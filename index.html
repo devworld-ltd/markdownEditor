@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markup Editor</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <h1>Markup Editor</h1>
+        <div id="toolbar-actions" class="toolbar-actions"></div>
+      </header>
+      <main class="editor-container">
+        <textarea id="editor" placeholder="마크다운을 입력하세요..."></textarea>
+        <div id="preview"></div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
