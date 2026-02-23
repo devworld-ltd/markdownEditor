@@ -63,6 +63,77 @@ body {
   background: #444;
 }
 
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: #555;
+  margin: 0 4px;
+}
+
+.tab-bar {
+  display: flex;
+  background: #252526;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.tab-bar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab-bar::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  color: #999;
+  cursor: pointer;
+  border-right: 1px solid #1e1e1e;
+  white-space: nowrap;
+  font-size: 13px;
+  user-select: none;
+}
+
+.tab:hover {
+  background: #2a2d2e;
+  color: #ccc;
+}
+
+.tab.active {
+  background: #1e1e1e;
+  color: #fff;
+  border-bottom: 2px solid #007acc;
+}
+
+.tab-name {
+  pointer-events: none;
+}
+
+.tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tab-close:hover {
+  background: #444;
+  color: #fff;
+}
+
 .editor-container {
   display: flex;
   flex: 1;
@@ -83,7 +154,7 @@ body {
 
 #preview {
   flex: 1;
-  padding: 16px;
+  padding: 16px 16px 16px 32px;
   overflow-y: auto;
   font-size: 14px;
   line-height: 1.6;

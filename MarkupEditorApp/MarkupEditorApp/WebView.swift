@@ -7,9 +7,11 @@ struct WebView: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         let schemeHandler = BundleSchemeHandler()
         config.setURLSchemeHandler(schemeHandler, forURLScheme: "app")
+        config.userContentController.add(context.coordinator, name: "fileHandler")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        context.coordinator.webView = webView
 
         if let url = URL(string: "app://localhost/index.html") {
             webView.load(URLRequest(url: url))
@@ -24,7 +26,9 @@ struct WebView: NSViewRepresentable {
         Coordinator()
     }
 
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        weak var webView: WKWebView?
+
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             print("[WebView] Navigation failed: \(error.localizedDescription)")
         }
@@ -35,6 +39,103 @@ struct WebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("[WebView] Page loaded successfully")
+        }
+
+        // MARK: - WKScriptMessageHandler
+
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage
+        ) {
+            guard let body = message.body as? [String: Any],
+                  let action = body["action"] as? String else { return }
+
+            switch action {
+            case "open":
+                handleOpen()
+            case "save":
+                let content = body["content"] as? String ?? ""
+                let filePath = body["filePath"] as? String
+                handleSave(content: content, filePath: filePath)
+            case "saveAs":
+                let content = body["content"] as? String ?? ""
+                handleSaveAs(content: content)
+            default:
+                break
+            }
+        }
+
+        // MARK: - File Operations
+
+        private func handleOpen() {
+            let panel = NSOpenPanel()
+            panel.allowedContentTypes = [
+                UTType(filenameExtension: "md") ?? .plainText,
+                .plainText,
+            ]
+            panel.allowsMultipleSelection = false
+            panel.canChooseDirectories = false
+
+            panel.begin { [weak self] response in
+                guard response == .OK, let url = panel.url else {
+                    self?.callBridge("window._bridge.onFileCancelled()")
+                    return
+                }
+
+                do {
+                    let content = try String(contentsOf: url, encoding: .utf8)
+                    let base64 = Data(content.utf8).base64EncodedString()
+                    let path = url.path.replacingOccurrences(of: "'", with: "\\'")
+                    let name = url.lastPathComponent.replacingOccurrences(of: "'", with: "\\'")
+                    self?.callBridge("window._bridge.onFileOpened(new TextDecoder().decode(Uint8Array.from(atob('\(base64)'),c=>c.charCodeAt(0))), '\(path)', '\(name)')")
+                } catch {
+                    let msg = error.localizedDescription.replacingOccurrences(of: "'", with: "\\'")
+                    self?.callBridge("window._bridge.onFileError('\(msg)')")
+                }
+            }
+        }
+
+        private func handleSave(content: String, filePath: String?) {
+            if let filePath = filePath {
+                let url = URL(fileURLWithPath: filePath)
+                writeFile(content: content, to: url)
+            } else {
+                handleSaveAs(content: content)
+            }
+        }
+
+        private func handleSaveAs(content: String) {
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [
+                UTType(filenameExtension: "md") ?? .plainText,
+            ]
+            panel.nameFieldStringValue = "Untitled.md"
+
+            panel.begin { [weak self] response in
+                guard response == .OK, let url = panel.url else {
+                    self?.callBridge("window._bridge.onFileCancelled()")
+                    return
+                }
+                self?.writeFile(content: content, to: url)
+            }
+        }
+
+        private func writeFile(content: String, to url: URL) {
+            do {
+                try content.write(to: url, atomically: true, encoding: .utf8)
+                let path = url.path.replacingOccurrences(of: "'", with: "\\'")
+                let name = url.lastPathComponent.replacingOccurrences(of: "'", with: "\\'")
+                callBridge("window._bridge.onFileSaved('\(path)', '\(name)')")
+            } catch {
+                let msg = error.localizedDescription.replacingOccurrences(of: "'", with: "\\'")
+                callBridge("window._bridge.onFileError('\(msg)')")
+            }
+        }
+
+        private func callBridge(_ js: String) {
+            DispatchQueue.main.async { [weak self] in
+                self?.webView?.evaluateJavaScript(js)
+            }
         }
     }
 }

@@ -35,5 +35,5 @@ xcodebuild \
   -derivedDataPath MarkupEditorApp/build \
   build
 
-APP_PATH="$(find MarkupEditorApp/build -name 'MarkupEditorApp.app' -type d | head -1)"
+APP_PATH="$(find MarkupEditorApp/build -name 'MarkdownEditor.app' -type d | head -1)"
 echo "==> Build complete: $APP_PATH"
