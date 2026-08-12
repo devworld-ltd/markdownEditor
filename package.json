@@ -15,7 +15,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:preview": "E2E_PREVIEW=1 playwright test",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "healthcheck:dev": "scripts/healthcheck.sh https://markdown-editor-dev.devworld-ltd-ai.workers.dev",
+    "healthcheck:prod": "scripts/healthcheck.sh https://md-editor.devworld.co.kr"
   },
   "engines": {
     "node": ">=22.22.2"
