@@ -270,7 +270,7 @@ sequenceDiagram
 | 경로 노출 | ✅ 브라우저가 절대 경로를 숨긴다 |
 | 문서 유출 | ✅ 문서가 네트워크로 전송되지 않는다 |
 | localStorage 격리 | ⚠️ 같은 오리진의 다른 스크립트가 세션을 읽을 수 있다. 공유 호스팅 오리진에 배포하지 말 것 |
-| CSP | ✅ `public/_headers` — `script-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`. [인프라 §6.1](../architecture/infrastructure.md#61-보안-헤더-public_headers) |
+| CSP | ✅ `public/_headers` — `script-src 'self' + CF Insights 비콘`, `object-src 'none'`, `frame-ancestors 'none'`. [인프라 §6.1](../architecture/infrastructure.md#61-보안-헤더-public_headers) |
 
 ---
 
