@@ -76,7 +76,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 | `dev` | dev | `markdown-editor-dev` | `*.workers.dev` |
 | `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
 
-`.github/workflows/ci.yml`(빌드+단위+E2E)와 `deploy.yml`(자동 배포). `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿은 등록 완료. **커스텀 도메인은 첫 prod 배포 때 생성되므로 `main` 에 병합되기 전까지 서비스되지 않는다.**
+`.github/workflows/ci.yml` 한 파일에 `verify`(빌드+단위+E2E) → `deploy`(needs: verify) 두 잡. **CI 는 Node 24 를 써야 한다** — jsdom 30 → undici 8 이 Node >=22.19 를 요구해 Node 20 에서는 vitest 가 기동하지 못한다. 배포는 `cloudflare/wrangler-action` 대신 `npx wrangler` 직접 호출 (액션 번들 wrangler 3.x 는 `wrangler.jsonc` 를 못 읽는다). `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿은 등록 완료. **커스텀 도메인은 첫 prod 배포 때 생성되므로 `main` 에 병합되기 전까지 서비스되지 않는다.**
 
 ## 문서 관리 (필수)
 

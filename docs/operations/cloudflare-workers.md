@@ -77,11 +77,13 @@ npm run cf:dev         # 로컬 workerd 런타임으로 dist/ 서빙
 
 ### 4.2 자동 (GitHub Actions)
 
-`.github/workflows/deploy.yml` — `dev`/`main` push 시 실행.
+`.github/workflows/ci.yml` 의 `deploy` 잡 — `dev`/`main` push 시 실행.
 
-- `concurrency: deploy-${{ github.ref }}` + `cancel-in-progress` 로 같은 브랜치의 중복 배포 취소
+- `needs: verify` — **테스트를 통과한 커밋만 배포된다**
+- `concurrency: ci-${{ github.ref }}` + `cancel-in-progress` 로 같은 브랜치의 중복 실행 취소
 - GitHub Environment 를 `dev`/`prod` 로 분리해 승인 규칙·시크릿을 환경별로 관리 가능
-- `cloudflare/wrangler-action@v3` 사용
+- `npx wrangler deploy` 직접 호출 (`cloudflare/wrangler-action` 은 wrangler 3.x 를 번들해
+  `wrangler.jsonc` 를 읽지 못하므로 사용하지 않는다)
 
 ### 4.3 검증
 

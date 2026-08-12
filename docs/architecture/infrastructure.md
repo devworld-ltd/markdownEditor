@@ -11,8 +11,7 @@
 | 애플리케이션 서버 | 없음 |
 | 데이터베이스 | 없음 ([데이터 모델](./data-model.md)) |
 | 런타임 외부 API 호출 | 없음 |
-| CI | GitHub Actions (`.github/workflows/ci.yml`) |
-| CD | GitHub Actions (`.github/workflows/deploy.yml`) |
+| CI/CD | GitHub Actions (`.github/workflows/ci.yml` — verify → deploy 의존 잡) |
 | 시크릿 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` 2개뿐 |
 | 배포 산출물 | `dist/` (HTML + JS + CSS + sourcemap) |
 
@@ -87,7 +86,9 @@ build.sourcemap: true  // 프로덕션 디버깅용
 
 ## 4. CI/CD
 
-### 4.1 CI — `.github/workflows/ci.yml`
+CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deploy` 는 `needs: verify` 로 묶여 있어 **검증을 통과한 커밋만 배포된다.**
+
+### 4.1 `verify` 잡
 
 `pull_request` 와 `dev`/`main` push 에서 실행:
 
@@ -98,16 +99,23 @@ build.sourcemap: true  // 프로덕션 디버깅용
 5. `npm run test:e2e` — E2E 73건
 6. 실패 시 `playwright-report/` 아티팩트 업로드 (7일 보관)
 
-### 4.2 CD — `.github/workflows/deploy.yml`
+### 4.2 `deploy` 잡
 
-`dev`/`main` push 에서 실행. `concurrency` 그룹으로 같은 브랜치의 중복 배포를 취소한다.
+`needs: verify` + `if: github.event_name == 'push'` — PR 에서는 실행되지 않는다.
 
 | 브랜치 | GitHub Environment | 명령 |
 |--------|--------------------|------|
-| `dev` | `dev` | `wrangler deploy --env dev` |
-| `main` | `prod` | `wrangler deploy --env prod` |
+| `dev` | `dev` | `npx wrangler deploy --env dev` |
+| `main` | `prod` | `npx wrangler deploy --env prod` |
 
-배포는 `cloudflare/wrangler-action@v3` 를 사용하며 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 시크릿이 필요하다.
+`CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 시크릿을 env 로 주입한다.
+
+### 4.3 CI 환경 제약 (실패로 확인한 것)
+
+| 제약 | 이유 |
+|------|------|
+| **Node 24 사용** (20 불가) | `jsdom@30` → `undici@8` 의 engines 가 `>=22.19.0`. Node 20 에서는 `webidl.util.markAsUncloneable` 부재로 vitest 워커가 기동조차 못 한다. `package.json` `engines` 에 `>=22.22.2` 로 명시 |
+| **`cloudflare/wrangler-action` 미사용** | 액션이 번들한 wrangler 3.90 은 `wrangler.jsonc`(JSON 설정)를 읽지 못해 `env`·`assets` 를 통째로 무시하고 "Missing entry-point" 로 실패한다. package-lock 에 고정된 wrangler 4 를 `npx` 로 직접 호출 |
 
 ## 5. 요구 사양
 

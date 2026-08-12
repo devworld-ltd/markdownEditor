@@ -16,6 +16,9 @@
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report"
   },
+  "engines": {
+    "node": ">=22.22.2"
+  },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@vitest/coverage-v8": "^4.1.10",
