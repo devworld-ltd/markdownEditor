@@ -4,11 +4,11 @@ import type { SwUpdateHost } from "../src/swUpdate";
 /**
  * `swUpdate.ts` 는 앱 모듈을 하나도 import 하지 않는 리프 모듈이다(§4.2). 그래서
  * 실제 `navigator.serviceWorker` 없이 가짜 registration + 주입 host 만으로 전량
- * 검증할 수 있다(U9). `navigator.serviceWorker.controller` 판정만은 DI 계약 밖이라
- * (§5.2 표시 판정식) 여기서도 전역 navigator 를 직접 흉내 낸다.
+ * 검증할 수 있다(U9). `navigator.serviceWorker.controller` 판정도 `SwUpdateHost.hasController()`
+ * 로 주입되므로(§5.2 표시 판정식) 전역 `navigator` 를 패치할 필요가 없다.
  *
- * `reloadPending` 은 모듈 스코프 상태(U5)라 테스트 간 누수를 막기 위해 매 테스트마다
- * `vi.resetModules()` 로 모듈을 새로 로드한다.
+ * `reloadPending`·`initialized` 는 모듈 스코프 상태(U5)라 테스트 간 누수를 막기 위해
+ * 매 테스트마다 `vi.resetModules()` 로 모듈을 새로 로드한다.
  */
 async function loadSwUpdate(): Promise<typeof import("../src/swUpdate")> {
   vi.resetModules();
@@ -68,17 +68,13 @@ function makeFakeRegistration(initialWaiting: FakeWorker | null = null) {
   };
 }
 
-function setController(controller: unknown): void {
-  Object.defineProperty(navigator, "serviceWorker", {
-    configurable: true,
-    value: { controller },
-  });
-}
-
 function createPanel(): HTMLElement {
   document.body.innerHTML = `
     <div id="sw-update" data-state="idle" hidden>
-      <p id="sw-update-text"></p>
+      <p id="sw-update-text">
+        <span id="sw-update-text-idle"></span>
+        <span id="sw-update-text-updating" hidden></span>
+      </p>
       <div class="sw-update-actions">
         <button type="button" id="sw-update-later"></button>
         <button type="button" id="sw-update-reload"></button>
@@ -99,6 +95,7 @@ function makeHost(
   hasDirty: ReturnType<typeof vi.fn>;
   confirmUnsafeReload: ReturnType<typeof vi.fn>;
   onControllerChange: ReturnType<typeof vi.fn>;
+  hasController: ReturnType<typeof vi.fn>;
 } {
   const controllerChangeListeners = new Set<() => void>();
   return {
@@ -108,6 +105,9 @@ function makeHost(
       controllerChangeListeners.add(fn);
       return () => controllerChangeListeners.delete(fn);
     }),
+    // 기본값: 이미 설치돼 페이지를 제어 중인 워커가 있는 상태(§5.2 표시 판정의 일반
+    // 케이스). "최초 설치" 시나리오만 개별 테스트에서 false 로 오버라이드한다.
+    hasController: vi.fn(() => true),
     persist: vi.fn(() => true),
     hasDirty: vi.fn(() => false),
     confirmUnsafeReload: vi.fn(() => true),
@@ -136,10 +136,12 @@ describe("swUpdate — 표시 판정 (§5.2)", () => {
   it("controller 없음(최초 설치) + waiting 있음 → 표시하지 않는다 (FR-M2, E1)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController(null);
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
-    const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
+    const host = makeHost(panelEl, {
+      register: vi.fn(async () => registration as never),
+      hasController: vi.fn(() => false),
+    });
 
     initSwUpdate(host);
     await flush();
@@ -151,7 +153,6 @@ describe("swUpdate — 표시 판정 (§5.2)", () => {
   it("controller 있음 + 로드 시점에 waiting 있음 → 1초 지연 후 표시된다 (D1-A, AC-02)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
@@ -171,7 +172,6 @@ describe("swUpdate — 표시 판정 (§5.2)", () => {
   it("controller 있음 + 세션 중 새 워커 설치(경로 B) → 표시된다 (AC-01)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(null);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -188,7 +188,6 @@ describe("swUpdate — dismiss (D2, AC-10)", () => {
   it("나중에를 누르면 숨겨지고, 동일 워커에는 재표시되지 않는다", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(null);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -213,7 +212,6 @@ describe("swUpdate — dismiss (D2, AC-10)", () => {
   it("나중에 실행 후 포커스가 지정된 요소로 돌아간다 (I-05)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(makeFakeWorker());
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -245,7 +243,6 @@ describe("swUpdate — dismiss (D2, AC-10)", () => {
   it("Esc — 알림 내부에 포커스가 있을 때만 닫힌다 (I-06/I-07, FR-S3)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(makeFakeWorker());
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -262,10 +259,39 @@ describe("swUpdate — dismiss (D2, AC-10)", () => {
     expect(panelEl.hidden).toBe(true);
   });
 
+  it("갱신 진행 중(updating)에는 Esc 를 눌러도 닫히지 않는다 (#10 회귀 방지)", async () => {
+    const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
+    const panelEl = createPanel();
+    const waiting = makeFakeWorker();
+    const registration = makeFakeRegistration(waiting);
+    const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
+
+    initSwUpdate(host);
+    await flush();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(panelEl.hidden).toBe(false);
+
+    // 갱신 시작 — data-state 가 "updating" 으로 전환되고 버튼은 disabled 되지만
+    // Esc 는 클릭과 달리 disabled 로 막히지 않으므로 keydown 핸들러 자체의 가드가
+    // 필요하다(§handleReload 와 동일한 가드를 keydown 에도 적용).
+    panelEl.querySelector<HTMLButtonElement>("#sw-update-reload")!.click();
+    expect(panelEl.dataset.state).toBe("updating");
+
+    const laterBtn = panelEl.querySelector<HTMLButtonElement>("#sw-update-later")!;
+    laterBtn.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    expect(panelEl.hidden).toBe(false);
+    expect(panelEl.dataset.state).toBe("updating");
+
+    // 타임아웃까지 흘려보내 리로드가 정상적으로 완료되는지도 함께 확인한다
+    // (Esc 가드가 갱신 흐름 자체를 막지는 않아야 한다).
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(host.reload).toHaveBeenCalledOnce();
+  });
+
   it("에디터에서 발생한 Esc 는 알림에 영향을 주지 않는다 (I-07)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(makeFakeWorker());
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -285,7 +311,6 @@ describe("swUpdate — 갱신 결정 로직 (§8, D3, FR-M5)", () => {
   it("persist() 성공 → 확인 없이 즉시 갱신 진행 (AC-06)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, {
@@ -308,7 +333,6 @@ describe("swUpdate — 갱신 결정 로직 (§8, D3, FR-M5)", () => {
   it("persist() 실패 + hasDirty() false → 확인 없이 진행 (잃을 것이 없음)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, {
@@ -330,7 +354,6 @@ describe("swUpdate — 갱신 결정 로직 (§8, D3, FR-M5)", () => {
   it("persist() 실패 + hasDirty() true + 취소 → 갱신 중단, 억제 해제 (AC-07/AC-08)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, {
@@ -357,7 +380,6 @@ describe("swUpdate — 갱신 결정 로직 (§8, D3, FR-M5)", () => {
   it("persist() 실패 + hasDirty() true + 계속 → 갱신 진행", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, {
@@ -382,7 +404,6 @@ describe("swUpdate — 연타 방지 · 타임아웃 · 리로드 (§8.2, U3, FR
   it("연타해도 postMessage 는 1회만 전송된다 (AC-18)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
@@ -401,7 +422,6 @@ describe("swUpdate — 연타 방지 · 타임아웃 · 리로드 (§8.2, U3, FR
   it("controllerchange 수신 시 리로드한다", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
@@ -421,7 +441,6 @@ describe("swUpdate — 연타 방지 · 타임아웃 · 리로드 (§8.2, U3, FR
   it("응답이 없으면 3000ms 뒤 강제로 리로드한다 (FR-S5, AC-19)", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
@@ -441,7 +460,6 @@ describe("swUpdate — 연타 방지 · 타임아웃 · 리로드 (§8.2, U3, FR
   it("controllerchange 와 타임아웃이 경합해도 reload() 는 1회만 호출된다", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const waiting = makeFakeWorker();
     const registration = makeFakeRegistration(waiting);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
@@ -463,7 +481,6 @@ describe("swUpdate — 능동 확인 (§5.5, U6, FR-S1/S2)", () => {
   it("가시성 복귀 시 registration.update() 를 호출한다", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(null);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -482,7 +499,6 @@ describe("swUpdate — 능동 확인 (§5.5, U6, FR-S1/S2)", () => {
   it("마지막 확인 후 10분 이내의 가시성 복귀는 건너뛴다", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(null);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -508,7 +524,6 @@ describe("swUpdate — 능동 확인 (§5.5, U6, FR-S1/S2)", () => {
   it("60분 주기로 확인 결과가 변화 없어도 예외 없이 반복 호출된다", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController({});
     const registration = makeFakeRegistration(null);
     const host = makeHost(panelEl, { register: vi.fn(async () => registration as never) });
 
@@ -528,12 +543,12 @@ describe("swUpdate — 견고성 (NFR-2, FR-M13)", () => {
   it("register() 실패는 조용히 무시되고 예외를 전파하지 않는다", async () => {
     const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
     const panelEl = createPanel();
-    setController(null);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const host = makeHost(panelEl, {
       register: vi.fn(async () => {
         throw new Error("등록 실패");
       }),
+      hasController: vi.fn(() => false),
     });
 
     expect(() => initSwUpdate(host)).not.toThrow();
@@ -552,5 +567,31 @@ describe("swUpdate — 견고성 (NFR-2, FR-M13)", () => {
     });
 
     expect(() => initSwUpdate(host)).not.toThrow();
+  });
+
+  it("두 번째 initSwUpdate 호출은 무시되어 setInterval 이 중복 등록되지 않는다 (#12 회귀 방지)", async () => {
+    const { initSwUpdate, isUpdateReloadPending } = await loadSwUpdate();
+    const setIntervalSpy = vi.spyOn(global, "setInterval");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const panelEl1 = createPanel();
+    const host1 = makeHost(panelEl1, {
+      register: vi.fn(async () => makeFakeRegistration() as never),
+    });
+    initSwUpdate(host1);
+    await flush();
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+
+    // 동일 모듈 인스턴스에 대해 재호출 — 두 번째 host 의 setInterval 은 등록되지 않아야
+    // 하며(재진입 가드), 경고 로그로 조용히 알려야 한다(NFR-2 와 동일한 견고성 기조).
+    const panelEl2 = createPanel();
+    const host2 = makeHost(panelEl2, {
+      register: vi.fn(async () => makeFakeRegistration() as never),
+    });
+    initSwUpdate(host2);
+    await flush();
+
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalled();
   });
 });
