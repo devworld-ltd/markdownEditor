@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # jsdom 30 은 undici 8 을 요구하고, undici 8 의 engines 는 Node >=22.19.0 이다.
+          # Node 20 에서는 webidl.util.markAsUncloneable 부재로 단위 테스트가 기동조차 못 한다.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: 타입 검사 + 빌드
+        run: npm run build
+
+      - name: 단위 테스트 + 커버리지
+        run: npm run test:coverage
+
+      - name: Playwright 브라우저 설치
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E 테스트
+        run: npm run test:e2e
+
+      - name: 실패 아티팩트 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # 검증을 통과한 커밋만 배포한다. deploy 를 별도 워크플로로 두면 테스트 실패와
+  # 무관하게 배포가 성사되므로 같은 워크플로의 의존 잡으로 묶었다.
+  deploy:
+    needs: verify
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: 빌드
+        run: npm run build
+
+      # wrangler-action 이 번들한 wrangler 3.x 는 wrangler.jsonc(JSON 설정)를 읽지 못해
+      # env 와 assets 를 통째로 무시한다. package-lock 에 고정된 wrangler 4 를 직접 쓴다.
+      - name: Cloudflare Workers 배포
+        run: npx wrangler deploy --env ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

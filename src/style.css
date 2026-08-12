@@ -6,15 +6,18 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  height: 100vh;
+  /* 모바일 브라우저의 주소창 높이 변화를 흡수하려면 dvh 가 필요하다. */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overscroll-behavior: none;
 }
 
 #app {
+  position: relative;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
 }
 
 .toolbar {
@@ -191,4 +194,74 @@ body {
   padding-left: 12px;
   color: #666;
   margin-bottom: 8px;
+}
+
+#preview table {
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  display: block;
+  overflow-x: auto;
+}
+
+#preview th,
+#preview td {
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+#preview img {
+  max-width: 100%;
+}
+
+/* 알림 (저장 성공·실패, 저장소 사용 불가 등) */
+.notice {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #323232;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+  z-index: 10;
+}
+
+.notice[data-kind="error"] {
+  background: #a1260d;
+}
+
+.notice[hidden] {
+  display: none;
+}
+
+/* 좁은 화면에서는 에디터/프리뷰를 위아래로 쌓는다. */
+@media (max-width: 720px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .editor-container {
+    flex-direction: column;
+  }
+
+  #editor {
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+    min-height: 40%;
+  }
+
+  #preview {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-btn {
+    transition: none;
+  }
 }
