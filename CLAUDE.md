@@ -47,6 +47,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`storage.ts`** — localStorage 세션 저장/복원. 스키마 버전 검증·손상 데이터 필터·접근 불가 감지.
 - **`fileOps.ts`** — 파일 I/O 2경로 분기. FS Access API(Chrome·Edge) ↔ `<input type=file>` + Blob 다운로드(Safari·Firefox).
 - **`notice.ts`** — 사용자에게 보이는 성공·오류 알림(`#notice`).
+- **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
 - **`shortcuts.ts`** — `Cmd/Ctrl+O·S`, `Shift+S`, `Alt+N·W`.
 
@@ -59,6 +60,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 5. **File System Access API 는 보안 컨텍스트에서만 동작한다.** LAN IP(`192.168.x.x`)로 접속하면 폴백 경로로 떨어져 관련 E2E 가 실패한다.
 6. **파일 핸들은 직렬화할 수 없다.** 세션 복원 탭은 항상 `handle: null` 이며 저장 시 위치를 다시 묻는다.
 7. **`vite.config.ts` 의 `base:"/"`** — v1.x 의 `"./"`·`modulePreload:false` 는 `app://` 스킴 호환용이었다. 되돌리지 말 것.
+8. **`tsc` 는 타입 검사 전용이다** (`tsc --noEmit && vite build`). tsconfig 에 `outDir`/`declaration` 을 되살리면 `tsc` 가 `dist/` 에 `.js`/`.d.ts` 를 쏟아내고, 타입 오류로 멈출 때 중간 산출물이 남는다.
+9. **`_headers` 와 서비스 워커는 로컬에서 동작하지 않는다.** `_headers` 는 Cloudflare 가, 서비스 워커는 `import.meta.env.PROD` 조건이 가른다. 관련 E2E 는 원격 baseURL 일 때만 실행되고 로컬에서는 skip 된다.
+10. **CSP `script-src` 에 `'unsafe-inline'`/`'unsafe-eval'` 을 절대 넣지 말 것.** E2E 가 단언한다. 인라인 스크립트가 필요하면 외부 파일로 뺀다.
+11. **서비스 워커 캐시 전략을 뒤집지 말 것.** HTML 은 network-first(새 배포 반영), `/assets/*` 는 cache-first(해시 불변). 반대로 하면 업데이트가 영원히 안 보이거나 오프라인 이점이 사라진다.
 
 ## 테스트
 
@@ -75,6 +80,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 |--------|------|--------|-----|
 | `dev` | dev | `markdown-editor-dev` | `*.workers.dev` |
 | `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
+
+**`main`·`dev` 모두 브랜치 보호 규칙이 걸려 있다.** 직접 push 가 거부되므로 문서 한 줄 수정이라도 `feature/*` → PR → 머지 경로를 거쳐야 한다.
 
 `.github/workflows/ci.yml` 한 파일에 `verify`(빌드+단위+E2E) → `deploy`(needs: verify) 두 잡. **CI 는 Node 24 를 써야 한다** — jsdom 30 → undici 8 이 Node >=22.19 를 요구해 Node 20 에서는 vitest 가 기동하지 못한다. 배포는 `cloudflare/wrangler-action` 대신 `npx wrangler` 직접 호출 (액션 번들 wrangler 3.x 는 `wrangler.jsonc` 를 못 읽는다). `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿은 등록 완료. **커스텀 도메인은 첫 prod 배포 때 생성되므로 `main` 에 병합되기 전까지 서비스되지 않는다.**
 
@@ -103,8 +110,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 
 상세: `docs/features/feature-status.md`
 
-1. **`dev` 브랜치 미생성** — CI/CD 워크플로가 아직 한 번도 실행되지 않았다 (F-66).
-2. localStorage 저장 실패(용량 초과)를 사용자에게 알리지 않는다 (F-54).
-3. CSP 헤더 미설정 (F-62).
+1. 단위 커버리지 8.37% — DOM 결합 모듈이 전부 미검증 (F-47).
+2. 서비스 워커 업데이트 알림 UI 가 없다 — 새 배포가 있어도 사용자는 옛 버전을 본다 (F-69).
+3. 배포 후 자동 헬스체크가 없다 (F-64).
 4. Safari·Firefox 는 덮어쓰기·중복 탭 방지가 불가능하나 이를 안내하는 UI 가 없다 (F-11, F-58).
-5. 단위 커버리지 8.11% — DOM 결합 모듈이 전부 미검증 (F-47).
+5. 용량 초과 후 오래된 탭을 자동 회수하지 않아 자동 저장이 멈춘 상태로 유지된다 (F-54 잔여).

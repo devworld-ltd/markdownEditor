@@ -144,7 +144,7 @@ interface PersistedTab {
 | `version` 불일치 | `null` 반환 |
 | 개별 탭 항목의 형식 오류 | 해당 항목만 버리고 나머지 복원 |
 | 남은 탭 0개 | `null` 반환 |
-| `QuotaExceededError` | `saveSession()` 이 `false` 반환 (현재 호출부는 무시) |
+| `QuotaExceededError` | `saveSession()` 이 `false` 반환 → `persistNow()` 가 **사용자에게 1회 알림**(F-54). 반복 알림을 막기 위해 플래그를 두고, 저장이 다시 성공하면 해제한다 |
 
 ## 4. 상태 전이
 

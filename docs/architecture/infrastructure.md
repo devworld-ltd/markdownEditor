@@ -57,7 +57,26 @@ build.sourcemap: true  // 프로덕션 디버깅용
 
 네이티브 시절의 `base: "./"`, `crossOriginLoading: false`, `modulePreload: false` 는 `app://` 커스텀 스킴 호환을 위한 것이었으므로 모두 제거했다.
 
-### 3.2 Wrangler 설정 (`wrangler.jsonc`)
+### 3.2 정적 자산 (`public/`)
+
+`public/` 의 내용은 vite 가 `dist/` 루트로 그대로 복사한다.
+
+| 파일 | 용도 |
+|------|------|
+| `_headers` | Cloudflare Workers 응답 헤더 규칙 (CSP·캐시) — §6.1 |
+| `manifest.webmanifest` | PWA 매니페스트 |
+| `icon.svg` | 파비콘 + PWA 아이콘 |
+| `sw.js` | 서비스 워커 (오프라인 캐시) |
+
+> `_headers` 와 서비스 워커는 **개발 서버에서 동작하지 않는다.** `_headers` 는 Cloudflare 가 적용하고, 서비스 워커는 `import.meta.env.PROD` 일 때만 등록한다. 관련 E2E 는 원격 baseURL 일 때만 실행된다.
+
+### 3.3 타입 검사와 번들의 분리
+
+`npm run build` 는 `tsc --noEmit && vite build` 다. 번들링은 vite 가 전담하고 `tsc` 는 타입 검사만 한다.
+
+이전 설정(`outDir: dist`, `declaration: true`)은 `tsc` 가 `dist/` 에 `.js`/`.d.ts` 를 쏟아낸 뒤 `vite build` 가 덮어쓰는 구조였다. 평소에는 vite 가 `dist/` 를 비우고 시작해 문제가 없지만, **`tsc` 가 타입 오류로 멈추면 중간 산출물이 `dist/` 에 그대로 남는다.** 실제로 PWA 작업 중 이 상태를 만났다.
+
+### 3.4 Wrangler 설정 (`wrangler.jsonc`)
 
 ```jsonc
 {
@@ -139,18 +158,46 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 | 문서 데이터 유출 | 문서가 서버로 전송되지 않으므로 서버 측 유출 경로가 없다 |
 | XSS | `parser.ts` 에서 DOMPurify 로 정화. 웹 배포 시 필수 방어선 |
 | HTTPS | Cloudflare 가 기본 제공. File System Access API 요구 조건도 충족 |
-| CSP 헤더 | **미설정** — `_headers` 파일로 추가 권장 |
+| CSP 헤더 | ✅ `public/_headers` — `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'` 등 |
 | 커스텀 도메인 | ✅ prod = `md-editor.devworld.co.kr` (dev 는 `*.workers.dev`) |
 | 관측 | `observability.enabled = true` (Workers Logs) |
 | 롤백 | Cloudflare 대시보드의 이전 버전 배포 또는 `main` revert 후 재배포 |
 
+## 6.1 보안 헤더 (`public/_headers`)
+
+| 헤더 | 값 |
+|------|-----|
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests` |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `no-referrer` |
+| `X-Frame-Options` | `DENY` |
+| `Cross-Origin-Opener-Policy` | `same-origin` |
+| `Permissions-Policy` | geolocation·microphone·camera·payment·usb 전부 차단 |
+
+**완화 항목과 사유**
+
+| 지시어 | 완화 | 사유 |
+|--------|------|------|
+| `style-src` | `'unsafe-inline'` 허용 | 마크다운 본문의 인라인 `style` 속성(DOMPurify 가 허용)이 렌더되려면 필요. 인라인 스크립트와 달리 실행 권한이 없어 위험도가 낮다 |
+| `img-src` | `https:` 허용 | 문서의 `![](https://…)` 외부 이미지 |
+| `img-src` | `data:` 허용 | 인라인 SVG·data URI 이미지 |
+
+`script-src` 는 `'self'` 만 허용하며 `'unsafe-inline'`·`'unsafe-eval'` 을 절대 넣지 않는다. E2E 가 이를 단언한다.
+
+**캐시 규칙**
+
+| 경로 | `Cache-Control` | 사유 |
+|------|-----------------|------|
+| `/assets/*` | `public, max-age=31536000, immutable` | 콘텐츠 해시가 붙어 내용이 바뀌지 않는다 |
+| `/`, `/index.html` | `no-cache` | 새 배포가 즉시 반영돼야 한다 |
+| `/sw.js` | `no-cache` | 캐시되면 서비스 워커 업데이트가 영원히 막힌다 |
+
 ## 7. 개선 권고
 
-1. **CSP `_headers` 추가** — `script-src 'self'` 등으로 DOMPurify 를 우회하는 잔여 위험까지 차단.
-2. **dev 환경 커스텀 도메인** — dev 는 아직 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 등을 추가한다.
-3. **배포 후 헬스체크** — 배포 잡에 `curl` 스모크 체크 또는 prod smoke E2E 를 추가.
-4. **PWA(오프라인 설치)** — 서비스 워커 + manifest 로 "설치형 웹앱" 을 제공하면 제거한 네이티브 앱의 사용성을 상당 부분 대체할 수 있다.
-5. **버전 표기** — `APP_ENV` 외에 커밋 SHA 를 빌드 타임에 주입하면 배포 추적이 쉬워진다.
+1. **dev 환경 커스텀 도메인** — dev 는 아직 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 등을 추가한다.
+2. **배포 후 헬스체크** — 배포 잡에 `curl` 스모크 체크 또는 prod smoke E2E 를 추가. 첫 배포 때 관측된 인증서 프로비저닝 구간(약 1분) 때문에 재시도가 필요하다.
+3. **서비스 워커 업데이트 알림** — 새 배포가 있어도 사용자가 알 수 없다.
+4. **버전 표기** — `APP_ENV` 외에 커밋 SHA 를 빌드 타임에 주입하면 배포 추적이 쉬워진다.
 
 ## 8. 관련 문서
 

@@ -5,11 +5,13 @@
 
 ## 1. 종합
 
-| 스위트 | 도구 | 통과 | 실패 | 총계 | 소요 |
+| 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | 21 | 0 | 21 | 378ms |
-| E2E | Playwright 1.62.1 (chromium) | **73** | **0** | 73 | 3.82s |
-| **합계** | | **94** | **0** | **94** | — |
+| 단위 | Vitest 4.1.10 (jsdom) | 22 | 0 | 0 | 22 |
+| E2E (로컬) | Playwright 1.62.1 (chromium) | **78** | **0** | 4 ※ | 82 |
+| **합계** | | **100** | **0** | 4 | 104 |
+
+※ `_headers`(Cloudflare 전용)와 서비스 워커(`import.meta.env.PROD` 전용)를 검증하는 4케이스는 로컬에서 `test.skip()` 된다. 원격 baseURL 로 실행하면 전량 수행된다.
 
 | 검증 | 결과 |
 |------|------|
@@ -22,13 +24,14 @@
 
 | 산출물 | 크기 | gzip |
 |--------|------|------|
-| `dist/index.html` | 1.58 kB | 0.88 kB |
+| `dist/index.html` | 1.43 kB | 0.76 kB |
 | `dist/assets/index-*.css` | 3.13 kB | 1.12 kB |
-| `dist/assets/index-*.js` | 83.33 kB | 27.88 kB |
+| `dist/assets/index-*.js` | 83.66 kB | 28.04 kB |
+| `dist/_headers`, `manifest.webmanifest`, `icon.svg`, `sw.js` | (정적 복사) | — |
 
 전환 전(48.57 kB / gzip 15.05 kB) 대비 JS 가 약 34.8 kB 늘었다. 대부분 **DOMPurify**(sanitize)이며, 나머지는 storage/notice 모듈과 파일 I/O 분기 코드다. XSS 방어와 맞바꾼 비용으로 판단한다.
 
-## 2. E2E 결과 — 73/73 PASS
+## 2. E2E 결과 — 78 PASS / 4 SKIP
 
 | 스펙 | 케이스 | 결과 |
 |------|--------|------|
@@ -38,6 +41,7 @@
 | `tabs.spec.ts` | 11 | ✅ 전체 통과 |
 | `fileaccess.spec.ts` | 15 | ✅ 전체 통과 |
 | `session.spec.ts` | 6 | ✅ 전체 통과 |
+| `hardening.spec.ts` | 9 | ✅ 5 통과 / 4 skip (배포 환경 전용) |
 
 ### 2.1 URL 응답 (15)
 
@@ -74,12 +78,26 @@
 
 자동 저장 / 새로고침 복원(본문·프리뷰·dirty) / 다중 탭+활성 탭 복원 / **복원 탭은 핸들이 없어 저장 시 위치 재질의** / 세션 없음 → 빈 탭 / 손상된 JSON 무시 후 정상 기동(`pageerror` 0건).
 
-## 3. 단위 테스트 — 21/21 PASS
+### 2.7 보안·PWA·저장 실패 (9 — 5 통과 / 4 skip)
+
+| 케이스 | 결과 |
+|--------|------|
+| 용량 초과 시 사용자에게 알린다 + 편집은 계속 가능 | ✅ |
+| 저장이 정상이면 실패 알림이 뜨지 않는다 | ✅ |
+| manifest 가 서빙되고 필수 필드를 갖춘다 (`maskable` 아이콘 포함) | ✅ |
+| 아이콘·서비스 워커 스크립트 서빙 | ✅ |
+| 문서에 manifest·icon 링크가 있다 | ✅ |
+| 서비스 워커 등록 | ⏭ 배포 환경 전용 |
+| CSP·보안 헤더 3종 | ⏭ 배포 환경 전용 |
+| 캐시 정책 (`immutable` / `no-cache`) | ⏭ 배포 환경 전용 |
+| CSP 위반 0건으로 동작 | ⏭ 배포 환경 전용 |
+
+## 3. 단위 테스트 — 22/22 PASS
 
 | 파일 | 케이스 | 내용 |
 |------|--------|------|
 | `parser.test.ts` | 13 | GFM 변환 7 + sanitize 6 (`<script>`·이벤트 핸들러·`javascript:`·`iframe` 제거, 안전 HTML·체크박스 유지) |
-| `storage.test.ts` | 8 | 저장·복원 왕복, 세션 없음, 손상 JSON, 버전 불일치, 형식 오류 항목 필터, 빈 탭, `clearSession` |
+| `storage.test.ts` | 9 | 저장·복원 왕복, 세션 없음, 손상 JSON, 버전 불일치, 형식 오류 항목 필터, 빈 탭, **용량 초과**, `clearSession` |
 
 ## 4. 전환 작업 중 발견해 수정한 애플리케이션 버그
 
@@ -90,6 +108,7 @@ E2E 를 새로 작성하는 과정에서 **실제 결함 3건**이 드러났다.
 | 1 | 높음 | New/Open/Save 버튼을 누르면 문서가 **즉시 변경됨(dirty)** 으로 표시 | `initToolbar()` 가 **모든** 버튼 클릭 후 `input` 이벤트를 재발행 — 파일 액션까지 포함 | `ToolbarAction.editsText` 플래그 도입, 서식 액션 12개만 재발행 |
 | 2 | 중간 | 탭을 전환하면 **커서 위치가 항상 0,0 으로 초기화** | 포커스 없는 textarea 의 선택 영역을 `setSelectionRange()` 로 복원해도, 클릭 이벤트가 끝나며 브라우저가 되돌림 | `switchTab()` 에서 `editorEl.focus()` 후 선택 복원 |
 | 3 | 낮음 | jsdom 단위 테스트에서 `localStorage` 접근 불가 | Node 22+ 가 `localStorage` 전역을 예약해 vitest 의 jsdom 환경이 실제 구현을 싣지 못함 | `tests/setup.ts` 에 테스트 전용 Storage 셰임 추가 |
+| 4 | 낮음 | `tsc` 가 타입 오류로 멈추면 `dist/` 에 중간 산출물(`.js`/`.d.ts`)이 남음 | tsconfig 가 `outDir: dist` + `declaration: true` 였다. 평소엔 `vite build` 가 덮어써 드러나지 않았다 | `tsc --noEmit` 으로 전환하고 tsconfig 에서 emit 옵션 제거 |
 
 버그 1은 **네이티브 버전에도 존재했으나** 당시에는 dirty 상태의 영향이 작아 드러나지 않았다. 웹 전환으로 dirty 가 닫기 확인·이탈 경고·자동 저장을 좌우하게 되면서 표면화됐다.
 
@@ -115,9 +134,9 @@ E2E 를 새로 작성하는 과정에서 **실제 결함 3건**이 드러났다.
 
 | 심각도 | 내용 | 참조 |
 |--------|------|------|
-| 중간 | localStorage 저장 실패(용량 초과)를 사용자에게 알리지 않는다 | [F-54](../features/feature-status.md) |
+| 중간 | 서비스 워커 업데이트 알림 UI 없음 — 새 배포가 있어도 사용자는 옛 버전을 본다 | [F-69](../features/feature-status.md) |
 | 중간 | 폴백 브라우저에서 덮어쓰기·중복 탭 방지 불가 (API 한계, 안내 UI 없음) | [F-11, F-58](../features/feature-status.md) |
-| 낮음 | CSP 헤더 미설정 | [F-62](../features/feature-status.md) |
+| 낮음 | 용량 초과 후 오래된 탭을 자동 회수하지 않아 자동 저장이 멈춘 상태로 유지 | [F-54 잔여](../features/feature-status.md) |
 
 ## 6.5 배포 환경 검증 (2026-08-12)
 

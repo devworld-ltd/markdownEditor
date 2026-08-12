@@ -101,12 +101,25 @@ npx wrangler deploy --env dev --dry-run   # 배포 설정 검증
 ### 4.6 `tests/e2e/session.spec.ts` — 세션 영속 (6케이스) → F-19, F-20
 자동 저장, 새로고침 복원, 다중 탭+활성 탭 복원, **복원 탭은 핸들이 없어 저장 시 위치 재질의**, 세션 없음, 손상된 JSON 무시.
 
-### 4.7 단위 테스트
+### 4.7 `tests/e2e/hardening.spec.ts` — 보안·PWA·저장 실패 (9케이스) → F-54, F-61, F-62
+
+| 그룹 | 케이스 | 실행 조건 |
+|------|--------|-----------|
+| F-54 자동 저장 실패 알림 | 용량 초과 시 오류 알림 + 편집 계속 가능 / 정상 시 알림 없음 | 전 환경 |
+| F-61 PWA | manifest 필드 · 아이콘/sw.js 서빙 · 문서의 manifest 링크 | 전 환경 |
+| F-61 PWA | 서비스 워커 등록 | **원격 baseURL 전용** |
+| F-62 보안 헤더 | CSP 지시어 · 보안 헤더 3종 / 캐시 정책 / CSP 위반 0건 | **원격 baseURL 전용** |
+
+`_headers` 는 Cloudflare 가 적용하고 서비스 워커는 `import.meta.env.PROD` 에서만 등록되므로, 해당 4케이스는 로컬 실행 시 `test.skip()` 된다. 로컬 82건 중 78건 실행, 원격 실행 시 전량 수행.
+
+용량 초과는 `Storage.prototype.setItem` 을 세션 키에 한해 throw 하도록 스텁해 재현한다(읽기는 정상 유지 → "쓸 수 있는데 실패한" 상태).
+
+### 4.8 단위 테스트
 
 | 파일 | 케이스 | 대상 |
 |------|--------|------|
 | `tests/parser.test.ts` | 13 | GFM 변환 7 + sanitize 6 |
-| `tests/storage.test.ts` | 8 | 저장·복원·스키마 검증·손상 데이터 방어 |
+| `tests/storage.test.ts` | 9 | 저장·복원·스키마 검증·손상 데이터 방어·용량 초과 |
 
 ## 5. 커버리지 목표
 
@@ -128,7 +141,8 @@ npx wrangler deploy --env dev --dry-run   # 배포 설정 검증
 | 반응형 레이아웃 | 뷰포트 테스트 미도입 | 수동 |
 | `scrollTop` 복원 | textarea 높이 의존, 단언 불안정 | 미검증 |
 | localStorage 용량 초과 | 5MB 채우는 테스트 미도입 | 미검증 |
-| 실제 Cloudflare 배포 | 계정 자격 증명 필요 | `--dry-run` 으로 설정만 검증 |
+| CSP · 서비스 워커 (로컬) | `_headers` 는 Cloudflare 전용, SW 는 PROD 전용 | 원격 baseURL 로 E2E 실행 |
+| 실제 오프라인 동작 | 네트워크 차단 시나리오 미도입 | 수동 (DevTools Offline) |
 
 ## 7. 수동 회귀 체크리스트 (릴리즈 전)
 

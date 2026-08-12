@@ -1,0 +1,27 @@
+{
+  "name": "Markdown Editor",
+  "short_name": "Markdown",
+  "description": "설치 없이 브라우저에서 바로 쓰는 마크다운 에디터. 실시간 프리뷰, 멀티 탭, 로컬 파일 열기/저장을 지원합니다.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#1e1e1e",
+  "lang": "ko",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

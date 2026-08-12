@@ -79,6 +79,22 @@ describe("storage", () => {
     expect(loadSession()).toBeNull();
   });
 
+  it("용량 초과(QuotaExceededError)면 saveSession 이 false 를 반환한다", () => {
+    const original = window.localStorage.setItem;
+    window.localStorage.setItem = () => {
+      throw new DOMException("quota", "QuotaExceededError");
+    };
+    try {
+      const session = createSession(
+        [{ id: "tab-1", fileName: "a.md", content: "A", isDirty: true }],
+        "tab-1",
+      );
+      expect(saveSession(session)).toBe(false);
+    } finally {
+      window.localStorage.setItem = original;
+    }
+  });
+
   it("clearSession 이 저장된 세션을 지운다", () => {
     saveSession(createSession([{ id: "tab-1", fileName: "a.md", content: "A", isDirty: false }], "tab-1"));
     clearSession();

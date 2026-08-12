@@ -1,0 +1,93 @@
+/**
+ * 서비스 워커 — 오프라인 지원.
+ *
+ * 캐시 전략을 자산 성격에 따라 나눈다.
+ *
+ *   /assets/*  콘텐츠 해시가 붙어 내용이 절대 바뀌지 않음 → cache-first
+ *   내비게이션  새 배포를 즉시 반영해야 함              → network-first (실패 시 캐시)
+ *   그 외 동일 출처                                     → network-first (실패 시 캐시)
+ *
+ * 해시 없는 진입 문서를 cache-first 로 두면 새 배포가 영원히 반영되지 않는다.
+ * 반대로 해시 자산을 network-first 로 두면 오프라인 이점이 사라진다.
+ *
+ * 빌드 타임 프리캐시 목록 주입(workbox 등)을 쓰지 않으므로, 설치 시에는 앱 셸만
+ * 캐시하고 나머지는 첫 요청 때 채운다.
+ */
+
+const VERSION = "v1";
+const CACHE = `markdown-editor-${VERSION}`;
+const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(CACHE);
+      // 일부 실패가 전체 설치를 막지 않도록 개별 처리한다.
+      await Promise.allSettled(APP_SHELL.map((url) => cache.add(url)));
+      await self.skipWaiting();
+    })(),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(
+        names.filter((n) => n !== CACHE).map((n) => caches.delete(n)),
+      );
+      await self.clients.claim();
+    })(),
+  );
+});
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response.ok) {
+    const cache = await caches.open(CACHE);
+    cache.put(request, response.clone());
+  }
+  return response;
+}
+
+async function networkFirst(request, fallbackUrl) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cached =
+      (await caches.match(request)) ||
+      (fallbackUrl ? await caches.match(fallbackUrl) : undefined);
+    if (cached) return cached;
+    throw error;
+  }
+}
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+
+  // GET 이 아니거나 다른 출처면 그대로 통과시킨다.
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirst(request, "/index.html"));
+    return;
+  }
+
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  event.respondWith(networkFirst(request));
+});

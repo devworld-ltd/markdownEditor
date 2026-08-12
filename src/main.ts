@@ -71,6 +71,17 @@ if (editorEl && previewEl) {
 
   document.body.dataset.fsAccess = String(isFileSystemAccessSupported());
 
+  // 서비스 워커는 프로덕션 빌드에서만 등록한다. 개발 서버에서 등록하면 HMR 결과가
+  // 캐시에 가려 "고쳤는데 안 바뀌는" 상황을 만든다.
+  if (import.meta.env.PROD && "serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch((error) => {
+        // 오프라인 지원은 부가 기능이므로 실패해도 앱은 그대로 동작한다.
+        console.warn("[sw] 등록 실패:", error);
+      });
+    });
+  }
+
   if (!isStorageAvailable()) {
     showNotice(
       "브라우저 저장소를 쓸 수 없어 자동 저장이 비활성화됩니다. 작업 내용을 파일로 저장하세요.",
