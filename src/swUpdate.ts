@@ -133,10 +133,12 @@ export function initSwUpdate(
 
     function handleLater(): void {
       dismissedWorker = registration?.waiting ?? null;
+      // 순서 중요(§10.3): 포커스를 먼저 되돌린 뒤 숨긴다. 반대로 하면 포커스를 가진
+      // 버튼이 먼저 사라져 포커스가 <body> 로 떨어진다. returnFocusTo 가 주입되지
+      // 않았을 때(기본값 null) 복구가 아예 불가능해지므로 순서가 실제로 문제가 된다.
+      host.returnFocusTo?.focus();
       hide();
       setPanelState("idle");
-      // 포커스가 사라진 요소에 남지 않도록, 먼저 되돌리고 그다음 숨긴다(순서 중요 — §10.3).
-      host.returnFocusTo?.focus();
     }
 
     async function handleReload(): Promise<void> {

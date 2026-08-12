@@ -223,9 +223,23 @@ describe("swUpdate — dismiss (D2, AC-10)", () => {
 
     const laterBtn = panelEl.querySelector<HTMLButtonElement>("#sw-update-later")!;
     laterBtn.focus();
+
+    // 순서 회귀 방지(§10.3): 포커스 복원은 숨김 **이전**에 일어나야 한다.
+    // 최종 상태만 단언하면 hide() → focus() 순서도 통과해버려, 스펙이 경고한
+    // "포커스가 <body> 로 떨어지는" 실패를 잡지 못한다. MutationObserver 는
+    // 마이크로태스크라 이미 늦으므로, focus() 호출 시점의 hidden 을 동기적으로 본다.
+    const editorEl = document.querySelector<HTMLElement>("#editor")!;
+    let hiddenWhenFocusRestored: boolean | null = null;
+    const originalFocus = editorEl.focus.bind(editorEl);
+    editorEl.focus = () => {
+      hiddenWhenFocusRestored = panelEl.hidden;
+      originalFocus();
+    };
+
     laterBtn.click();
 
-    expect(document.activeElement).toBe(document.querySelector("#editor"));
+    expect(hiddenWhenFocusRestored).toBe(false);
+    expect(document.activeElement).toBe(editorEl);
   });
 
   it("Esc — 알림 내부에 포커스가 있을 때만 닫힌다 (I-06/I-07, FR-S3)", async () => {
