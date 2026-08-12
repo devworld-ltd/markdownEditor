@@ -69,7 +69,7 @@
 |-----------|------|
 | `switchTab()` 진입부 | 떠나는 탭의 스냅샷 확보 |
 | `closeTab()` 진입부 | dirty 판정 전에 최신 상태 확보 |
-| `persistNow()` | 세션에 최신 본문 저장 |
+| `persistNow()` | 세션에 최신 본문 저장 (반환값으로 성공 여부 전달) |
 | `hasDirtyTabs()` | `beforeunload` 판정 |
 | `saveFile()` / `saveFileAs()` | 디스크에 최신 본문 기록 |
 
@@ -179,7 +179,7 @@ stateDiagram-v2
 | `markActiveTabDirty()` | `isDirty` | 세션 저장 예약 |
 | `findTabByHandle(handle)` → `Promise` | — | `isSameEntry()` 선형 탐색 |
 | `updateActiveTab(partial)` | `handle`/`fileName`/`isDirty`/`content` | 탭바·타이틀·세션 |
-| `persistNow()` | localStorage | 디바운스 무시하고 즉시 저장 |
+| `persistNow()` → `boolean` | localStorage | 디바운스 무시하고 즉시 저장. **반환값은 `saveSession()` 성공 여부**(F-69). 갱신 흐름이 이탈 경고 억제를 안전하게 판단하려면 저장 성공 여부를 알아야 한다. 기존 호출부 3곳은 반환값을 쓰지 않아 무영향 |
 | `setCloseConfirm(fn)` | `onCloseDirty` | — |
 
 ## 6. 영속 계층 (로컬 디스크)

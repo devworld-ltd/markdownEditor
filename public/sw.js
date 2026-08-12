@@ -14,7 +14,10 @@
  * 캐시하고 나머지는 첫 요청 때 채운다.
  */
 
-const VERSION = "v1";
+// F-69: 빌드마다 vite.config.ts 의 writeBundle 플러그인이 이 플레이스홀더를
+// 실제 빌드 ID 로 치환한다(dist/sw.js). 치환되지 않으면 /sw.js 바이트가 배포마다
+// 동일해져 브라우저가 업데이트를 감지하지 못한다 — 빌드 자체를 실패시키는 이유가 이것이다.
+const VERSION = "__BUILD_ID__";
 const CACHE = `markdown-editor-${VERSION}`;
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
 
@@ -24,7 +27,8 @@ self.addEventListener("install", (event) => {
       const cache = await caches.open(CACHE);
       // 일부 실패가 전체 설치를 막지 않도록 개별 처리한다.
       await Promise.allSettled(APP_SHELL.map((url) => cache.add(url)));
-      await self.skipWaiting();
+      // F-69: 즉시 활성화하지 않는다. 새 워커는 여기서 waiting 상태에 머무르고,
+      // 페이지가 SKIP_WAITING 메시지를 보낼 때만 활성화된다(아래 message 리스너).
     })(),
   );
 });
@@ -39,6 +43,13 @@ self.addEventListener("activate", (event) => {
       await self.clients.claim();
     })(),
   );
+});
+
+// F-69: 페이지가 갱신을 수락하면 registration.waiting(= 이 워커)에 이 메시지를 보낸다.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 async function cacheFirst(request) {

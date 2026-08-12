@@ -66,9 +66,17 @@ build.sourcemap: true  // 프로덕션 디버깅용
 | `_headers` | Cloudflare Workers 응답 헤더 규칙 (CSP·캐시) — §6.1 |
 | `manifest.webmanifest` | PWA 매니페스트 |
 | `icon.svg` | 파비콘 + PWA 아이콘 |
-| `sw.js` | 서비스 워커 (오프라인 캐시) |
+| `sw.js` | 서비스 워커 (오프라인 캐시 + 갱신 알림 프로토콜) |
+
+**빌드 ID 주입 (F-69)**: `vite.config.ts` 의 `swBuildIdPlugin` 이 `writeBundle` 훅에서 `dist/sw.js` 의 `__BUILD_ID__` 를 빌드마다 달라지는 값으로 치환한다. vite 는 `public/` 을 변환 없이 복사만 하므로 `transform` 훅이 닿지 않아 복사 이후 단계가 필요하다.
+
+이 치환이 없으면 `/sw.js` 응답 바이트가 배포마다 동일해 브라우저가 업데이트를 감지하지 못하고 **갱신 알림이 한 번도 뜨지 않는다.** 실패 모드가 조용한 무동작이라, 플레이스홀더를 못 찾으면 **빌드를 실패시킨다.** 값은 `GITHUB_SHA` → `CF_PAGES_COMMIT_SHA` → `Date.now().toString(36)` 순으로 결정된다.
 
 > `_headers` 와 서비스 워커는 **개발 서버에서 동작하지 않는다.** `_headers` 는 Cloudflare 가 적용하고, 서비스 워커는 `import.meta.env.PROD` 일 때만 등록한다. 관련 E2E 는 원격 baseURL 일 때만 실행된다.
+
+### 3.2.1 E2E 실행 모드
+
+`playwright.config.ts` 는 `E2E_PREVIEW=1` 일 때 개발 서버 대신 `build && preview`(프로덕션 번들)를 띄운다. 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문에 F-69 시나리오는 이 모드에서만 유효하다. 기본(개발 서버) 실행 동작은 바뀌지 않는다.
 
 ### 3.3 타입 검사와 번들의 분리
 
