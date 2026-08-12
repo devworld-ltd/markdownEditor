@@ -3,20 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Markup Editor</title>
+    <meta
+      name="description"
+      content="설치 없이 브라우저에서 바로 쓰는 마크다운 에디터. 실시간 프리뷰, 멀티 탭, 로컬 파일 열기/저장을 지원합니다."
+    />
+    <meta name="theme-color" content="#1e1e1e" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%231e1e1e'/%3E%3Cpath d='M4 17V7h3l3 4 3-4h3v10h-3v-5l-3 4-3-4v5z' fill='%23fff'/%3E%3C/svg%3E"
+    />
+    <title>Markdown Editor</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app">
       <header class="toolbar">
-        <h1>Markup Editor</h1>
+        <h1>Markdown Editor</h1>
         <div id="toolbar-actions" class="toolbar-actions"></div>
       </header>
       <div id="tab-bar" class="tab-bar"></div>
       <main class="editor-container">
-        <textarea id="editor" placeholder="마크다운을 입력하세요..."></textarea>
-        <div id="preview"></div>
+        <textarea
+          id="editor"
+          placeholder="마크다운을 입력하세요..."
+          spellcheck="false"
+          autocomplete="off"
+          autocapitalize="off"
+          aria-label="마크다운 편집기"
+        ></textarea>
+        <div id="preview" aria-label="미리보기"></div>
       </main>
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

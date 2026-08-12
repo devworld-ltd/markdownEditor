@@ -1,21 +1,32 @@
 {
-  "name": "markupeditor",
-  "version": "1.0.0",
-  "description": "A Markdown editor built with vanilla TypeScript",
+  "name": "markdown-editor",
+  "version": "2.0.0",
+  "description": "브라우저에서 바로 쓰는 바닐라 TypeScript 마크다운 에디터",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "deploy:dev": "npm run build && wrangler deploy --env dev",
+    "deploy:prod": "npm run build && wrangler deploy --env prod",
+    "cf:dev": "npm run build && wrangler dev",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^30.0.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "wrangler": "^4.121.0"
   },
   "dependencies": {
+    "dompurify": "^3.4.13",
     "marked": "^17.0.3"
   }
 }
