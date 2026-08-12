@@ -118,7 +118,6 @@ E2E 를 새로 작성하는 과정에서 **실제 결함 3건**이 드러났다.
 | 중간 | localStorage 저장 실패(용량 초과)를 사용자에게 알리지 않는다 | [F-54](../features/feature-status.md) |
 | 중간 | 폴백 브라우저에서 덮어쓰기·중복 탭 방지 불가 (API 한계, 안내 UI 없음) | [F-11, F-58](../features/feature-status.md) |
 | 낮음 | CSP 헤더 미설정 | [F-62](../features/feature-status.md) |
-| 낮음 | 브랜치 보호 규칙 미설정 (`main` 직접 push 가능) | [F-66](../features/feature-status.md) |
 
 ## 6.5 배포 환경 검증 (2026-08-12)
 
