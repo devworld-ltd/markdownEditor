@@ -109,6 +109,7 @@ E2E 를 새로 작성하는 과정에서 **실제 결함 3건**이 드러났다.
 | 2 | 중간 | 탭을 전환하면 **커서 위치가 항상 0,0 으로 초기화** | 포커스 없는 textarea 의 선택 영역을 `setSelectionRange()` 로 복원해도, 클릭 이벤트가 끝나며 브라우저가 되돌림 | `switchTab()` 에서 `editorEl.focus()` 후 선택 복원 |
 | 3 | 낮음 | jsdom 단위 테스트에서 `localStorage` 접근 불가 | Node 22+ 가 `localStorage` 전역을 예약해 vitest 의 jsdom 환경이 실제 구현을 싣지 못함 | `tests/setup.ts` 에 테스트 전용 Storage 셰임 추가 |
 | 4 | 낮음 | `tsc` 가 타입 오류로 멈추면 `dist/` 에 중간 산출물(`.js`/`.d.ts`)이 남음 | tsconfig 가 `outDir: dist` + `declaration: true` 였다. 평소엔 `vite build` 가 덮어써 드러나지 않았다 | `tsc --noEmit` 으로 전환하고 tsconfig 에서 emit 옵션 제거 |
+| 5 | 낮음 | 용량 초과 단위 테스트가 **로컬만 통과하고 CI 에서 실패** | jsdom 의 `Storage` 는 Proxy 라 `localStorage.setItem = fn` 이 메서드 교체가 아니라 `"setItem"` 항목 저장으로 처리된다. 로컬은 `tests/setup.ts` 의 셰임(일반 객체)이라 통과했다 | `Object.defineProperty(window, "localStorage", …)` 로 속성 자체를 교체하도록 변경. 셰임·Proxy 두 환경에서 모두 검증 |
 
 버그 1은 **네이티브 버전에도 존재했으나** 당시에는 dirty 상태의 영향이 작아 드러나지 않았다. 웹 전환으로 dirty 가 닫기 확인·이탈 경고·자동 저장을 좌우하게 되면서 표면화됐다.
 

@@ -71,6 +71,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **E2E**: `tests/e2e/*.spec.ts` (Playwright, Chromium) 73건.
 - `vitest.config.ts` 가 `tests/e2e/**` 를 제외한다. **새 E2E 는 `.spec.ts`, 단위는 `.test.ts`.**
 - `tests/setup.ts` 는 Node 22+ 의 `localStorage` 전역 예약 때문에 필요한 Storage 셰임이다. 지우면 `storage.test.ts` 가 깨진다.
+- **`localStorage` 메서드를 스텁할 때는 `window.localStorage` 속성 자체를 `Object.defineProperty` 로 갈아끼워야 한다.** jsdom 의 Storage 는 Proxy 라 `localStorage.setItem = fn` 이 메서드 교체가 아니라 `"setItem"` 이라는 이름의 **항목 저장**으로 처리된다. 로컬(셰임=일반 객체)에서는 통과하고 CI(jsdom 실물=Proxy)에서만 깨지는 함정이다.
 - 파일 I/O 는 `tests/e2e/fixtures.ts` 의 `installFsMock()` / `installFallbackMode()` 로 검증한다. 목 핸들은 이름별로 재사용되므로 `isSameEntry()` 중복 방지까지 실제와 같이 동작한다.
 - Playwright 는 테스트마다 새 컨텍스트를 쓰므로 localStorage 가 자동 격리된다.
 
