@@ -187,7 +187,9 @@ function downloadFile(content: string, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
-function suggestFileName(fileName: string): string {
+/** 순수 함수 — 저장 대화상자에 제안할 파일명 계산. UNTITLED/공백은 "Untitled.md",
+ * 이미 마크다운류 확장자면 그대로, 아니면 ".md" 를 붙인다. */
+export function suggestFileName(fileName: string): string {
   if (fileName === UNTITLED || fileName.trim() === "") return "Untitled.md";
   return /\.(md|markdown|txt)$/i.test(fileName) ? fileName : `${fileName}.md`;
 }

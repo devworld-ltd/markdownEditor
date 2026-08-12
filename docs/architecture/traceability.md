@@ -61,13 +61,14 @@ graph LR
   shortcuts --> fileOps
   shortcuts --> tabs
   toolbar -. "setFileActions() 콜백 주입" .-> fileOps
+  toolbar --> textEdit["textEdit.ts"]
 
   classDef leaf fill:#eef,stroke:#88a
-  class parser,storage,notice,swUpdate leaf
+  class parser,storage,notice,swUpdate,textEdit leaf
 ```
 
 - **순환 의존 없음.** `toolbar.ts` 는 `fileOps` 를 import 하지 않고 `setFileActions()` 로 콜백을 주입받아 역방향 의존을 끊는다.
-- `parser.ts` · `storage.ts` · `notice.ts` · `swUpdate.ts` 는 다른 앱 모듈에 의존하지 않는 리프다. 이 중 단위 테스트가 붙은 것은 `parser.ts`(100%) · `storage.ts`(91.4%) · `swUpdate.ts`(78.9%) — **테스트 용이성과 의존 방향이 정확히 일치한다.** `swUpdate.ts` 는 `SwUpdateHost` 주입으로 이 성질을 의도적으로 확보했다.
+- `parser.ts` · `storage.ts` · `notice.ts` · `swUpdate.ts` · `textEdit.ts` 는 다른 앱 모듈에 의존하지 않는 리프다. 이 중 단위 테스트가 붙은 것은 `parser.ts`(100%) · `storage.ts`(91.4%) · `swUpdate.ts`(78.9%) · `textEdit.ts`(신규) — **테스트 용이성과 의존 방향이 정확히 일치한다.** `swUpdate.ts` 는 `SwUpdateHost` 주입, `textEdit.ts` 는 DOM 삽입과 문자열 계산을 분리해 이 성질을 의도적으로 확보했다.
 
 ## 3. 상태 필드 ↔ 소비처 역방향 인덱스
 
@@ -113,6 +114,7 @@ graph LR
 | `tsconfig.json` · `package.json` build | [인프라 §3.3](./infrastructure.md) |
 | `src/fileOps.ts` (파일 I/O 분기) | [API 명세 §2·§3](../api/browser-apis.md), [서비스 아키텍처 §5.3](./service-architecture.md) |
 | `src/toolbar.ts` (버튼 증감) | [기능 현황](../features/feature-status.md), `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
+| `src/textEdit.ts` (감싸기·줄머리·블록 삽입 계산) | `tests/textEdit.test.ts`, `tests/e2e/toolbar.spec.ts` (동작 회귀 게이트) |
 | `src/shortcuts.ts` | [API 명세 §5](../api/browser-apis.md#5-키보드-단축키), [사용자 시나리오](../user-scenarios.md), README 단축키 표 |
 | `src/notice.ts` | [API 명세](../api/browser-apis.md), `fileaccess.spec.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | [인프라 아키텍처](./infrastructure.md), [CF Workers 구성](../operations/cloudflare-workers.md) |
