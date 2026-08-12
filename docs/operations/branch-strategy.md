@@ -25,10 +25,12 @@ push 시 배포는 `.github/workflows/deploy.yml` 이 자동 수행한다. 상�
 |------|-----|
 | 존재하는 브랜치 | `main` 만 |
 | `dev` 브랜치 | **미생성** |
-| 브랜치 보호 규칙 | 미설정 |
-| CI/CD 워크플로 | 추가됨 (`ci.yml`, `deploy.yml`) — **`dev` 가 없어 아직 미실행** |
+| 존재하는 브랜치 | `main`, `dev` |
+| 브랜치 보호 규칙 | ✅ `main`·`dev` 모두 적용 (§6) |
+| CI/CD 워크플로 | ✅ `ci.yml` (`verify` → `deploy`) 운영 중 |
+| 릴리즈 이력 | PR #1 (v2.0.0 웹 전환), PR #2 (릴리즈 기록·스택 프로필) |
 
-→ 전략 적용을 위해 `dev` 브랜치 생성과 보호 규칙 설정이 선행돼야 한다 (§6). 이것이 [F-66](../features/feature-status.md) 이며 현재 최우선 조치 항목이다.
+전략이 실제로 강제되고 있다. `main`·`dev` 모두 직접 push 가 거부된다.
 
 ## 3. 명명 규칙
 
@@ -75,6 +77,9 @@ gitGraph
   merge dev tag: "v2.1.0 릴리즈"
 ```
 
+> **보호 규칙 적용 후에는 `dev` 에도 직접 push 할 수 없다.** 문서 한 줄 수정이라도
+> `feature/*` 브랜치 → PR → 머지 경로를 거쳐야 한다.
+
 ### 5.1 기능 개발 절차
 
 1. `dev` 최신화 후 `feature/<요약>` 분기
@@ -105,15 +110,43 @@ gitGraph
 
 `main` 에서 `hotfix/*` 분기 → 수정 → `main` 병합 + 태그 → **`dev` 에도 반드시 병합**(누락 시 다음 릴리즈에서 회귀).
 
-## 6. 적용 준비 작업 (미완료)
+## 6. 브랜치 보호 규칙 (적용 완료)
 
-- [ ] `dev` 브랜치 생성 (`git checkout -b dev main && git push -u origin dev`)
+`main` 과 `dev` 에 동일 규칙을 적용했다 (2026-08-12).
+
+| 항목 | 값 | 의미 |
+|------|-----|------|
+| PR 필수 | ✅ | 직접 push 거부 (`GH006: Protected branch update failed`) |
+| 필요 승인 수 | **0** | 메인테이너가 1명이라 1 이상이면 자기 PR 을 승인할 수 없어 머지가 영구 차단된다 |
+| 필수 상태 체크 | `verify` | 빌드 + 단위 + E2E. **`deploy` 는 넣지 않는다** — PR 에서 skip 되므로 필수로 걸면 영구 대기 상태가 된다 |
+| strict (최신화 강제) | `false` | 머지 커밋 때문에 `dev` 가 항상 `main` 보다 뒤처져 매번 동기화가 필요해진다. PR 체크는 이미 base+head 병합 결과에서 돌므로 실익이 적다 |
+| 관리자에도 적용 | ✅ | 소유자도 우회 불가 |
+| 강제 push | ❌ 금지 | 히스토리 훼손 방지 |
+| 브랜치 삭제 | ❌ 금지 | `dev`/`main` 실수 삭제 방지 |
+
+### 적용 명령
+
+```bash
+gh api -X PUT repos/OWNER/REPO/branches/main/protection --input protection.json
+gh api -X PUT repos/OWNER/REPO/branches/dev/protection  --input protection.json
+```
+
+### 긴급 상황 우회
+
+관리자에도 적용되므로 우회하려면 규칙을 **일시 해제**해야 한다.
+
+```bash
+gh api -X DELETE repos/OWNER/REPO/branches/main/protection   # 해제
+# 조치 후 위 PUT 으로 재적용
+```
+
+### 남은 준비 작업
+
 - [ ] 기본 브랜치를 `dev` 로 변경 (PR 기본 타깃)
-- [ ] `main`·`dev` 브랜치 보호 규칙 설정 (PR 필수, 상태 체크 필수)
-- [x] CI 워크플로 추가 (`ci.yml`) — **필수 상태 체크 등록은 미완료**
-- [x] CD 워크플로 추가 (`deploy.yml`)
-- [ ] `CLOUDFLARE_API_TOKEN` · `CLOUDFLARE_ACCOUNT_ID` 시크릿 등록
-- [x] `MarkdownEditor.dmg` 를 Git 추적에서 제거 (웹 전환 시 삭제)
+- [ ] 승인 1명 필수로 상향 (협업자가 2명 이상 활동할 때)
+- [x] CI/CD 워크플로 (`ci.yml`: `verify` → `deploy`)
+- [x] `CLOUDFLARE_API_TOKEN` · `CLOUDFLARE_ACCOUNT_ID` 시크릿 등록
+- [x] `MarkdownEditor.dmg` 를 Git 추적에서 제거
 
 ## 7. 문서 동기화 규칙
 
