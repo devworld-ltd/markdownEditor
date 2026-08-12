@@ -32,6 +32,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-54 | 저장소 용량 초과 알림 | 세션 저장 실패 | `tabs.persistNow()` → `notice.ts` | — | `localStorage` | `hardening.spec.ts` |
 | F-61 | PWA · 오프라인 | 페이지 로드 | `main.ts` 등록 → `public/sw.js` | — | Service Worker, Cache Storage, Manifest | `hardening.spec.ts` |
 | F-62 | CSP · 보안 헤더 | 모든 응답 | `public/_headers` (Cloudflare 적용) | — | — | `hardening.spec.ts` (원격 전용) |
+| F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
 
 ## 2. 모듈 의존 그래프
 
@@ -44,6 +45,8 @@ graph LR
   main --> shortcuts["shortcuts.ts"]
   main --> notice["notice.ts"]
   main --> storage["storage.ts"]
+  main --> swUpdate["swUpdate.ts"]
+  swUpdate -. "SKIP_WAITING / controllerchange" .-> sw(["public/sw.js"])
 
   editor --> preview["preview.ts"]
   tabs --> preview
@@ -60,11 +63,11 @@ graph LR
   toolbar -. "setFileActions() 콜백 주입" .-> fileOps
 
   classDef leaf fill:#eef,stroke:#88a
-  class parser,storage,notice leaf
+  class parser,storage,notice,swUpdate leaf
 ```
 
 - **순환 의존 없음.** `toolbar.ts` 는 `fileOps` 를 import 하지 않고 `setFileActions()` 로 콜백을 주입받아 역방향 의존을 끊는다.
-- `parser.ts` · `storage.ts` · `notice.ts` 는 다른 앱 모듈에 의존하지 않는 리프다. 이 중 `parser.ts`(100%)와 `storage.ts`(88.6%)만 단위 테스트가 붙어 있다 — 테스트 용이성과 의존 방향이 정확히 일치한다.
+- `parser.ts` · `storage.ts` · `notice.ts` · `swUpdate.ts` 는 다른 앱 모듈에 의존하지 않는 리프다. 이 중 단위 테스트가 붙은 것은 `parser.ts`(100%) · `storage.ts`(91.4%) · `swUpdate.ts`(78.9%) — **테스트 용이성과 의존 방향이 정확히 일치한다.** `swUpdate.ts` 는 `SwUpdateHost` 주입으로 이 성질을 의도적으로 확보했다.
 
 ## 3. 상태 필드 ↔ 소비처 역방향 인덱스
 
@@ -91,7 +94,9 @@ graph LR
 | `tests/e2e/tabs.spec.ts` | 11 | F-05, F-06, F-09, F-10, F-15 |
 | `tests/e2e/fileaccess.spec.ts` | 15 | F-07, F-08, F-11, F-12, F-14 |
 | `tests/e2e/session.spec.ts` | 6 | F-19, F-20 |
-| `tests/e2e/hardening.spec.ts` | 9 | F-54, F-61, F-62 (4건은 배포 환경 전용) |
+| `tests/e2e/hardening.spec.ts` | 10 | F-54, F-61, F-62 (배포 환경 전용 포함) |
+| `tests/e2e/swupdate.spec.ts` | 10 | F-69 (프리뷰 모드 전용 — STUB) |
+| `tests/swUpdate.test.ts` | 20 | F-69 |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
 
@@ -101,7 +106,10 @@ graph LR
 | `src/tabs.ts` (`TabState` 필드) | [데이터 모델 §2](./data-model.md), 본 문서 §1·§3 |
 | `src/storage.ts` (세션 스키마·버전) | [데이터 모델 §3](./data-model.md), [API 명세 §4](../api/browser-apis.md#4-세션-저장-localstorage) |
 | `public/_headers` (CSP·캐시) | [인프라 §6.1](./infrastructure.md), [API 명세 §8](../api/browser-apis.md#8-보안-노트), `tests/e2e/hardening.spec.ts` |
-| `public/sw.js` (캐시 전략) · `manifest.webmanifest` | [서비스 아키텍처 §7.1](./service-architecture.md), [API 명세 §4.1](../api/browser-apis.md) |
+| `public/sw.js` (캐시 전략 · 생명주기) | [서비스 아키텍처 §7.1·§7.2](./service-architecture.md), [API 명세 §4.1](../api/browser-apis.md) |
+| `src/swUpdate.ts` (`SwUpdateHost` 계약) | [서비스 아키텍처 §7.2](./service-architecture.md), [API 명세 §4.1.3](../api/browser-apis.md), `tests/swUpdate.test.ts` |
+| `vite.config.ts` 빌드 ID 플러그인 | [인프라 §3.2](./infrastructure.md), [서비스 아키텍처 §7.2](./service-architecture.md) |
+| `playwright.config.ts` 프리뷰 모드 | [테스트 계획 §2](../testing/test-plan.md) |
 | `tsconfig.json` · `package.json` build | [인프라 §3.3](./infrastructure.md) |
 | `src/fileOps.ts` (파일 I/O 분기) | [API 명세 §2·§3](../api/browser-apis.md), [서비스 아키텍처 §5.3](./service-architecture.md) |
 | `src/toolbar.ts` (버튼 증감) | [기능 현황](../features/feature-status.md), `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |

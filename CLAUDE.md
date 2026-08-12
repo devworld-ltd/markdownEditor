@@ -37,6 +37,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
         → tabs.ts (상태) → preview.ts / storage.ts
         → fileOps.ts → File System Access API | 업로드·다운로드 폴백
         → toolbar.ts / shortcuts.ts / notice.ts
+        → swUpdate.ts ⇄ public/sw.js (갱신 알림)
 ```
 
 - **`main.ts`** — 엔트리포인트. 초기화 순서가 중요하다: `initFileOps()` → `setCloseConfirm()` → `initTabs()`(세션 복원) → `setFileActions()` → `initToolbar()`. `beforeunload`/`visibilitychange` 가드도 여기서 등록한다.
@@ -47,6 +48,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`storage.ts`** — localStorage 세션 저장/복원. 스키마 버전 검증·손상 데이터 필터·접근 불가 감지.
 - **`fileOps.ts`** — 파일 I/O 2경로 분기. FS Access API(Chrome·Edge) ↔ `<input type=file>` + Blob 다운로드(Safari·Firefox).
 - **`notice.ts`** — 사용자에게 보이는 성공·오류 알림(`#notice`).
+- **`swUpdate.ts`** — 서비스 워커 갱신 감지·알림·리로드(F-69). `SwUpdateHost` 주입형 **리프**라 앱 모듈을 import 하지 않는다(`tabs → notice → tabs` 순환 방지).
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
 - **`shortcuts.ts`** — `Cmd/Ctrl+O·S`, `Shift+S`, `Alt+N·W`.
@@ -64,6 +66,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 9. **`_headers` 와 서비스 워커는 로컬에서 동작하지 않는다.** `_headers` 는 Cloudflare 가, 서비스 워커는 `import.meta.env.PROD` 조건이 가른다. 관련 E2E 는 원격 baseURL 일 때만 실행되고 로컬에서는 skip 된다.
 10. **CSP `script-src` 에 `'unsafe-inline'`/`'unsafe-eval'` 을 절대 넣지 말 것.** E2E 가 단언한다. 인라인 스크립트가 필요하면 외부 파일로 뺀다.
 11. **서비스 워커 캐시 전략을 뒤집지 말 것.** HTML 은 network-first(새 배포 반영), `/assets/*` 는 cache-first(해시 불변). 반대로 하면 업데이트가 영원히 안 보이거나 오프라인 이점이 사라진다.
+12. **`sw.js` 의 `__BUILD_ID__` 플레이스홀더를 지우지 말 것.** `vite.config.ts` 의 `writeBundle` 훅이 치환한다. 없으면 `/sw.js` 바이트가 배포마다 같아져 갱신 알림이 **한 번도 뜨지 않는다**(조용한 무동작). 그래서 미발견 시 빌드가 실패한다.
+13. **`install` 에서 `skipWaiting()` 을 되살리지 말 것.** 새 워커가 대기 상태에 머물러야 갱신을 감지할 수 있다. 활성화는 `SKIP_WAITING` 메시지로만.
+14. **`postMessage` 대상은 `registration.waiting`.** `controller` 로 보내면 구 워커에게 간다.
+15. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
@@ -96,6 +102,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 |-----------|-----------|
 | `src/tabs.ts` (`TabState`) · `src/storage.ts` (세션 스키마) | `docs/architecture/data-model.md`, `docs/architecture/traceability.md` |
 | `src/fileOps.ts` · `src/shortcuts.ts` · `src/notice.ts` | `docs/api/browser-apis.md` |
+| `src/swUpdate.ts` · `public/sw.js` (생명주기) | `docs/architecture/service-architecture.md` §7.2, `docs/api/browser-apis.md` §4.1 |
+| `vite.config.ts` 빌드 ID 플러그인 | `docs/architecture/infrastructure.md` §3.2 |
 | `src/toolbar.ts` (버튼 증감) | `docs/features/feature-status.md`, `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | `docs/architecture/service-architecture.md`, `docs/api/browser-apis.md` §8, `tests/parser.test.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | `docs/architecture/infrastructure.md`, `docs/operations/cloudflare-workers.md` |
@@ -111,8 +119,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 
 상세: `docs/features/feature-status.md`
 
-1. 단위 커버리지 8.37% — DOM 결합 모듈이 전부 미검증 (F-47).
-2. 서비스 워커 업데이트 알림 UI 가 없다 — 새 배포가 있어도 사용자는 옛 버전을 본다 (F-69).
-3. 배포 후 자동 헬스체크가 없다 (F-64).
+1. 단위 커버리지 24.19% — `swUpdate.ts` 도입으로 올랐으나 DOM 결합 모듈(`tabs.ts`·`toolbar.ts`·`fileOps.ts`)은 여전히 0% (F-47).
+2. 배포 후 자동 헬스체크가 없다 (F-64).
+3. 갱신 알림 P2 4건 — 이슈 #10~#13 (F-71). 현재 배선에서 증상은 없다.
 4. Safari·Firefox 는 덮어쓰기·중복 탭 방지가 불가능하나 이를 안내하는 UI 가 없다 (F-11, F-58).
 5. 용량 초과 후 오래된 탭을 자동 회수하지 않아 자동 저장이 멈춘 상태로 유지된다 (F-54 잔여).

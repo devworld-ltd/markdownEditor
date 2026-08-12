@@ -8,8 +8,8 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 22건 + E2E 82건 (전부 통과) |
-| 기능 커버리지 | 23/26 자동 검증 |
+| 테스트 | 단위 42건 + E2E 94건 (전부 통과) |
+| 기능 커버리지 | 24/27 자동 검증 |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
 
@@ -36,7 +36,7 @@
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
 - 로컬 파일 열기/저장 — File System Access API + 업로드/다운로드 폴백
 - **세션 자동 저장·복원** (localStorage) + 미저장 이탈 경고 + 용량 초과 알림
-- **PWA** — 설치형 앱, 서비스 워커 기반 오프라인 지원
+- **PWA** — 설치형 앱, 서비스 워커 기반 오프라인 지원, **새 버전 갱신 알림**
 - **CSP 및 보안 헤더** — `script-src 'self'`, `object-src 'none'` 등
 - 서식 툴바 16종, 키보드 단축키
 - 720px 이하 반응형 (상하 분할)
@@ -78,6 +78,7 @@ markdownEditor/
 │   ├── fileOps.ts            # 파일 I/O (FS Access + 폴백)
 │   ├── storage.ts            # localStorage 세션 저장/복원
 │   ├── notice.ts             # 사용자 알림
+│   ├── swUpdate.ts           # 서비스 워커 갱신 알림
 │   ├── toolbar.ts            # 툴바 16종
 │   ├── shortcuts.ts          # 키보드 단축키
 │   └── style.css
@@ -93,7 +94,8 @@ markdownEditor/
 │       ├── tabs.spec.ts      # 멀티 탭
 │       ├── fileaccess.spec.ts # 파일 I/O 2경로
 │       ├── session.spec.ts   # 세션 자동 저장 · 복원
-│       └── hardening.spec.ts # CSP · PWA · 저장 실패
+│       ├── hardening.spec.ts # CSP · PWA · 저장 실패
+│       └── swupdate.spec.ts  # 서비스 워커 갱신 (프리뷰 모드)
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
@@ -143,8 +145,11 @@ npm test                 # 단위 테스트 (Vitest)
 npm run test:watch       # 워치 모드
 npm run test:coverage    # 단위 + 커버리지
 npm run test:e2e         # E2E (Playwright, dev 서버 자동 기동)
+E2E_PREVIEW=1 npx playwright test   # E2E (프로덕션 번들 — 서비스 워커 시나리오)
 npm run test:e2e:report  # 직전 E2E HTML 리포트
 ```
+
+서비스 워커는 프로덕션 빌드에서만 등록되므로 관련 시나리오는 `E2E_PREVIEW=1` 에서만 실행된다.
 
 상세: [테스트 계획](./docs/testing/test-plan.md) · [실행 결과](./docs/testing/test-results.md)
 

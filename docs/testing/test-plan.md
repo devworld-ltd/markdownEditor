@@ -25,6 +25,7 @@
 | 서버 기동 | Playwright `webServer` 가 `npm run dev -- --host 127.0.0.1 --port 5173 --strictPort` 자동 실행 |
 | 브라우저 | Chromium (`devices["Desktop Chrome"]`) |
 | 병렬 | `fullyParallel: true` — 테스트마다 새 브라우저 컨텍스트 = **localStorage 격리** |
+| 실행 모드 | 기본 = vite 개발 서버 / `E2E_PREVIEW=1` = **프로덕션 번들**(`build && preview`) |
 | 재시도 | 로컬 0회 / CI 1회 |
 | 실패 아티팩트 | 스크린샷 + trace, `playwright-report/` |
 | 단위 환경 | jsdom + `tests/setup.ts` (Node 22+ 의 `localStorage` 전역 예약 때문에 Storage 셰임 필요) |
@@ -35,6 +36,7 @@
 npm test                 # 단위
 npm run test:coverage    # 단위 + 커버리지
 npm run test:e2e         # E2E (dev 서버 자동 기동)
+E2E_PREVIEW=1 npx playwright test   # E2E (프로덕션 번들 — 서비스 워커 시나리오)
 npm run test:e2e:report  # 직전 E2E HTML 리포트
 npx wrangler deploy --env dev --dry-run   # 배포 설정 검증
 ```
@@ -114,20 +116,40 @@ npx wrangler deploy --env dev --dry-run   # 배포 설정 검증
 
 용량 초과는 `Storage.prototype.setItem` 을 세션 키에 한해 throw 하도록 스텁해 재현한다(읽기는 정상 유지 → "쓸 수 있는데 실패한" 상태).
 
-### 4.8 단위 테스트
+### 4.8 `tests/e2e/swupdate.spec.ts` — 서비스 워커 갱신 (10케이스) → F-69
+
+**프리뷰 모드 전용.** 서비스 워커는 `import.meta.env.PROD` 에서만 등록되므로 개발 서버 번들에서는 `register()` 자체가 호출되지 않는다. `E2E_PREVIEW=1` 로 프로덕션 번들을 띄워야 유효하다.
+
+실제 두 버전 배포를 자동 재현할 수는 없으므로, `fixtures.ts` 의 `installSwUpdateStub()` 이 `navigator.serviceWorker` 를 앱 스크립트 실행 **전에** 가짜 객체로 치환한다. 검증 대상은 앱의 **판정·표시·갱신 로직 전체**이며, 브라우저가 `/sw.js` 바이트 차이로 업데이트를 감지하는 부분만 배포 환경 수동 검증으로 남는다.
+
+| 시나리오 | 검증 |
+|----------|------|
+| E1 | 최초 설치(제어 워커 없음) → 알림 **미표시** |
+| E2 | 로드 시 이미 대기 중 → 1초 후 표시 |
+| E3 | 새로고침 수락 → `SKIP_WAITING` 전송 → 세션 복원 |
+| E4 | "나중에" → 리로드 없음, 같은 버전 재알림 억제 |
+| E5 | 저장 실패 + 미저장 탭 → 앱이 확인 요청 |
+| E6 | 두 알림 동시 표시 → 겹치지 않음 |
+| E7 | 연타 방지 + 활성화 타임아웃 |
+| E8 | 오프라인 회귀 (`hardening.spec.ts`) |
+
+### 4.9 단위 테스트
 
 | 파일 | 케이스 | 대상 |
 |------|--------|------|
 | `tests/parser.test.ts` | 13 | GFM 변환 7 + sanitize 6 |
 | `tests/storage.test.ts` | 9 | 저장·복원·스키마 검증·손상 데이터 방어·용량 초과 |
+| `tests/swUpdate.test.ts` | 20 | 표시 판정 · dismiss · 갱신 결정 · 타임아웃 경합 · 포커스 순서 |
+
+> `swUpdate.ts` 는 `SwUpdateHost` 주입형 리프라 실제 `navigator.serviceWorker` 없이 가짜 registration 만으로 검증된다. 다만 표시 판정에 쓰는 `navigator.serviceWorker.controller` 만은 DI 계약 밖이라 전역을 패치한다(이슈 #11).
 
 ## 5. 커버리지 목표
 
 | 지표 | 현재 | 목표 |
 |------|------|------|
-| E2E 기능 커버리지 | 20/23 자동 검증 | 유지 |
+| E2E 기능 커버리지 | 24/27 자동 검증 | 유지 |
 | URL 커버리지 | 13/13 | 100% 유지 |
-| 단위 라인 커버리지 | 8.39% | 60%+ |
+| 단위 라인 커버리지 | **25.09%** | 60%+ |
 
 상세: [테스트 커버리지 분석](./coverage.md)
 
@@ -143,6 +165,8 @@ npx wrangler deploy --env dev --dry-run   # 배포 설정 검증
 | localStorage 용량 초과 | 5MB 채우는 테스트 미도입 | 미검증 |
 | CSP · 서비스 워커 (로컬) | `_headers` 는 Cloudflare 전용, SW 는 PROD 전용 | 원격 baseURL 로 E2E 실행 |
 | 실제 오프라인 동작 | 네트워크 차단 시나리오 미도입 | 수동 (DevTools Offline) |
+| 실제 두 버전 간 `updatefound` | 재배포 없이 자동 재현 불가 | 배포 환경 수동 (2회 배포 후 확인) |
+| 과도기 1회 동작 | 현재 워커에 `skipWaiting()` 잔존 | 다음 배포 이후에야 알림이 동작 — 검증 시 감안 |
 
 ## 7. 수동 회귀 체크리스트 (릴리즈 전)
 
