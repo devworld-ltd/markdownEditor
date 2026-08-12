@@ -1,0 +1,23 @@
+{
+  "use_docker": false,
+  "tech_stack": [
+    "node"
+  ],
+  "profile": "web",
+  "agent_hints": {
+    "platform": "web",
+    "backend": null,
+    "frontend": {
+      "language": "typescript",
+      "framework": "vanilla",
+      "bundler": "vite",
+      "deploy_target": "cloudflare-workers",
+      "orm": "none",
+      "test_runner": "vitest",
+      "e2e_runner": "playwright"
+    },
+    "mobile": null,
+    "structure": "single",
+    "ci": "github-actions"
+  }
+}

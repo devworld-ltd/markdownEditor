@@ -1,0 +1,17 @@
+# Reviewer 프로필 — /aiops:setup 이 자동 생성 (2026-08-12)
+# 스키마: claude-ai-devops/docs/review-profile-schema.md
+
+repo: devworld-ltd/markdownEditor
+forge: github
+platform: web
+structure: single
+
+stack:
+  backend: none          # 백엔드 없음 — 서버·DB·HTTP API 가 존재하지 않는 클라이언트 전용 앱
+  frontend: none         # ⚠️ 실제로는 바닐라 TypeScript SPA. 스키마 enum(hono-ts|nextjs|react|vue|svelte)
+                         #    에 해당 값이 없어 none 으로 기록. 정확한 정보는
+                         #    .claude/config.json 의 agent_hints.frontend 를 참조할 것
+  admin: none
+
+prd_source: github-issue
+max_diff_loc: 1500
