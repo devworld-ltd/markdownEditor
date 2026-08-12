@@ -111,8 +111,6 @@ npx wrangler deploy --env dev --dry-run
 | dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` | [F-67](../features/feature-status.md) |
 | CSP `_headers` | 미설정 | [F-62](../features/feature-status.md) |
 | 배포 후 헬스체크 / prod smoke E2E | `deploy.yml` 에 미포함 | [F-64](../features/feature-status.md) |
-| 실제 배포 실행 | `--dry-run` 까지만 검증. **커스텀 도메인은 첫 prod 배포 때 생성된다** | — |
-| `dev` 브랜치 | 미생성 → 워크플로가 아직 트리거되지 않음 | [F-66](../features/feature-status.md) |
 
 ### 서버·DB 가 필요해지는 시나리오
 
@@ -139,7 +137,17 @@ npx wrangler deploy --env dev --dry-run
 
 사전 확인 결과(2026-08-12): `md-editor.devworld.co.kr` DNS 레코드 0개, 다른 Worker 가 점유한 커스텀 도메인 없음 → 충돌 없음.
 
-> ⚠️ **도메인은 prod 배포 전까지 생성되지 않는다.** prod 는 `main` 브랜치에서 배포되므로, `main` 에 웹 전환 코드가 병합돼야 실제로 서비스된다.
+**배포 후 실제 생성 결과 (2026-08-12)**
+
+| 항목 | 값 |
+|------|-----|
+| DNS | `AAAA md-editor.devworld.co.kr → 100::` (proxied) — Cloudflare 가 자동 생성한 플레이스홀더 |
+| 공개 조회 | `104.21.71.69`, `172.67.143.187` |
+| 커스텀 도메인 등록 | `service: markdown-editor-prod`, `environment: production`, `enabled: true`, `cert_id` 발급됨 |
+| 인증서 | Let's Encrypt, `CN=devworld.co.kr`, 만료 2026-09-23 |
+| HTTPS | 200, `text/html`, TLS 검증 통과, 응답 0.2~0.5초 |
+
+> 배포 직후 약 1분간 500 응답이 관측됐다. 엣지 인증서 프로비저닝이 끝나기 전이며 자동으로 해소된다. **배포 후 헬스체크를 넣을 때는 이 구간을 감안해 재시도를 둬야 한다** ([F-64](../features/feature-status.md)).
 
 dev 환경은 여전히 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 을 같은 방식으로 추가한다 ([F-67](../features/feature-status.md)).
 
