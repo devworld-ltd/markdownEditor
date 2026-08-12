@@ -8,9 +8,9 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 21건 + E2E 73건 (전부 통과) |
-| 기능 커버리지 | 20/23 자동 검증 |
-| 번들 | 83.3 kB (gzip 27.9 kB) |
+| 테스트 | 단위 22건 + E2E 82건 (전부 통과) |
+| 기능 커버리지 | 23/26 자동 검증 |
+| 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
 
 > **v1.x 는 macOS 네이티브 앱(SwiftUI + WKWebView)이었다.** v2.0.0 에서 웹 전용으로 전환하며 Xcode 프로젝트·DMG·JS↔Swift 브리지를 제거했다. 전환 내역: [웹 전환 히스토리](./docs/history/2026-08-12-web-pivot.md)
@@ -35,7 +35,9 @@
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
 - 로컬 파일 열기/저장 — File System Access API + 업로드/다운로드 폴백
-- **세션 자동 저장·복원** (localStorage) + 미저장 이탈 경고
+- **세션 자동 저장·복원** (localStorage) + 미저장 이탈 경고 + 용량 초과 알림
+- **PWA** — 설치형 앱, 서비스 워커 기반 오프라인 지원
+- **CSP 및 보안 헤더** — `script-src 'self'`, `object-src 'none'` 등
 - 서식 툴바 16종, 키보드 단축키
 - 720px 이하 반응형 (상하 분할)
 
@@ -90,7 +92,13 @@ markdownEditor/
 │       ├── toolbar.spec.ts   # 서식 툴바
 │       ├── tabs.spec.ts      # 멀티 탭
 │       ├── fileaccess.spec.ts # 파일 I/O 2경로
-│       └── session.spec.ts   # 세션 자동 저장 · 복원
+│       ├── session.spec.ts   # 세션 자동 저장 · 복원
+│       └── hardening.spec.ts # CSP · PWA · 저장 실패
+├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
+│   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
+│   ├── manifest.webmanifest  # PWA 매니페스트
+│   ├── icon.svg              # 파비콘 + PWA 아이콘
+│   └── sw.js                 # 서비스 워커 (오프라인)
 ├── docs/                     # 프로젝트 문서 (→ docs/README.md)
 ├── .github/workflows/        # CI (ci.yml) · CD (deploy.yml)
 ├── index.html

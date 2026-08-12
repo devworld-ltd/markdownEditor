@@ -14,6 +14,8 @@
 | File System Access API | 로컬 파일 열기·덮어쓰기 | Chrome·Edge |
 | `<input type="file">` + Blob 다운로드 | 폴백 열기·저장 | 전 브라우저 |
 | `localStorage` | 세션 자동 저장 | 전 브라우저 (시크릿 모드 예외) |
+| Service Worker + Cache Storage | 오프라인 지원 | 전 최신 브라우저 (프로덕션 빌드만) |
+| Web App Manifest | 설치형 PWA | 전 최신 브라우저 |
 
 노출되는 URL 목록은 [테스트 계획 §3](../testing/test-plan.md#3-url-인벤토리) 참고.
 
@@ -139,6 +141,28 @@ const url = URL.createObjectURL(blob);
 
 접근 불가 환경(시크릿 모드 등)에서는 기동 시 8초짜리 오류 알림을 띄우고 자동 저장 없이 동작한다.
 
+**용량 초과 처리 (F-54)**: `saveSession()` 이 `false` 를 반환하면 `persistNow()` 가 "브라우저 저장 공간이 부족해 자동 저장이 중단됐습니다" 오류 알림을 띄운다. 500ms 마다 반복되지 않도록 플래그로 1회만 알리고, 저장이 다시 성공하면 플래그를 해제한다.
+
+---
+
+## 4.1 Service Worker / Cache Storage
+
+| 항목 | 값 |
+|------|-----|
+| 스크립트 | `/sw.js` (scope `/`) |
+| 등록 조건 | `import.meta.env.PROD && "serviceWorker" in navigator` |
+| 등록 시점 | `window` `load` 이벤트 |
+| 캐시 이름 | `markdown-editor-v1` |
+| 실패 처리 | `console.warn` 후 무시 — 오프라인은 부가 기능이라 앱 동작에 영향 없음 |
+
+캐시 전략은 [서비스 아키텍처 §7.1](../architecture/service-architecture.md#71-오프라인-서비스-워커) 참고.
+
+`/sw.js` 는 `_headers` 에서 `Cache-Control: no-cache` 로 지정한다. 서비스 워커 스크립트가 캐시되면 업데이트가 영원히 막히기 때문이다.
+
+## 4.2 Web App Manifest
+
+`/manifest.webmanifest` — `display: standalone`, `start_url: /`, `theme_color: #1e1e1e`, 아이콘은 `/icon.svg`(`any` + `maskable`).
+
 ---
 
 ## 5. 키보드 단축키
@@ -241,12 +265,12 @@ sequenceDiagram
 
 | 항목 | 상태 |
 |------|------|
-| XSS | ✅ `parser.ts` 가 DOMPurify 로 정화. `script`·이벤트 핸들러·`javascript:`·`iframe` 제거 |
+| XSS | ✅ **2중 방어** — `parser.ts` 의 DOMPurify 정화 + CSP `script-src 'self'` |
 | 파일 접근 범위 | ✅ 사용자가 명시적으로 고른 파일만. 앱이 임의 경로를 읽을 수 없다 |
 | 경로 노출 | ✅ 브라우저가 절대 경로를 숨긴다 |
 | 문서 유출 | ✅ 문서가 네트워크로 전송되지 않는다 |
 | localStorage 격리 | ⚠️ 같은 오리진의 다른 스크립트가 세션을 읽을 수 있다. 공유 호스팅 오리진에 배포하지 말 것 |
-| CSP | ❌ 미설정 — [인프라 §7](../architecture/infrastructure.md#7-개선-권고) |
+| CSP | ✅ `public/_headers` — `script-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`. [인프라 §6.1](../architecture/infrastructure.md#61-보안-헤더-public_headers) |
 
 ---
 

@@ -1,5 +1,12 @@
 import { renderPreview } from "./preview";
-import { createSession, loadSession, saveSession, type PersistedTab } from "./storage";
+import {
+  createSession,
+  isStorageAvailable,
+  loadSession,
+  saveSession,
+  type PersistedTab,
+} from "./storage";
+import { showNotice } from "./notice";
 
 export const APP_NAME = "Markdown Editor";
 export const UNTITLED = "Untitled";
@@ -31,6 +38,8 @@ let titleEl: HTMLElement;
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let onCloseDirty: ((tab: TabState) => boolean) | null = null;
+/** 자동 저장 실패 알림을 500ms 마다 반복하지 않기 위한 플래그. */
+let saveFailureNotified = false;
 
 function generateId(): string {
   return `tab-${nextId++}`;
@@ -295,5 +304,22 @@ export function persistNow(): void {
     isDirty: tab.isDirty,
   }));
 
-  saveSession(createSession(persisted, activeTabId));
+  const saved = saveSession(createSession(persisted, activeTabId));
+
+  // 자동 저장이 조용히 실패하면 사용자는 보호받고 있다고 잘못 믿게 된다.
+  // 저장소 자체를 못 쓰는 경우는 기동 시 main.ts 가 이미 안내하므로,
+  // 여기서는 용량 초과처럼 "쓸 수 있는데 실패한" 경우만 알린다.
+  if (!saved && isStorageAvailable()) {
+    if (!saveFailureNotified) {
+      saveFailureNotified = true;
+      showNotice(
+        "브라우저 저장 공간이 부족해 자동 저장이 중단됐습니다. 문서를 파일로 저장하세요.",
+        "error",
+        10000,
+      );
+    }
+  } else if (saved) {
+    // 다시 성공하면 다음 실패 때 또 알릴 수 있도록 되돌린다.
+    saveFailureNotified = false;
+  }
 }

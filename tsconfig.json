@@ -3,14 +3,20 @@
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "sourceMap": true,
-    "declaration": true
+
+    // 번들링은 vite 가 전담한다. tsc 는 타입 검사만 수행하므로 emit 관련 옵션
+    // (outDir/declaration/sourceMap)을 두지 않는다. 예전 설정은 tsc 가 dist/ 에
+    // .js/.d.ts 를 쏟아낸 뒤 vite build 가 덮어쓰는 구조라, tsc 가 실패하면
+    // 중간 산출물이 dist/ 에 그대로 남았다.
+    "noEmit": true,
+
+    // import.meta.env (PROD 등) 타입
+    "types": ["vite/client"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "tests"]

@@ -65,6 +65,12 @@ flowchart LR
 
 > `env.*` 블록은 최상위 설정을 상속하지 않는 항목이 있어 `assets` 를 환경마다 명시한다.
 
+### 3.1 `_headers`
+
+`public/_headers` 가 `dist/_headers` 로 복사되어 Cloudflare Workers Static Assets 가 응답 헤더로 적용한다. CSP·보안 헤더·캐시 정책이 여기 있다 — [인프라 §6.1](../architecture/infrastructure.md#61-보안-헤더-public_headers).
+
+개발 서버(vite)는 이 파일을 무시하므로 **헤더 검증 E2E 는 원격 baseURL 일 때만 실행**된다.
+
 ## 4. 배포
 
 ### 4.1 수동
@@ -109,7 +115,6 @@ npx wrangler deploy --env dev --dry-run
 | 항목 | 상태 | 참조 |
 |------|------|------|
 | dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` | [F-67](../features/feature-status.md) |
-| CSP `_headers` | 미설정 | [F-62](../features/feature-status.md) |
 | 배포 후 헬스체크 / prod smoke E2E | `deploy.yml` 에 미포함 | [F-64](../features/feature-status.md) |
 
 ### 서버·DB 가 필요해지는 시나리오
