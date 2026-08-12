@@ -116,8 +116,18 @@ test.describe("F-62 보안 헤더", () => {
     expect(csp).toContain("script-src 'self'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
-    // 인라인 스크립트는 절대 허용하지 않는다.
-    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+    // 인라인 스크립트·eval 은 어떤 경우에도 허용하지 않는다.
+    expect(csp).not.toContain("'unsafe-inline'; script-src");
+    expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    expect(csp).not.toContain("'unsafe-eval'");
+    // 외부 스크립트는 Cloudflare Web Analytics 비콘만 허용한다.
+    const scriptSrc = csp.split(";").find((d) => d.trim().startsWith("script-src"))!;
+    const allowedHosts = scriptSrc
+      .replace("script-src", "")
+      .trim()
+      .split(/\s+/)
+      .filter((t) => t !== "'self'");
+    expect(allowedHosts).toEqual(["https://static.cloudflareinsights.com"]);
 
     expect(headers["x-content-type-options"]).toBe("nosniff");
     expect(headers["referrer-policy"]).toBe("no-referrer");
