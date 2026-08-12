@@ -8,8 +8,16 @@ interface E2EFsMock {
   failWrite: boolean;
 }
 
+/** F-69 서비스 워커 업데이트 플랫폼 스텁의 테스트 제어 핸들 (`installSwUpdateStub` 참고). */
+interface E2ESwStub {
+  triggerUpdateFound(): void;
+  triggerControllerChange(): void;
+  getWaitingPostMessageCalls(): unknown[];
+}
+
 interface Window {
   __fsMock?: E2EFsMock;
+  __swStub?: E2ESwStub;
   showOpenFilePicker?: (options?: unknown) => Promise<FileSystemFileHandle[]>;
   showSaveFilePicker?: (options?: unknown) => Promise<FileSystemFileHandle>;
 }

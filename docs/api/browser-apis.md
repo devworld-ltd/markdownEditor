@@ -152,12 +152,48 @@ const url = URL.createObjectURL(blob);
 | 스크립트 | `/sw.js` (scope `/`) |
 | 등록 조건 | `import.meta.env.PROD && "serviceWorker" in navigator` |
 | 등록 시점 | `window` `load` 이벤트 |
-| 캐시 이름 | `markdown-editor-v1` |
+| 캐시 이름 | `markdown-editor-<빌드 ID>` (빌드마다 달라짐) |
 | 실패 처리 | `console.warn` 후 무시 — 오프라인은 부가 기능이라 앱 동작에 영향 없음 |
 
 캐시 전략은 [서비스 아키텍처 §7.1](../architecture/service-architecture.md#71-오프라인-서비스-워커) 참고.
 
 `/sw.js` 는 `_headers` 에서 `Cache-Control: no-cache` 로 지정한다. 서비스 워커 스크립트가 캐시되면 업데이트가 영원히 막히기 때문이다.
+
+### 4.1.1 갱신 메시지 프로토콜 (F-69)
+
+| 방향 | 메시지 | 트리거 | 수신 측 동작 |
+|------|--------|--------|--------------|
+| 페이지 → 워커 | `{ type: "SKIP_WAITING" }` | 사용자가 "새로고침" 클릭 | `self.skipWaiting()` |
+| 워커 → 페이지 | (없음) | — | `controllerchange` 이벤트로 대체 |
+
+**전송 대상은 `registration.waiting` 이다.** `navigator.serviceWorker.controller` 로 보내면 구 워커에게 가서 아무 일도 일어나지 않는다.
+
+`install` 에서 `skipWaiting()` 을 호출하지 않으므로 새 워커는 대기 상태에 머무른다. 이것이 "대기 중인 새 버전" 을 감지할 수 있는 전제다.
+
+### 4.1.2 감지 이벤트
+
+| 이벤트 | 용도 | 주의 |
+|--------|------|------|
+| `registration.waiting` (즉시 조회) | 로드 시점에 이미 대기 중인 경우 | 1초 지연 후 표시해 초기 렌더를 방해하지 않는다 |
+| `registration.updatefound` | 세션 중 새 워커 설치 시작 | `installing.state === "installed"` 까지 기다린다 |
+| `serviceWorker.controllerchange` | 새 워커 활성화 완료 | **갱신 수락 시점에만 구독.** 상시 구독하면 최초 설치의 `clients.claim()` 으로도 발화한다 |
+| `registration.update()` | 능동 확인 | 60분 주기 + 가시성 복귀 시(10분 스로틀) |
+
+### 4.1.3 `swUpdate.ts` — 리프 모듈 계약
+
+`SwUpdateHost` 로 모든 능력을 주입받아 앱 모듈을 하나도 import 하지 않는다. `notice.ts` 확장은 `tabs → notice → tabs` 순환을 만들어 기각했다.
+
+| host 필드 | 기본 구현 | `main.ts` 주입값 |
+|-----------|-----------|------------------|
+| `register()` | `navigator.serviceWorker.register("/sw.js")` | 기본 |
+| `onControllerChange(fn)` | `addEventListener` + 해제 함수 반환 | 기본 |
+| `persist()` | `() => false` | `tabs.persistNow` |
+| `hasDirty()` | `() => false` | `tabs.hasDirtyTabs` |
+| `confirmUnsafeReload(msg)` | `window.confirm` | 기본 |
+| `reload()` | `location.reload()` | 기본 |
+| `returnFocusTo` | `null` | `editorEl` |
+
+`isUpdateReloadPending()` 을 export 해 `main.ts` 의 `beforeunload` 가 억제 여부를 판단한다.
 
 ## 4.2 Web App Manifest
 

@@ -289,8 +289,15 @@ function schedulePersist(): void {
   persistTimer = setTimeout(persistNow, PERSIST_DEBOUNCE_MS);
 }
 
-/** 디바운스를 건너뛰고 즉시 저장한다 (beforeunload 등). */
-export function persistNow(): void {
+/**
+ * 디바운스를 건너뛰고 즉시 저장한다 (beforeunload 등).
+ *
+ * F-69: 반환값이 `saveSession()` 의 성공 여부를 그대로 알린다. 서비스 워커 갱신
+ * 흐름(`swUpdate.ts`)이 "세션이 정말 저장됐는지"를 알아야 이탈 경고 억제 여부를
+ * 안전하게 판단할 수 있기 때문이다. 기존 호출부(schedulePersist 의 setTimeout,
+ * beforeunload, visibilitychange)는 반환값을 쓰지 않으므로 무영향이다.
+ */
+export function persistNow(): boolean {
   if (persistTimer) {
     clearTimeout(persistTimer);
     persistTimer = null;
@@ -322,4 +329,6 @@ export function persistNow(): void {
     // 다시 성공하면 다음 실패 때 또 알릴 수 있도록 되돌린다.
     saveFailureNotified = false;
   }
+
+  return saved;
 }
