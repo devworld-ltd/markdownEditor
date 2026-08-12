@@ -16,6 +16,7 @@
 | `npx tsc --noEmit` | ✅ 오류 0건 |
 | `npm run build` | ✅ 15 모듈, 115ms |
 | `npx wrangler deploy --env dev --dry-run` | ✅ 설정 유효, 자산 5개 인식, `APP_ENV=dev` 바인딩 확인 |
+| dev·prod 실배포 + 배포 환경 E2E | ✅ 각 58/58 (§6.5) |
 
 ### 빌드 산출물
 
@@ -106,7 +107,6 @@ E2E 를 새로 작성하는 과정에서 **실제 결함 3건**이 드러났다.
 | 실제 파일 선택기 / 디스크 I/O | 브라우저 네이티브 대화상자 자동화 불가 — 목으로 프로토콜만 검증 |
 | Firefox · WebKit 실제 동작 | Chromium 프로젝트만 구성 |
 | 반응형 레이아웃 | 뷰포트 테스트 미도입 |
-| 실제 Cloudflare 배포 | 자격 증명 필요 — `--dry-run` 까지만 |
 | localStorage 용량 초과 | 미도입 |
 
 → [테스트 계획 §7 수동 회귀 체크리스트](./test-plan.md#7-수동-회귀-체크리스트-릴리즈-전)로 보완.
@@ -118,7 +118,33 @@ E2E 를 새로 작성하는 과정에서 **실제 결함 3건**이 드러났다.
 | 중간 | localStorage 저장 실패(용량 초과)를 사용자에게 알리지 않는다 | [F-54](../features/feature-status.md) |
 | 중간 | 폴백 브라우저에서 덮어쓰기·중복 탭 방지 불가 (API 한계, 안내 UI 없음) | [F-11, F-58](../features/feature-status.md) |
 | 낮음 | CSP 헤더 미설정 | [F-62](../features/feature-status.md) |
-| 낮음 | `dev` 브랜치가 없어 CI/CD 가 아직 한 번도 실행되지 않음 | [F-66](../features/feature-status.md) |
+| 낮음 | 브랜치 보호 규칙 미설정 (`main` 직접 push 가능) | [F-66](../features/feature-status.md) |
+
+## 6.5 배포 환경 검증 (2026-08-12)
+
+로컬뿐 아니라 **실제 배포된 아티팩트**를 대상으로 E2E 를 돌렸다. `E2E_BASE_URL` 을 주면
+Playwright `webServer` 가 원격 URL 이 살아 있음을 확인하고 로컬 서버를 띄우지 않는다.
+
+| 환경 | URL | 결과 |
+|------|-----|------|
+| dev | `markdown-editor-dev.devworld-ltd-ai.workers.dev` | ✅ **58/58** (7.6s) |
+| prod | `md-editor.devworld.co.kr` | ✅ **58/58** (7.8s) |
+
+```bash
+E2E_BASE_URL=https://md-editor.devworld.co.kr npx playwright test \
+  tests/e2e/editor.spec.ts tests/e2e/toolbar.spec.ts tests/e2e/tabs.spec.ts \
+  tests/e2e/fileaccess.spec.ts tests/e2e/session.spec.ts
+```
+
+`urls.spec.ts` 는 Vite 개발 서버의 소스 모듈 경로를 검증하므로 제외한다(프로덕션은 번들됨).
+
+정적 자산·SPA 폴백·인증서도 함께 확인했다.
+
+| 항목 | 결과 |
+|------|------|
+| `/assets/*.js` · `*.css` | 200, 올바른 MIME |
+| 알 수 없는 경로 | 200 (`index.html` 폴백) |
+| TLS | Let's Encrypt, 검증 통과 |
 
 ## 7. 재현 방법
 

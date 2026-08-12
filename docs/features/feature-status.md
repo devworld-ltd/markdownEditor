@@ -47,8 +47,8 @@
 | F-20 | 세션 복원 | `tabs.ts restoreSession()` | E2E 6케이스 |
 | F-31 | 반응형 레이아웃 | `style.css` | 수동 |
 | F-41 | CI 파이프라인 | `.github/workflows/ci.yml` | — |
-| F-52 | Cloudflare Workers 배포 (dev/prod) | `wrangler.jsonc`, `deploy.yml` | dry-run 검증 |
-| F-63 | prod 커스텀 도메인 `md-editor.devworld.co.kr` | `wrangler.jsonc` `routes` | dry-run 검증 (실배포 시 생성) |
+| F-52 | Cloudflare Workers 배포 (dev/prod) | `wrangler.jsonc`, `ci.yml` deploy 잡 | **실배포 성공** (dev·prod) |
+| F-63 | prod 커스텀 도메인 `md-editor.devworld.co.kr` | `wrangler.jsonc` `routes` | **실서비스 중** + prod E2E 58건 |
 | F-53 | 저장소 사용 불가 환경 안내 | `main.ts`, `storage.ts` | 단위 |
 
 ## 3. 부분 구현 (⚠️)
@@ -124,7 +124,7 @@
 | F-45 | 린터 / 포매터 (ESLint·Prettier) | 설정 없음 |
 | F-47 | 단위 테스트 커버리지 | 8.11% — [커버리지 분석](../testing/coverage.md) |
 | F-65 | 크로스 브라우저 E2E (Firefox·WebKit 프로젝트) | Chromium 만 실행 |
-| F-66 | `dev` 브랜치 생성 + 보호 규칙 | 미생성 — CI/CD 워크플로가 `dev` push 를 기다리는 상태 |
+| F-66 | 브랜치 보호 규칙 | `dev` 브랜치는 생성·운영 중. **보호 규칙(PR 필수·상태 체크 필수)은 미설정** |
 
 ## 5. 제거됨 (🗑)
 
@@ -145,7 +145,7 @@
 
 ```mermaid
 graph TD
-  A["1. F-66 dev 브랜치 + 보호 규칙<br/>(CI/CD 가 동작하려면 선행 필요)"] --> B["2. F-62 CSP 헤더"]
+  A["1. F-66 브랜치 보호 규칙<br/>(PR 필수·상태 체크 필수)"] --> B["2. F-62 CSP 헤더"]
   B --> C["3. F-54 저장소 용량 초과 알림"]
   C --> D["4. F-61 PWA<br/>(오프라인·설치형)"]
   D --> E["5. F-47 단위 커버리지 60%+"]
@@ -156,7 +156,7 @@ graph TD
 
 ### 즉시 조치 권장
 
-1. **F-66** — `dev` 브랜치가 없으면 방금 추가한 CI/CD 워크플로가 한 번도 실행되지 않는다.
+1. **F-66** — 보호 규칙이 없으면 `main` 에 직접 push 가 가능해 릴리즈 절차를 우회할 수 있다.
 2. **F-62** — 공개 URL 로 배포되는 이상 CSP 는 DOMPurify 다음의 두 번째 방어선이다.
 3. **F-54** — 자동 저장 실패를 사용자가 모른다면 자동 저장이 오히려 잘못된 안심을 준다.
 
