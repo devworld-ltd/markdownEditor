@@ -64,7 +64,8 @@ graph TB
 | UI 액션 | `src/toolbar.ts` | 파일 4 + 서식 12 = 16개 버튼. `execCommand("insertText")` 로 undo 보존 | — (콜백 주입) |
 | 단축키 | `src/shortcuts.ts` | Cmd/Ctrl+O·S, Shift+S, Alt+N·W | fileOps, tabs |
 | I/O | `src/fileOps.ts` | File System Access API ↔ 업로드/다운로드 폴백 분기 | tabs, notice |
-| 알림 | `src/notice.ts` | 저장 성공·실패를 화면에 표시 | — |
+| 알림 | `src/notice.ts` | 저장 성공·실패·용량 초과를 화면에 표시 | — |
+| 오프라인 | `public/sw.js` | 서비스 워커. 앱 셸 캐시 + 자산별 캐시 전략 | — (별도 실행 컨텍스트) |
 
 ## 4. 초기화 순서 (`main.ts`)
 
@@ -171,15 +172,31 @@ flowchart TD
 
 | 항목 | 현재 구현 | 비고 |
 |------|-----------|------|
-| XSS | `parser.ts` 가 marked 출력을 **DOMPurify 로 정화**한 뒤 반환 | 웹 전환과 함께 해결. `parseMarkdown()` 을 우회해 `innerHTML` 을 쓰면 안 된다 |
+| XSS | `parser.ts` 가 **DOMPurify 로 정화** + `_headers` 의 **CSP** 2중 방어 | `parseMarkdown()` 을 우회해 `innerHTML` 을 쓰면 안 된다 |
 | 저장 확인 | dirty 탭 닫기 시 `confirm()`, 페이지 이탈 시 `beforeunload` | 웹 전환과 함께 해결 |
 | 세션 지속성 | localStorage 자동 저장 + 복원 | 파일 핸들은 직렬화 불가 — 복원 탭은 저장 시 위치를 다시 묻는다 |
-| 저장소 용량 | localStorage 5MB 내외 공용 | 대용량 문서 다수 편집 시 `QuotaExceededError` → 저장 실패는 조용히 무시된다 |
+| 저장소 용량 | localStorage 5MB 내외 공용 | 초과 시 **사용자에게 알린다**(F-54). 다만 오래된 탭을 자동 회수하지는 않아 이후 자동 저장은 멈춘 상태로 유지된다 |
 | 탭 순서 | `Map` 삽입 순서 고정, 드래그 재정렬 불가 | 기능 부재 |
 | 모듈 결합 | `tabs.ts`/`fileOps.ts` 가 모듈 레벨 가변 싱글턴 사용 | 단위 테스트가 어려움 |
 | 협업 | 단일 사용자 전용 | 실시간 공동 편집 없음 |
 
 상세 미구현 목록은 [기능 개발 현황](../features/feature-status.md) 참고.
+
+## 7.1 오프라인 (서비스 워커)
+
+`public/sw.js` 가 자산 성격에 따라 캐시 전략을 나눈다.
+
+| 대상 | 전략 | 사유 |
+|------|------|------|
+| 내비게이션(HTML) | network-first → 캐시 폴백 | 새 배포를 즉시 반영해야 한다. cache-first 면 업데이트가 영원히 안 보인다 |
+| `/assets/*` | cache-first | 콘텐츠 해시가 붙어 내용이 절대 안 바뀐다 |
+| 그 외 동일 출처 | network-first → 캐시 폴백 | 안전한 기본값 |
+
+`install` 에서 앱 셸(`/`, `/index.html`, `/manifest.webmanifest`, `/icon.svg`)을 캐시하고 `skipWaiting()`, `activate` 에서 구버전 캐시를 지우고 `clients.claim()` 한다. 빌드 타임 프리캐시 목록 주입(workbox 등)을 쓰지 않으므로 나머지 자산은 첫 요청 때 채워진다.
+
+**등록 조건**: `import.meta.env.PROD` 일 때만 등록한다. 개발 서버에서 등록하면 HMR 결과가 캐시에 가려 "고쳤는데 안 바뀌는" 상황이 생긴다.
+
+**알려진 공백**: 새 버전이 배포돼도 사용자에게 알리지 않는다 ([F-69](../features/feature-status.md)). 오프라인 상태 표시도 없다(F-70).
 
 ## 8. 관련 문서
 
