@@ -31,7 +31,28 @@
         ></textarea>
         <div id="preview" aria-label="미리보기"></div>
       </main>
-      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <div id="notice-stack" class="notice-stack">
+        <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+        <div
+          id="sw-update"
+          class="notice sw-update"
+          role="status"
+          aria-live="polite"
+          data-state="idle"
+          hidden
+        >
+          <p id="sw-update-text" class="sw-update-text">
+            새 버전이 준비됐습니다.<br />새로고침하면 최신 버전으로 전환됩니다.
+          </p>
+          <div class="sw-update-actions">
+            <button type="button" id="sw-update-later" class="sw-update-btn">나중에</button>
+            <button type="button" id="sw-update-reload" class="sw-update-btn primary">
+              새로고침
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

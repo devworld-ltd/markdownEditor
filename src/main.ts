@@ -18,6 +18,7 @@ import {
 } from "./tabs";
 import { initNotice, showNotice } from "./notice";
 import { isStorageAvailable } from "./storage";
+import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -25,6 +26,7 @@ const toolbarEl = document.querySelector<HTMLElement>("#toolbar-actions");
 const titleEl = document.querySelector<HTMLElement>(".toolbar h1");
 const tabBarEl = document.querySelector<HTMLElement>("#tab-bar");
 const noticeEl = document.querySelector<HTMLElement>("#notice");
+const swUpdateEl = document.querySelector<HTMLElement>("#sw-update");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -56,9 +58,11 @@ if (editorEl && previewEl) {
   initShortcuts();
 
   // 새로고침·탭 닫기로 인한 유실 방지. 브라우저는 문구를 무시하고 기본 경고를 띄운다.
+  // F-69: 서비스 워커 갱신 리로드가 진행 중이면(세션이 이미 확정 저장됐으므로) 이
+  // 리로드 한 번에 한해 경고를 억제한다(U5, AC-06/AC-08).
   window.addEventListener("beforeunload", (e) => {
     persistNow();
-    if (hasDirtyTabs()) {
+    if (hasDirtyTabs() && !isUpdateReloadPending()) {
       e.preventDefault();
       e.returnValue = "";
     }
@@ -75,10 +79,16 @@ if (editorEl && previewEl) {
   // 캐시에 가려 "고쳤는데 안 바뀌는" 상황을 만든다.
   if (import.meta.env.PROD && "serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch((error) => {
-        // 오프라인 지원은 부가 기능이므로 실패해도 앱은 그대로 동작한다.
-        console.warn("[sw] 등록 실패:", error);
-      });
+      // F-69: 등록·감지·표시·갱신 로직 전체는 swUpdate.ts 가 맡는다(등록 자체도
+      // 이 모듈이 수행 — 기본 host.register() 가 navigator.serviceWorker.register 를 호출한다).
+      if (swUpdateEl) {
+        initSwUpdate({
+          panelEl: swUpdateEl,
+          persist: () => persistNow(),
+          hasDirty: () => hasDirtyTabs(),
+          returnFocusTo: editorEl,
+        });
+      }
     });
   }
 

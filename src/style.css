@@ -214,12 +214,32 @@ body {
   max-width: 100%;
 }
 
-/* 알림 (저장 성공·실패, 저장소 사용 불가 등) */
-.notice {
+/*
+ * 알림 스택 — 위치 책임을 컨테이너로 옮겨 여러 알림을 겹치지 않게 쌓는다(F-69, §10.1).
+ * DOM 순서가 #notice → #sw-update 이고 컨테이너가 bottom 기준으로 고정되므로,
+ * #notice(일시)가 위, #sw-update(지속)가 아래에 놓인다. #notice 가 사라져도
+ * #sw-update 는 1px 도 움직이지 않는다.
+ */
+.notice-stack {
   position: absolute;
   right: 16px;
   bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
   max-width: min(420px, calc(100% - 32px));
+  z-index: 10;
+  pointer-events: none; /* 빈 영역이 에디터 클릭을 가로채지 않게 */
+}
+
+.notice-stack > * {
+  pointer-events: auto;
+}
+
+/* 알림 (저장 성공·실패, 저장소 사용 불가 등) — 위치 속성은 .notice-stack 이 담당한다 */
+.notice {
+  width: 100%;
   padding: 10px 14px;
   border-radius: 6px;
   background: #323232;
@@ -227,7 +247,6 @@ body {
   font-size: 13px;
   line-height: 1.5;
   box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
-  z-index: 10;
 }
 
 .notice[data-kind="error"] {
@@ -236,6 +255,43 @@ body {
 
 .notice[hidden] {
   display: none;
+}
+
+/* F-69 서비스 워커 업데이트 알림 — 오류가 아니므로 error 색상 변형을 쓰지 않는다 */
+.sw-update-text {
+  margin-bottom: 8px;
+}
+
+.sw-update-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sw-update-btn {
+  padding: 6px 12px;
+  border: 1px solid #666;
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sw-update-btn.primary {
+  border-color: #007acc;
+  background: #007acc;
+  font-weight: 500;
+}
+
+.sw-update-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sw-update-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 /* 좁은 화면에서는 에디터/프리뷰를 위아래로 쌓는다. */
@@ -257,6 +313,10 @@ body {
 
   #preview {
     padding: 16px;
+  }
+
+  .sw-update-btn {
+    flex: 1;
   }
 }
 

@@ -101,6 +101,42 @@ test.describe("F-61 PWA", () => {
     });
     expect(scope).toContain(new URL(baseURL!).host);
   });
+
+  // F-69 E8 — 실제 서비스 워커 회귀: 오프라인 동작과 등록이 그대로 유지된다(U10 REMOTE).
+  // 스텁 주입 없이 실제 원격 배포 워커를 대상으로 하므로 이 블록(같은 isRemote 판정,
+  // 같은 관심사)에 추가한다. 기존 3건의 순서·내용은 건드리지 않는다.
+  test("배포 환경에서 오프라인 동작과 업데이트 감지가 회귀 없이 유지된다 (F-69 E8)", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    test.skip(!isRemote(baseURL), "서비스 워커는 배포 환경에서만 등록된다");
+
+    await page.goto("/");
+    await expect(page.locator("#editor")).toBeVisible();
+
+    // 서비스 워커가 활성화될 때까지 기다린다.
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+
+    // 방금 배포된 단일 버전이므로 대기 워커가 없어야 하고, 업데이트 알림도 뜨지 않는다.
+    await page.waitForTimeout(1500);
+    await expect(page.locator("#sw-update")).toBeHidden();
+
+    await context.setOffline(true);
+    try {
+      await page.reload();
+      await expect(page.locator("#editor")).toBeVisible();
+
+      await page.locator("#editor").fill("# 오프라인");
+      await expect(page.locator("#preview h1")).toHaveText("오프라인");
+    } finally {
+      await context.setOffline(false);
+    }
+
+    await expect(page.locator("#sw-update")).toBeHidden();
+  });
 });
 
 test.describe("F-62 보안 헤더", () => {

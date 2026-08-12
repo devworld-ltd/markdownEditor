@@ -10,3 +10,6 @@ test-results/
 # direnv (시크릿 포함 — 절대 커밋 금지)
 .envrc
 .envrc.local
+
+# devflow 실행 중 lock (커밋 대상 아님)
+.claude/.devflow.lock
