@@ -167,7 +167,7 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 
 | 헤더 | 값 |
 |------|-----|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `no-referrer` |
 | `X-Frame-Options` | `DENY` |
@@ -181,8 +181,10 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 | `style-src` | `'unsafe-inline'` 허용 | 마크다운 본문의 인라인 `style` 속성(DOMPurify 가 허용)이 렌더되려면 필요. 인라인 스크립트와 달리 실행 권한이 없어 위험도가 낮다 |
 | `img-src` | `https:` 허용 | 문서의 `![](https://…)` 외부 이미지 |
 | `img-src` | `data:` 허용 | 인라인 SVG·data URI 이미지 |
+| `script-src` | `https://static.cloudflareinsights.com` 허용 | Cloudflare Web Analytics 가 **커스텀 도메인에만** 비콘을 엣지 주입한다. `*.workers.dev`(dev)에는 주입되지 않아 dev 검증에서 드러나지 않았고, prod E2E 에서 처음 잡혔다. 차단하면 모든 사용자 콘솔에 CSP 위반 에러가 남는다 |
+| `connect-src` | `https://cloudflareinsights.com` 허용 | 위 비콘의 전송 대상 |
 
-`script-src` 는 `'self'` 만 허용하며 `'unsafe-inline'`·`'unsafe-eval'` 을 절대 넣지 않는다. E2E 가 이를 단언한다.
+`script-src` 는 `'self'` + Cloudflare Insights 비콘 호스트만 허용하며 `'unsafe-inline'`·`'unsafe-eval'` 은 절대 넣지 않는다. E2E 가 허용 호스트 목록을 **정확히 일치**로 단언하므로, 외부 스크립트를 추가하려면 테스트도 함께 고쳐야 한다.
 
 **캐시 규칙**
 

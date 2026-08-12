@@ -11,7 +11,12 @@
   # 실행 권한이 없어 위험도가 낮다.
   # img-src 에 https: 가 필요한 이유: 문서의 ![](https://…) 외부 이미지.
   # img-src 에 data: 가 필요한 이유: 인라인 SVG 파비콘.
-  Content-Security-Policy: default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests
+  #
+  # cloudflareinsights.com 을 허용하는 이유: Cloudflare Web Analytics 가 커스텀
+  # 도메인(prod)에 비콘 스크립트를 엣지에서 자동 주입한다. *.workers.dev(dev)에는
+  # 주입되지 않아 dev 에서는 드러나지 않았다. 차단하면 모든 사용자 콘솔에 CSP 위반
+  # 에러가 남는다. 특정 호스트만 허용하므로 'unsafe-inline' 같은 광범위 완화는 아니다.
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   X-Frame-Options: DENY
