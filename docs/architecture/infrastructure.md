@@ -24,7 +24,7 @@
 |------|-------------|-----------|-------------|-----------|------|
 | **local** | 작업 브랜치 | `npm run dev` (Vite) 또는 `npm run cf:dev` (workerd) | — | — | `http://127.0.0.1:5173` |
 | **dev** | `dev` | `dev` push 시 GitHub Actions 자동 | `markdown-editor-dev` | `dev` | `*.workers.dev` |
-| **prod** | `main` | `main` push 시 GitHub Actions 자동 | `markdown-editor-prod` | `prod` | 운영 도메인 (연결 예정) |
+| **prod** | `main` | `main` push 시 GitHub Actions 자동 | `markdown-editor-prod` | `prod` | **`md-editor.devworld.co.kr`** |
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,11 @@ build.sourcemap: true  // 프로덕션 디버깅용
   },
   "env": {
     "dev":  { "name": "markdown-editor-dev",  "vars": { "APP_ENV": "dev" }  },
-    "prod": { "name": "markdown-editor-prod", "vars": { "APP_ENV": "prod" } }
+    "prod": {
+      "name": "markdown-editor-prod",
+      "vars": { "APP_ENV": "prod" },
+      "routes": [{ "pattern": "md-editor.devworld.co.kr", "custom_domain": true }]
+    }
   }
 }
 ```
@@ -128,14 +132,14 @@ build.sourcemap: true  // 프로덕션 디버깅용
 | XSS | `parser.ts` 에서 DOMPurify 로 정화. 웹 배포 시 필수 방어선 |
 | HTTPS | Cloudflare 가 기본 제공. File System Access API 요구 조건도 충족 |
 | CSP 헤더 | **미설정** — `_headers` 파일로 추가 권장 |
-| 커스텀 도메인 | **미연결** — prod 는 현재 `*.workers.dev` |
+| 커스텀 도메인 | ✅ prod = `md-editor.devworld.co.kr` (dev 는 `*.workers.dev`) |
 | 관측 | `observability.enabled = true` (Workers Logs) |
 | 롤백 | Cloudflare 대시보드의 이전 버전 배포 또는 `main` revert 후 재배포 |
 
 ## 7. 개선 권고
 
 1. **CSP `_headers` 추가** — `script-src 'self'` 등으로 DOMPurify 를 우회하는 잔여 위험까지 차단.
-2. **커스텀 도메인 연결** — prod 를 `*.workers.dev` 로 두면 브랜딩·캐시 정책 제어가 어렵다.
+2. **dev 환경 커스텀 도메인** — dev 는 아직 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 등을 추가한다.
 3. **배포 후 헬스체크** — 배포 잡에 `curl` 스모크 체크 또는 prod smoke E2E 를 추가.
 4. **PWA(오프라인 설치)** — 서비스 워커 + manifest 로 "설치형 웹앱" 을 제공하면 제거한 네이티브 앱의 사용성을 상당 부분 대체할 수 있다.
 5. **버전 표기** — `APP_ENV` 외에 커밋 SHA 를 빌드 타임에 주입하면 배포 추적이 쉬워진다.

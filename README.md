@@ -11,6 +11,7 @@
 | 테스트 | 단위 21건 + E2E 73건 (전부 통과) |
 | 기능 커버리지 | 20/23 자동 검증 |
 | 번들 | 83.3 kB (gzip 27.9 kB) |
+| 배포 (prod) | https://md-editor.devworld.co.kr |
 
 > **v1.x 는 macOS 네이티브 앱(SwiftUI + WKWebView)이었다.** v2.0.0 에서 웹 전용으로 전환하며 Xcode 프로젝트·DMG·JS↔Swift 브리지를 제거했다. 전환 내역: [웹 전환 히스토리](./docs/history/2026-08-12-web-pivot.md)
 
@@ -149,7 +150,7 @@ npm run deploy:dev   # Cloudflare Workers dev 환경
 npm run deploy:prod  # Cloudflare Workers prod 환경
 ```
 
-`dev` 브랜치 push → dev 환경, `main` 브랜치 push → prod 환경으로 GitHub Actions 가 자동 배포한다.
+`dev` 브랜치 push → dev 환경(`*.workers.dev`), `main` 브랜치 push → prod 환경(`md-editor.devworld.co.kr`)으로 GitHub Actions 가 자동 배포한다.
 상세: [Cloudflare Workers 구성](./docs/operations/cloudflare-workers.md)
 
 ## 단축키

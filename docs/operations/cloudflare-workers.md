@@ -23,6 +23,8 @@
 | **dev** | `dev` | `dev` push → GitHub Actions | `markdown-editor-dev` | `dev` | 없음 |
 | **prod** | `main` | `main` push → GitHub Actions | `markdown-editor-prod` | `prod` | 없음 |
 
+prod 접근 URL: **https://md-editor.devworld.co.kr** · dev 접근 URL: `markdown-editor-dev.*.workers.dev`
+
 ```mermaid
 flowchart LR
   F["feature/* · bug/*"] --> D["dev 브랜치"]
@@ -54,7 +56,8 @@ flowchart LR
     "prod": {
       "name": "markdown-editor-prod",
       "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
-      "vars": { "APP_ENV": "prod" }
+      "vars": { "APP_ENV": "prod" },
+      "routes": [{ "pattern": "md-editor.devworld.co.kr", "custom_domain": true }]
     }
   }
 }
@@ -95,16 +98,18 @@ npx wrangler deploy --env dev --dry-run
 | `CLOUDFLARE_API_TOKEN` | GitHub Actions Secrets | 배포 권한 (Workers Scripts:Edit) |
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub Actions Secrets | 대상 계정 |
 
+2026-08-12 등록 완료 (`gh secret list` 확인). 토큰 유효성·계정 접근·Workers Scripts 권한을 Cloudflare API 로 사전 검증했다.
+
 애플리케이션 런타임 시크릿은 **없다**. `APP_ENV` 는 시크릿이 아닌 평문 `vars` 다. 자세한 규약: [환경 변수 정리](./environment-variables.md).
 
 ## 6. 아직 하지 않은 것
 
 | 항목 | 상태 | 참조 |
 |------|------|------|
-| 커스텀 도메인 연결 | prod 가 `*.workers.dev` | [F-63](../features/feature-status.md) |
+| dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` | [F-67](../features/feature-status.md) |
 | CSP `_headers` | 미설정 | [F-62](../features/feature-status.md) |
 | 배포 후 헬스체크 / prod smoke E2E | `deploy.yml` 에 미포함 | [F-64](../features/feature-status.md) |
-| 실제 배포 실행 | 시크릿 미등록 상태 — `--dry-run` 까지만 검증 | — |
+| 실제 배포 실행 | `--dry-run` 까지만 검증. **커스텀 도메인은 첫 prod 배포 때 생성된다** | — |
 | `dev` 브랜치 | 미생성 → 워크플로가 아직 트리거되지 않음 | [F-66](../features/feature-status.md) |
 
 ### 서버·DB 가 필요해지는 시나리오
@@ -118,6 +123,23 @@ npx wrangler deploy --env dev --dry-run
 | 사용 통계·오류 수집 | Worker + Analytics Engine |
 
 이때 §2 의 "데이터베이스 없음" 항목이 환경별 Supabase 매핑으로 대체된다.
+
+## 6.5 커스텀 도메인
+
+| 항목 | 값 |
+|------|-----|
+| 도메인 | `md-editor.devworld.co.kr` |
+| 대상 | prod 환경 (`markdown-editor-prod`) |
+| 존 | `devworld.co.kr` — 같은 Cloudflare 계정에 `active` 상태로 존재 |
+| 설정 | `wrangler.jsonc` `env.prod.routes[].custom_domain: true` |
+
+`custom_domain: true` 로 선언하면 **첫 prod 배포 시 Cloudflare 가 자동으로** 프록시 DNS 레코드와 엣지 인증서를 만든다. 별도로 DNS 레코드를 미리 만들어 둘 필요가 없고, 오히려 같은 이름의 레코드가 이미 있으면 배포가 충돌로 실패한다.
+
+사전 확인 결과(2026-08-12): `md-editor.devworld.co.kr` DNS 레코드 0개, 다른 Worker 가 점유한 커스텀 도메인 없음 → 충돌 없음.
+
+> ⚠️ **도메인은 prod 배포 전까지 생성되지 않는다.** prod 는 `main` 브랜치에서 배포되므로, `main` 에 웹 전환 코드가 병합돼야 실제로 서비스된다.
+
+dev 환경은 여전히 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 을 같은 방식으로 추가한다 ([F-67](../features/feature-status.md)).
 
 ## 7. 롤백
 
@@ -135,6 +157,7 @@ npx wrangler deploy --env dev --dry-run
 |------|------|------|
 | 2026-08-12 (오전) | Cloudflare Workers **미도입** | 당시 macOS 네이티브 앱이라 서버 사이드 요구가 전무 |
 | 2026-08-12 (오후) | Cloudflare Workers **도입** | 웹 전환으로 정적 자산 호스팅이 필수가 됨. 조직 표준(dev/prod 브랜치 매핑)에 맞춰 구성 |
+| 2026-08-12 (오후) | prod 커스텀 도메인 `md-editor.devworld.co.kr` 연결 | `*.workers.dev` 는 브랜딩·캐시 정책 제어가 어려움. 존이 이미 같은 계정에 있어 추가 비용 없음 |
 
 ## 9. 관련 문서
 

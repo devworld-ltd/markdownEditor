@@ -48,6 +48,7 @@
 | F-31 | 반응형 레이아웃 | `style.css` | 수동 |
 | F-41 | CI 파이프라인 | `.github/workflows/ci.yml` | — |
 | F-52 | Cloudflare Workers 배포 (dev/prod) | `wrangler.jsonc`, `deploy.yml` | dry-run 검증 |
+| F-63 | prod 커스텀 도메인 `md-editor.devworld.co.kr` | `wrangler.jsonc` `routes` | dry-run 검증 (실배포 시 생성) |
 | F-53 | 저장소 사용 불가 환경 안내 | `main.ts`, `storage.ts` | 단위 |
 
 ## 3. 부분 구현 (⚠️)
@@ -113,8 +114,8 @@
 |----|------|------|
 | F-61 | PWA (오프라인 설치·서비스 워커·manifest) | 제거한 네이티브 앱의 "설치형" 사용성을 대체할 수 있는 가장 가까운 수단 |
 | F-62 | CSP 헤더 (`_headers`) | DOMPurify 우회 잔여 위험 차단 |
-| F-63 | 커스텀 도메인 | prod 가 `*.workers.dev` |
 | F-64 | 배포 후 헬스체크 / prod smoke E2E | `deploy.yml` 에 미포함 |
+| F-67 | dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` |
 
 ### 4.6 엔지니어링
 
@@ -150,7 +151,7 @@ graph TD
   D --> E["5. F-47 단위 커버리지 60%+"]
   E --> F["6. F-57 다크모드 / F-25 스크롤 동기화<br/>F-58 단축키 안내"]
   F --> G["7. F-38/39 내보내기"]
-  G --> H["8. F-65 크로스 브라우저 E2E<br/>F-63 커스텀 도메인"]
+  G --> H["8. F-65 크로스 브라우저 E2E<br/>F-64 배포 헬스체크"]
 ```
 
 ### 즉시 조치 권장

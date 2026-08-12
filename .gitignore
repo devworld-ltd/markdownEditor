@@ -6,3 +6,7 @@ MarkupEditorApp/build/
 coverage/
 playwright-report/
 test-results/
+
+# direnv (시크릿 포함 — 절대 커밋 금지)
+.envrc
+.envrc.local

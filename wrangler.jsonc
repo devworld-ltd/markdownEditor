@@ -25,7 +25,13 @@
         "directory": "./dist",
         "not_found_handling": "single-page-application"
       },
-      "vars": { "APP_ENV": "prod" }
+      "vars": { "APP_ENV": "prod" },
+
+      // 커스텀 도메인. 배포 시 Cloudflare 가 DNS 레코드(프록시 CNAME)와
+      // 인증서를 자동 생성한다. devworld.co.kr 존이 같은 계정에 있어야 한다.
+      "routes": [
+        { "pattern": "md-editor.devworld.co.kr", "custom_domain": true }
+      ]
     }
   }
 }

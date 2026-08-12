@@ -71,12 +71,12 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 
 ## 배포
 
-| 브랜치 | 환경 | Worker |
-|--------|------|--------|
-| `dev` | dev | `markdown-editor-dev` |
-| `main` | prod | `markdown-editor-prod` |
+| 브랜치 | 환경 | Worker | URL |
+|--------|------|--------|-----|
+| `dev` | dev | `markdown-editor-dev` | `*.workers.dev` |
+| `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
 
-`.github/workflows/ci.yml`(빌드+단위+E2E)와 `deploy.yml`(자동 배포). 배포에는 `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿이 필요하며 **아직 등록되지 않았다.** `dev` 브랜치도 아직 없다.
+`.github/workflows/ci.yml`(빌드+단위+E2E)와 `deploy.yml`(자동 배포). `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿은 등록 완료. **커스텀 도메인은 첫 prod 배포 때 생성되므로 `main` 에 병합되기 전까지 서비스되지 않는다.**
 
 ## 문서 관리 (필수)
 

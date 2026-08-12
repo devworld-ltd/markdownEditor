@@ -97,7 +97,7 @@ gitGraph
 4. `dev` → `main` PR 생성 · 병합
 5. Actions 가 prod(`markdown-editor-prod`)로 자동 배포
 6. `main` 에 태그 부여 (`v2.1.0`)
-7. 배포 URL 접속해 스모크 확인
+7. https://md-editor.devworld.co.kr 접속해 스모크 확인
 
 네이티브 앱 시절의 `build.sh` · DMG · 코드 서명 단계는 웹 전환과 함께 사라졌다.
 
