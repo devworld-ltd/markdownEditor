@@ -71,3 +71,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # F-64(#15): 배포 직후 자동 헬스체크. 캐시 우회 + 재시도 + SHA 일치 확인은
+      # scripts/healthcheck.sh 에 위임한다(로컬에서도 동일 스크립트로 수동 재현 가능).
+      - name: 배포 헬스체크
+        run: |
+          URL="${{ github.ref == 'refs/heads/main' && 'https://md-editor.devworld.co.kr' || 'https://markdown-editor-dev.devworld-ltd-ai.workers.dev' }}"
+          ./scripts/healthcheck.sh "$URL" "${GITHUB_SHA:0:7}"
