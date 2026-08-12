@@ -1,69 +1,117 @@
 # MarkdownEditor
 
-바닐라 TypeScript로 만든 macOS 마크다운 에디터. 프레임워크 없이 순수 TypeScript + DOM API를 사용하며, SwiftUI + WKWebView로 네이티브 macOS 앱으로 패키징한다.
+바닐라 TypeScript로 만든 **웹 기반 마크다운 에디터**. 프레임워크 없이 순수 TypeScript + DOM API를 사용하며, Cloudflare Workers 로 배포한다.
+
+설치가 필요 없고, **문서는 서버로 전송되지 않는다.** 모든 데이터는 사용자의 브라우저와 로컬 디스크에만 존재한다.
+
+| 항목 | 값 |
+|------|-----|
+| 버전 | 2.0.0 (웹 전환) |
+| 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
+| 테스트 | 단위 21건 + E2E 73건 (전부 통과) |
+| 기능 커버리지 | 20/23 자동 검증 |
+| 번들 | 83.3 kB (gzip 27.9 kB) |
+
+> **v1.x 는 macOS 네이티브 앱(SwiftUI + WKWebView)이었다.** v2.0.0 에서 웹 전용으로 전환하며 Xcode 프로젝트·DMG·JS↔Swift 브리지를 제거했다. 전환 내역: [웹 전환 히스토리](./docs/history/2026-08-12-web-pivot.md)
+
+## 📚 문서
+
+전체 문서 인덱스: **[docs/README.md](./docs/README.md)**
+
+| 분류 | 문서 |
+|------|------|
+| 아키텍처 | [서비스 아키텍처](./docs/architecture/service-architecture.md) · [인프라 아키텍처](./docs/architecture/infrastructure.md) · [데이터 모델](./docs/architecture/data-model.md) · [상호 관계 매트릭스](./docs/architecture/traceability.md) |
+| API | [브라우저 API 명세](./docs/api/browser-apis.md) |
+| 기능 | [사용자 시나리오](./docs/user-scenarios.md) · [기능 개발 현황](./docs/features/feature-status.md) |
+| 테스트 | [테스트 계획](./docs/testing/test-plan.md) · [테스트 실행 결과](./docs/testing/test-results.md) · [커버리지 분석](./docs/testing/coverage.md) |
+| 운영 | [Cloudflare Workers 구성](./docs/operations/cloudflare-workers.md) · [환경 변수](./docs/operations/environment-variables.md) · [브랜치 전략](./docs/operations/branch-strategy.md) |
+| 기록 | [작업 히스토리](./docs/history/README.md) |
 
 ## 주요 기능
 
-- 실시간 마크다운 프리뷰 (좌우 분할 레이아웃)
-- GFM(GitHub Flavored Markdown) 지원
-- 멀티 탭 파일 관리 (탭 전환, 닫기, 중복 열기 방지)
-- 파일 열기/저장/다른 이름으로 저장 (네이티브 파일 대화상자)
-- 마크다운 툴바 (볼드, 이탤릭, 헤딩, 링크, 코드 블록 등)
-- 키보드 단축키 (Cmd+O, Cmd+S, Cmd+W)
-- 입력 디바운스 (150ms)
+- 실시간 마크다운 프리뷰 (좌우 분할, 150ms 디바운스)
+- GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
+- **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
+- 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
+- 로컬 파일 열기/저장 — File System Access API + 업로드/다운로드 폴백
+- **세션 자동 저장·복원** (localStorage) + 미저장 이탈 경고
+- 서식 툴바 16종, 키보드 단축키
+- 720px 이하 반응형 (상하 분할)
+
+## 브라우저별 파일 기능
+
+| 기능 | Chrome · Edge | Safari · Firefox |
+|------|---------------|------------------|
+| 편집 · 프리뷰 · 탭 · 세션 저장 | ✅ | ✅ |
+| 파일 열기 | ✅ 파일 선택기 | ✅ 업로드 |
+| 저장 (덮어쓰기) | ✅ | ❌ 매번 새 파일 다운로드 |
+| 같은 파일 중복 열기 방지 | ✅ | ❌ |
+
+File System Access API 는 **보안 컨텍스트(HTTPS 또는 localhost)** 에서만 동작한다.
 
 ## 기술 스택
 
 | 영역 | 기술 |
 |------|------|
-| 에디터 (웹) | TypeScript, DOM API |
+| 언어 | TypeScript (프레임워크 없음) |
 | 마크다운 파싱 | [marked](https://github.com/markedjs/marked) (GFM + line breaks) |
+| HTML 정화 | [DOMPurify](https://github.com/cure53/DOMPurify) |
 | 번들러 | [Vite](https://vitejs.dev/) |
-| 테스트 | [Vitest](https://vitest.dev/) |
-| 네이티브 앱 | SwiftUI + WKWebView (macOS 14.0+) |
-| JS-Native 브리지 | WKScriptMessageHandler + custom `app://` URL scheme |
+| 단위 테스트 | [Vitest](https://vitest.dev/) + jsdom |
+| E2E 테스트 | [Playwright](https://playwright.dev/) (Chromium) |
+| 호스팅 | [Cloudflare Workers](https://workers.cloudflare.com/) (정적 자산) |
+| CI/CD | GitHub Actions |
 
 ## 프로젝트 구조
 
 ```
-markupEditor/
+markdownEditor/
 ├── src/                      # TypeScript 소스
-│   ├── main.ts               # 엔트리포인트
-│   ├── editor.ts             # 에디터 초기화 + 디바운스 입력 처리
-│   ├── preview.ts            # 프리뷰 패널 렌더링
-│   ├── parser.ts             # marked 라이브러리 래퍼
-│   ├── tabs.ts               # 멀티 탭 상태 관리 + UI
-│   ├── fileOps.ts            # 파일 열기/저장 + Swift 브리지
-│   ├── toolbar.ts            # 툴바 UI + 버튼 액션
+│   ├── main.ts               # 엔트리포인트 · 세션 복원 · 이탈 방지
+│   ├── editor.ts             # 디바운스 입력 처리
+│   ├── preview.ts            # 프리뷰 렌더링
+│   ├── parser.ts             # marked + DOMPurify
+│   ├── tabs.ts               # 멀티 탭 상태 + 세션 영속화
+│   ├── fileOps.ts            # 파일 I/O (FS Access + 폴백)
+│   ├── storage.ts            # localStorage 세션 저장/복원
+│   ├── notice.ts             # 사용자 알림
+│   ├── toolbar.ts            # 툴바 16종
 │   ├── shortcuts.ts          # 키보드 단축키
-│   └── style.css             # 스타일
-├── tests/                    # 테스트
-│   └── parser.test.ts        # 마크다운 파싱 테스트
-├── index.html                # HTML 엔트리포인트
-├── MarkupEditorApp/          # Xcode 프로젝트 (macOS 앱)
-│   ├── MarkupEditorApp/
-│   │   ├── MarkupEditorApp.swift    # @main 앱 엔트리
-│   │   ├── ContentView.swift        # SwiftUI 뷰
-│   │   ├── WebView.swift            # WKWebView + 파일 I/O 브리지
-│   │   ├── Assets.xcassets/         # 앱 아이콘
-│   │   └── Resources/WebContent/    # 빌드된 웹 에셋
-│   └── MarkupEditorApp.xcodeproj/
-├── build.sh                  # 웹 빌드 + Xcode 빌드 통합 스크립트
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+│   └── style.css
+├── tests/
+│   ├── parser.test.ts        # 단위 — 파싱 + sanitize
+│   ├── storage.test.ts       # 단위 — 세션 저장소
+│   ├── setup.ts              # jsdom Storage 셰임
+│   └── e2e/                  # Playwright
+│       ├── fixtures.ts       # File System Access API 목
+│       ├── urls.spec.ts      # 전체 URL 응답
+│       ├── editor.spec.ts    # 에디터 · 프리뷰 · 정화
+│       ├── toolbar.spec.ts   # 서식 툴바
+│       ├── tabs.spec.ts      # 멀티 탭
+│       ├── fileaccess.spec.ts # 파일 I/O 2경로
+│       └── session.spec.ts   # 세션 자동 저장 · 복원
+├── docs/                     # 프로젝트 문서 (→ docs/README.md)
+├── .github/workflows/        # CI (ci.yml) · CD (deploy.yml)
+├── index.html
+├── wrangler.jsonc            # Cloudflare Workers 설정
+├── vite.config.ts
+├── vitest.config.ts
+└── playwright.config.ts
 ```
 
 ## 아키텍처
 
 ```
-[textarea] → input 이벤트 (디바운스 150ms)
-    → editor.ts → preview.ts → parser.ts → marked → [프리뷰 div]
+[textarea] → input (디바운스 150ms)
+    → editor.ts → preview.ts → parser.ts → marked → DOMPurify → [프리뷰]
 
-[탭 바] → switchTab → textarea.value 교체 + 프리뷰 갱신
+[탭 바] → switchTab → 스냅샷 저장 → 값·포커스·커서 복원 → 프리뷰 갱신
 
-[Cmd+O] → Swift 파일 대화상자 → _bridge.onFileOpened → createTab
-[Cmd+S] → Swift 파일 저장 → _bridge.onFileSaved → updateActiveTab
+[Cmd+O] → showOpenFilePicker() 또는 <input type=file> → createTab
+[Cmd+S] → handle.createWritable() 또는 Blob 다운로드 → updateActiveTab
+
+[모든 상태 변경] → 500ms 디바운스 → localStorage 세션 저장
+[재방문 / 새로고침] → restoreSession() → 탭 복원
 ```
 
 ## 시작하기
@@ -71,44 +119,47 @@ markupEditor/
 ### 요구사항
 
 - Node.js 18+
-- macOS 14.0+ (네이티브 앱 빌드 시)
-- Xcode (네이티브 앱 빌드 시)
 
 ### 개발 서버
 
 ```bash
 npm install
-npm run dev
+npm run dev          # http://127.0.0.1:5173
 ```
 
 ### 테스트
 
 ```bash
-npm test              # 전체 테스트
-npm run test:watch    # 워치 모드
+npm test                 # 단위 테스트 (Vitest)
+npm run test:watch       # 워치 모드
+npm run test:coverage    # 단위 + 커버리지
+npm run test:e2e         # E2E (Playwright, dev 서버 자동 기동)
+npm run test:e2e:report  # 직전 E2E HTML 리포트
 ```
 
-### macOS 앱 빌드
+상세: [테스트 계획](./docs/testing/test-plan.md) · [실행 결과](./docs/testing/test-results.md)
+
+### 빌드 · 배포
 
 ```bash
-bash build.sh
+npm run build        # tsc + vite build → dist/
+npm run preview      # 빌드 결과 미리보기
+npm run cf:dev       # 로컬 workerd 런타임으로 dist/ 서빙
+npm run deploy:dev   # Cloudflare Workers dev 환경
+npm run deploy:prod  # Cloudflare Workers prod 환경
 ```
 
-빌드된 앱: `MarkupEditorApp/build/Build/Products/Release/MarkdownEditor.app`
-
-### DMG 설치 파일 생성
-
-```bash
-# build.sh 실행 후
-hdiutil create -volname "MarkdownEditor" \
-  -srcfolder MarkupEditorApp/build/Build/Products/Release/MarkdownEditor.app \
-  -ov -format UDZO MarkdownEditor.dmg
-```
+`dev` 브랜치 push → dev 환경, `main` 브랜치 push → prod 환경으로 GitHub Actions 가 자동 배포한다.
+상세: [Cloudflare Workers 구성](./docs/operations/cloudflare-workers.md)
 
 ## 단축키
 
 | 단축키 | 동작 |
 |--------|------|
-| Cmd+O | 파일 열기 |
-| Cmd+S | 파일 저장 |
-| Cmd+W | 현재 탭 닫기 |
+| `Cmd/Ctrl + O` | 파일 열기 |
+| `Cmd/Ctrl + S` | 저장 |
+| `Cmd/Ctrl + Shift + S` | 다른 이름으로 저장 |
+| `Alt + N` | 새 문서 |
+| `Alt + W` | 탭 닫기 |
+
+`Cmd/Ctrl + N` 과 `Cmd/Ctrl + W` 는 브라우저가 선점해 사용할 수 없어 `Alt` 조합으로 대체했다.
