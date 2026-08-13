@@ -116,6 +116,25 @@ export function setFileOpsHost(partial?: Partial<FileOpsHost>): void {
   host = { ...defaultHost(), ...partial };
 }
 
+/**
+ * F-36: 파일을 연/저장한 뒤 알린다. `fileOps` 가 최근 목록 모듈을 import 하지
+ * 않도록 콜백으로 뒤집는다 — `toolbar.ts` 의 `setFileActions` 와 같은 패턴이다.
+ */
+type FileTouchListener = (name: string, handle: FileSystemFileHandle | null) => void;
+let fileTouchListener: FileTouchListener | null = null;
+
+export function setFileTouchListener(listener: FileTouchListener | null): void {
+  fileTouchListener = listener;
+}
+
+function notifyFileTouched(name: string, handle: FileSystemFileHandle | null): void {
+  try {
+    fileTouchListener?.(name, handle);
+  } catch {
+    // 기록 실패가 파일 열기·저장을 망치면 안 된다.
+  }
+}
+
 export function isFileSystemAccessSupported(): boolean {
   return host.isSupported();
 }
@@ -146,25 +165,49 @@ async function openViaFileSystemAccess(): Promise<void> {
       multiple: false,
     });
     if (!handle) return;
-
-    const existing = await findTabByHandle(handle);
-    if (existing) {
-      switchTab(existing.id);
-      return;
-    }
-
-    const file = await handle.getFile();
-    createTab(await file.text(), handle, file.name);
+    await openHandle(handle);
   } catch (error) {
     if (isAbort(error)) return;
     showNotice(`파일을 열지 못했습니다: ${errorMessage(error)}`, "error");
   }
 }
 
+/**
+ * 이미 가진 핸들로 연다 (F-36 최근 파일).
+ *
+ * 대화상자를 거치지 않는 것 말고는 일반 열기와 같다 — **중복 탭 방지와 최근
+ * 목록 기록을 같은 경로에서** 처리해야 두 진입점의 동작이 갈라지지 않는다.
+ * 권한이 만료됐거나 파일이 사라졌으면 예외가 나므로 호출부가 알 수 있다.
+ */
+export async function openFileFromHandle(handle: FileSystemFileHandle): Promise<void> {
+  try {
+    await openHandle(handle);
+  } catch (error) {
+    if (isAbort(error)) return;
+    showNotice(`파일을 열지 못했습니다: ${errorMessage(error)}`, "error");
+  }
+}
+
+async function openHandle(handle: FileSystemFileHandle): Promise<void> {
+  const existing = await findTabByHandle(handle);
+  if (existing) {
+    switchTab(existing.id);
+    // 이미 열려 있어도 "방금 쓴 파일" 이다 — 최근 목록에서 뒤로 밀리면
+    // 자주 쓰는 문서일수록 목록에서 사라지는 이상한 동작이 된다 (F-36).
+    notifyFileTouched(existing.fileName, handle);
+    return;
+  }
+
+  const file = await handle.getFile();
+  createTab(await file.text(), handle, file.name);
+  notifyFileTouched(file.name, handle); // F-36
+}
+
 async function openViaUpload(file: File): Promise<void> {
   try {
     // 업로드 경로에는 핸들이 없어 중복 열기를 판별할 수 없다. 항상 새 탭이 열린다.
     createTab(await file.text(), null, file.name);
+    notifyFileTouched(file.name, null); // F-36 — 폴백 경로엔 핸들이 없다
   } catch (error) {
     showNotice(`파일을 읽지 못했습니다: ${errorMessage(error)}`, "error");
   }
@@ -199,6 +242,7 @@ export async function saveFileAs(): Promise<void> {
     notifyFallbackSave();
     downloadFile(content, suggestedName);
     updateActiveTab({ fileName: suggestedName, isDirty: false });
+    notifyFileTouched(suggestedName, null); // F-36 — 폴백 저장도 "최근" 이다
     showNotice(`${suggestedName} 을(를) 내려받았습니다.`);
     return;
   }
@@ -225,6 +269,7 @@ async function writeToHandle(
     await writable.write(content);
     await writable.close();
     updateActiveTab({ handle, fileName, isDirty: false });
+    notifyFileTouched(fileName, handle); // F-36
     showNotice(`${fileName} 에 저장했습니다.`);
   } catch (error) {
     if (isAbort(error)) return;

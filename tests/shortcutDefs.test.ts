@@ -108,10 +108,20 @@ describe("shortcutDefs — 안내 목록의 정합성", () => {
       const usesShift = caps.includes("Shift");
       expect(usesMod || usesAlt, `${shortcut.id} 는 수식 키 캡이 없다`).toBe(true);
 
+      // 표시용 캡을 `e.code` 로 옮긴다. 글자 키는 `Key<X>` 지만 기호·화살표는
+      // 이름이 따로 있다 — 이 표가 빠지면 새 단축키가 추가될 때 이 테스트가
+      // "캡과 판별이 어긋난다" 고 잘못 보고한다(실제로 그랬다).
+      const CODE_BY_CAP: Record<string, string> = {
+        "/": "Slash",
+        "←": "ArrowLeft",
+        "→": "ArrowRight",
+        "↑": "ArrowUp",
+        "↓": "ArrowDown",
+      };
       const last = caps[caps.length - 1];
       const probe = key({
         key: last.toLowerCase(),
-        code: last === "/" ? "Slash" : `Key${last.toUpperCase()}`,
+        code: CODE_BY_CAP[last] ?? `Key${last.toUpperCase()}`,
         ctrlKey: usesMod,
         altKey: usesAlt,
         shiftKey: usesShift,

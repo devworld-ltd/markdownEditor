@@ -10,7 +10,7 @@
 #                 검사를 건너뛴다 (플레이스홀더 검사는 항상 수행).
 #
 # 로컬 수동 실행 예:
-#   scripts/healthcheck.sh https://markdown-editor-dev.devworld-ltd-ai.workers.dev
+#   scripts/healthcheck.sh https://md-editor-dev.devworld.co.kr
 #   scripts/healthcheck.sh https://md-editor.devworld.co.kr $(git rev-parse --short=7 HEAD)
 #
 # 환경변수:
@@ -110,7 +110,61 @@ attempt() {
     return 1
   fi
 
-  echo "통과 — / 200(html+CSP), 자산 $(echo "$assets" | wc -l | tr -d ' ')건 200, /sw.js VERSION=${sw_version}"
+  # --- F-60 공유 API -------------------------------------------------------
+  #
+  # 이 검사는 **실제로 배포된 Worker 에서만 드러나는 결함**을 잡는다. 정적 자산
+  # 계층이 Worker 보다 먼저 요청을 가로채기 때문에, run_worker_first 설정이
+  # 빠지면 GET /api/share/<id> 가 마크다운 대신 앱 HTML 을 돌려준다. 단위·E2E
+  # 테스트는 API 를 목으로 대체하므로 이걸 절대 잡지 못한다 — 실제로 그렇게
+  # 절반만 동작하는 상태로 배포됐던 적이 있다.
+  #
+  # 내용 주소 지정이라 같은 문자열은 항상 같은 객체가 되어 R2 가 증가하지 않는다.
+  local probe='{"content":"# healthcheck probe\n\n이 문서는 배포 검증용입니다."}'
+  local create_body
+  if ! create_body=$(curl -fsS -X POST "${URL}/api/share" \
+      -H 'content-type: application/json' -d "$probe" 2>&1); then
+    echo "POST /api/share 실패: ${create_body}"
+    return 1
+  fi
+
+  local share_id
+  share_id=$(printf '%s' "$create_body" | sed -nE 's/.*"id":"([0-9a-f]+)".*/\1/p')
+  if [[ -z "$share_id" ]]; then
+    echo "POST /api/share 응답에 id 가 없다: ${create_body}"
+    return 1
+  fi
+
+  local read_type read_body
+  # 캐시 우회가 **필수**다. 공유 응답은 내용 주소 지정이라 immutable 로 캐시되는데,
+  # 그러면 Worker 가 아니라 엣지 캐시가 답해 라우팅이 깨져도 통과해 버린다
+  # (실제로 그렇게 잘못 통과한 적이 있다 — CLAUDE.md 트랩 #19 의 공유 API 판).
+  read_type=$(curl -fsS -H 'cache-control: no-cache' -o /tmp/hc-share.$$ -w '%{content_type}' \
+    "${URL}/api/share/${share_id}?cb=${RANDOM}${RANDOM}" 2>&1) || {
+    echo "GET /api/share/${share_id} 실패"
+    rm -f /tmp/hc-share.$$
+    return 1
+  }
+  read_body=$(cat /tmp/hc-share.$$ 2>/dev/null || true)
+  rm -f /tmp/hc-share.$$
+
+  if [[ "$read_type" != text/markdown* ]]; then
+    echo "GET /api/share/${share_id} 의 content-type 이 ${read_type} — Worker 가 아니라 정적 자산이 응답했다(run_worker_first 확인)"
+    return 1
+  fi
+  if [[ "$read_body" != *"healthcheck probe"* ]]; then
+    echo "GET /api/share/${share_id} 본문이 올려둔 내용과 다르다"
+    return 1
+  fi
+
+  local bad_status
+  bad_status=$(curl -sS -o /dev/null -w '%{http_code}' \
+    "${URL}/api/share/ZZZZZZZZZZZZZZZZ?cb=${RANDOM}${RANDOM}")
+  if [[ "$bad_status" != "404" ]]; then
+    echo "잘못된 공유 ID 가 ${bad_status} 를 반환 — 404 여야 한다(ID 검증이 Worker 에 닿지 않았다)"
+    return 1
+  fi
+
+  echo "통과 — / 200(html+CSP), 자산 $(echo "$assets" | wc -l | tr -d ' ')건 200, /sw.js VERSION=${sw_version}, 공유 API 왕복 OK(${share_id})"
   return 0
 }
 

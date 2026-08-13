@@ -3,6 +3,8 @@ import { initToolbar, setFileActions } from "./toolbar";
 import {
   exportFile,
   initFileOps,
+  openFileFromHandle,
+  setFileTouchListener,
   isFileSystemAccessSupported,
   openFile,
   saveFile,
@@ -12,7 +14,9 @@ import { initShortcuts } from "./shortcuts";
 import {
   UNTITLED,
   createTab,
+  getActiveContent,
   getActiveTab,
+  syncActiveTab,
   hasDirtyTabs,
   initTabs,
   persistNow,
@@ -22,6 +26,10 @@ import {
 import { initNotice, showNotice } from "./notice";
 import {
   isStorageAvailable,
+  loadRecentFilesRaw,
+  saveRecentFiles,
+  loadEditorPrefs,
+  saveEditorPrefs,
   loadSplitRatio,
   loadViewMode,
   saveSplitRatio,
@@ -35,7 +43,13 @@ import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
+import { initEditorSettings } from "./editorSettings";
+import { initRecentFiles } from "./recentFilesUi";
+import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
+import { copyRenderedHtml } from "./clipboardExport";
+import { createShareLink, loadSharedDocument, type ShareHost } from "./share";
+import { shareIdFromPath } from "./shareId";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -168,6 +182,96 @@ if (editorEl && previewEl) {
       })
     : null;
 
+  // F-35: 툴바가 버튼을 만든 뒤라야 #settings 관련 요소를 찾을 수 있다(F-33 과 같은 이유).
+  const settingsDialogEl = document.querySelector<HTMLDialogElement>("#editor-settings");
+  const settingsFontEl = document.querySelector<HTMLSelectElement>("#setting-font");
+  const settingsSizeEl = document.querySelector<HTMLElement>("#setting-size-value");
+  const settingsDownEl = document.querySelector<HTMLElement>("#setting-size-down");
+  const settingsUpEl = document.querySelector<HTMLElement>("#setting-size-up");
+  const settingsResetEl = document.querySelector<HTMLElement>("#setting-reset");
+  const settingsCloseEl = document.querySelector<HTMLElement>("#editor-settings-close");
+
+  const editorSettings =
+    settingsDialogEl &&
+    settingsFontEl &&
+    settingsSizeEl &&
+    settingsDownEl &&
+    settingsUpEl &&
+    settingsResetEl &&
+    settingsCloseEl
+      ? initEditorSettings({
+          rootEl: document.documentElement,
+          dialogEl: settingsDialogEl,
+          fontSelectEl: settingsFontEl,
+          sizeValueEl: settingsSizeEl,
+          decreaseEl: settingsDownEl,
+          increaseEl: settingsUpEl,
+          resetEl: settingsResetEl,
+          closeEl: settingsCloseEl,
+          loadPrefs: loadEditorPrefs,
+          savePrefs: saveEditorPrefs,
+          returnFocusTo: editorEl,
+        })
+      : null;
+
+  // F-36 최근 파일. 핸들은 직렬화되지 않으므로(트랩 #6) **이번 세션 동안만**
+  // 메모리에 들고 있다가, 살아 있으면 바로 열고 아니면 파일 선택 창을 연다.
+  const liveHandles = new Map<string, FileSystemFileHandle>();
+  const recentDialogEl = document.querySelector<HTMLDialogElement>("#recent-files");
+  const recentListEl = document.querySelector<HTMLElement>("#recent-files-list");
+  const recentEmptyEl = document.querySelector<HTMLElement>("#recent-files-empty");
+  const recentCloseEl = document.querySelector<HTMLElement>("#recent-files-close");
+
+  const recentFiles =
+    recentDialogEl && recentListEl && recentEmptyEl && recentCloseEl
+      ? initRecentFiles({
+          dialogEl: recentDialogEl,
+          listEl: recentListEl,
+          emptyEl: recentEmptyEl,
+          closeEl: recentCloseEl,
+          load: () => parseRecent(loadRecentFilesRaw()),
+          save: saveRecentFiles,
+          isLive: (name) => liveHandles.has(name),
+          openLive: (name) => {
+            const handle = liveHandles.get(name);
+            if (handle) void openFileFromHandle(handle);
+          },
+          openPicker: () => void openFile(),
+          notify: (message) => showNotice(message, "info", 6000),
+          returnFocusTo: editorEl,
+        })
+      : null;
+
+  setFileTouchListener((name, handle) => {
+    if (handle) liveHandles.set(name, handle);
+    recentFiles?.record(name);
+  });
+
+  // F-60 공유. 서버는 마크다운 원문만 주고받는다 — 렌더를 서버에서 하면
+  // 정화 정책이 두 곳으로 갈라진다(F-38·F-40 과 같은 이유).
+  const shareHost: ShareHost = {
+    origin: window.location.origin,
+    upload: async (content) => {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${response.status}`);
+      }
+      return (await response.json()) as { id: string };
+    },
+    download: async (id) => {
+      const response = await fetch(`/api/share/${id}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.text();
+    },
+    notify: (message, kind) => showNotice(message, kind ?? "info", 8000),
+    copyLink: (url) => navigator.clipboard.writeText(url),
+  };
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
@@ -175,6 +279,38 @@ if (editorEl && previewEl) {
     saveAs: () => void saveFileAs(),
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
+    showSettings: editorSettings ? () => editorSettings.open() : undefined,
+    showRecent: recentFiles ? () => recentFiles.open() : undefined,
+
+    // F-60: 이 앱에서 유일하게 네트워크를 타는 동작이다. 버튼을 눌러야만 fetch 한다.
+    share: () => {
+      syncActiveTab();
+      void createShareLink(shareHost, getActiveContent());
+    },
+
+    // F-40: F-38 과 같은 원칙 — 프리뷰의 정화된 HTML 만 쓴다. 붙여넣는 곳이
+    // 우리 앱이 아니므로 위험도는 오히려 높다.
+    copyHtml: () => {
+      void copyRenderedHtml(
+        {
+          supportsRichCopy: () =>
+            typeof ClipboardItem === "function" &&
+            typeof navigator.clipboard?.write === "function",
+          writeRich: async (html, text) => {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                "text/html": new Blob([html], { type: "text/html" }),
+                "text/plain": new Blob([text], { type: "text/plain" }),
+              }),
+            ]);
+          },
+          writeText: (text) => navigator.clipboard.writeText(text),
+          notify: (message, kind) => showNotice(message, kind ?? "info", 5000),
+        },
+        previewEl.innerHTML,
+        getActiveContent(),
+      );
+    },
 
     // F-38: 프리뷰에 이미 들어가 있는 **정화된** HTML 을 그대로 쓴다.
     // 원문을 다시 파싱하는 두 번째 경로를 만들면 정화 정책이 갈라진다(F-18).
@@ -240,6 +376,18 @@ if (editorEl && previewEl) {
           returnFocusTo: editorEl,
         });
       }
+    });
+  }
+
+  // F-60: /s/<id> 로 들어왔으면 문서를 가져와 새 탭으로 연다.
+  // 실패해도 앱은 정상적으로 떠야 한다 — 흰 화면이 되면 안 된다.
+  const sharedId = shareIdFromPath(window.location.pathname);
+  if (sharedId) {
+    void loadSharedDocument(shareHost, sharedId).then((content) => {
+      if (content === null) return;
+      createTab(content, null, `공유-${sharedId}.md`);
+      // 주소를 정리한다 — 새로고침 때마다 다시 받아 탭이 쌓이는 것을 막는다.
+      window.history.replaceState(null, "", "/");
     });
   }
 

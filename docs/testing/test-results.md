@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **349** | 0 | 0 | 349 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **201** | **0** | 15 ※ | 216 |
-| **합계 (dev 기준)** | | **550** | **0** | 15 | 565 |
+| 단위 | Vitest 4.1.10 (jsdom) | **473** | 0 | 0 | 473 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **253** | **0** | 15 ※ | 268 |
+| **합계 (dev 기준)** | | **726** | **0** | 15 | 741 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -64,6 +64,11 @@
 | `htmlexport.spec.ts` | 7 | ✅ F-38 HTML 내보내기 — 실제 기록되는 바이트·탭 무영향·폴백 |
 | `print.spec.ts` | 9 | ✅ F-39 인쇄 — `emulateMedia("print")` 로 실제 인쇄 스타일 검증 |
 | `a11y.spec.ts` | 18 | ✅ F-59 접근성 — axe 8상태 + 다크 + 수동 시나리오 9건 |
+| `taborder.spec.ts` | 11 | ✅ F-34 탭 재정렬 — 드래그·키보드·즉시 영속화 |
+| `settings.spec.ts` | 12 | ✅ F-35 편집 설정 — 글꼴·크기·웹폰트 없음·설정 격리 |
+| `recent.spec.ts` | 12 | ✅ F-36 최근 파일 — 핸들 수명·중복 탭 방지·내용 미저장 |
+| `clipboard.spec.ts` | 7 | ✅ F-40 클립보드 — 실제 나가는 바이트·폴백·정화 |
+| `share.spec.ts` | 10 | ✅ F-60 공유 — 배선·정화·요청 없음 확인 |
 
 ### 2.1 URL 응답 (15)
 
@@ -173,7 +178,7 @@ Playwright `webServer` 가 원격 URL 이 살아 있음을 확인하고 로컬 �
 
 | 환경 | URL | 결과 |
 |------|-----|------|
-| dev | `markdown-editor-dev.devworld-ltd-ai.workers.dev` | ✅ **58/58** (7.6s) |
+| dev | `md-editor-dev.devworld.co.kr` (F-67) | ✅ **58/58** (7.6s) |
 | prod | `md-editor.devworld.co.kr` | ✅ **58/58** (7.8s) |
 
 ```bash

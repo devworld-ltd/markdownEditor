@@ -74,8 +74,16 @@ export interface FileActions {
   cycleView?: () => void;
   /** F-38 HTML 내보내기. */
   exportHtml?: () => void;
+  /** F-40 렌더된 HTML 클립보드 복사. */
+  copyHtml?: () => void;
+  /** F-60 공유 링크 만들기. */
+  share?: () => void;
   /** F-39 인쇄 / PDF 저장. */
   print?: () => void;
+  /** F-35 편집 설정 열기. */
+  showSettings?: () => void;
+  /** F-36 최근 파일 목록 열기. */
+  showRecent?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -94,6 +102,12 @@ const actions: ToolbarAction[] = [
     label: "Open",
     icon: `<svg ${SVG_ATTRS}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
     action: () => fileActions?.open(),
+  },
+  {
+    // F-36: 최근 파일은 "여는" 동작이므로 Open 바로 옆에 둔다.
+    label: "Recent",
+    icon: `<svg ${SVG_ATTRS}><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
+    action: () => fileActions?.showRecent?.(),
   },
   {
     label: "Save",
@@ -219,6 +233,19 @@ const actions: ToolbarAction[] = [
     action: () => fileActions?.exportHtml?.(),
   },
   {
+    // F-40: 붙여넣기는 파일 내보내기보다 훨씬 자주 쓰인다. 내보내기 바로 옆.
+    label: "Copy HTML",
+    icon: `<svg ${SVG_ATTRS}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+    action: () => fileActions?.copyHtml?.(),
+  },
+  {
+    // F-60 공유 링크. **이 앱에서 유일하게 네트워크를 타는 동작**이라
+    // 다른 내보내기와 나란히 두되 아이콘으로 성격을 구분한다.
+    label: "Share Link",
+    icon: `<svg ${SVG_ATTRS}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+    action: () => fileActions?.share?.(),
+  },
+  {
     // F-39 인쇄/PDF. 브라우저 인쇄 대화상자를 그대로 연다 — "PDF 로 저장" 은
     // 그 대화상자 안에 이미 있다. 별도 PDF 라이브러리를 넣을 이유가 없다.
     label: "Print / PDF",
@@ -232,6 +259,12 @@ const actions: ToolbarAction[] = [
     icon: `<svg ${SVG_ATTRS}><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`,
     action: () => fileActions?.cycleView?.(),
     id: "view-mode",
+  },
+  {
+    // F-35 편집 설정.
+    label: "Settings",
+    icon: `<svg ${SVG_ATTRS}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+    action: () => fileActions?.showSettings?.(),
   },
   {
     // F-58: 단축키를 알려주는 기능을 단축키로만 열 수 있으면 순환이다.

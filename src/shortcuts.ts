@@ -1,5 +1,5 @@
 import { openFile, saveFile, saveFileAs } from "./fileOps";
-import { UNTITLED, closeTab, createTab, getActiveTab } from "./tabs";
+import { UNTITLED, closeTab, createTab, getActiveTab, moveActiveTab } from "./tabs";
 import { findShortcut, type ShortcutId } from "./shortcutDefs";
 
 /**
@@ -32,6 +32,8 @@ export function initShortcuts(handlers: ShortcutHandlers = {}): void {
     save: () => void saveFile(),
     saveAs: () => void saveFileAs(),
     newTab: () => createTab("", null, UNTITLED),
+    moveTabLeft: () => moveActiveTab(-1),
+    moveTabRight: () => moveActiveTab(1),
     closeTab: () => {
       const tab = getActiveTab();
       if (tab) closeTab(tab.id);

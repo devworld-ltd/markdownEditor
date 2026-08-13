@@ -94,6 +94,58 @@
              키보드로 스크롤할 방법이 아예 없었다. -->
         <div id="preview" role="region" aria-label="미리보기" tabindex="0"></div>
       </main>
+      <!-- F-36 최근 파일 -->
+      <dialog id="recent-files" class="shortcut-help" aria-labelledby="recent-files-title">
+        <div class="shortcut-help-header">
+          <h2 id="recent-files-title">최근 파일</h2>
+          <button type="button" id="recent-files-close" class="shortcut-help-close" aria-label="닫기">
+            &times;
+          </button>
+        </div>
+        <div class="shortcut-help-list">
+          <ul id="recent-files-list" class="recent-list"></ul>
+          <p id="recent-files-empty" class="setting-note" hidden>아직 연 파일이 없습니다.</p>
+          <p class="setting-note">
+            브라우저 보안 때문에 새로고침 후에는 파일 권한이 유지되지 않습니다.
+            그때는 목록에서 골라도 파일을 다시 선택해야 합니다.
+          </p>
+        </div>
+      </dialog>
+
+      <!-- F-35 편집 설정. F-58 과 같은 <dialog> 패턴을 쓴다. -->
+      <dialog id="editor-settings" class="shortcut-help" aria-labelledby="editor-settings-title">
+        <div class="shortcut-help-header">
+          <h2 id="editor-settings-title">편집 설정</h2>
+          <button type="button" id="editor-settings-close" class="shortcut-help-close" aria-label="닫기">
+            &times;
+          </button>
+        </div>
+        <div class="shortcut-help-list settings-body">
+          <div class="setting-row">
+            <label for="setting-font">글꼴</label>
+            <select id="setting-font" class="setting-select"></select>
+          </div>
+          <div class="setting-row">
+            <span id="setting-size-label">글자 크기</span>
+            <div class="setting-stepper" role="group" aria-labelledby="setting-size-label">
+              <button type="button" id="setting-size-down" class="search-text-btn" aria-label="글자 크기 줄이기">
+                &minus;
+              </button>
+              <span id="setting-size-value" class="setting-value" role="status" aria-live="polite">14px</span>
+              <button type="button" id="setting-size-up" class="search-text-btn" aria-label="글자 크기 키우기">
+                &plus;
+              </button>
+            </div>
+          </div>
+          <p class="setting-note">
+            편집 영역에만 적용됩니다. 미리보기와 내보내기·인쇄 결과는 바뀌지 않습니다.
+          </p>
+          <div class="sw-update-actions">
+            <button type="button" id="setting-reset" class="search-text-btn">기본값으로</button>
+          </div>
+        </div>
+      </dialog>
+
       <!-- F-58: 단축키 안내. 네이티브 <dialog> 를 쓰면 포커스 트랩·Esc 닫기·
            백드롭·바깥 요소 inert 처리를 브라우저가 정확히 해 준다. -->
       <dialog id="shortcut-help" class="shortcut-help" aria-labelledby="shortcut-help-title">

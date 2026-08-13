@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 바닐라 TypeScript로 만든 **웹 기반 마크다운 에디터**. 프레임워크 없이 순수 TypeScript + DOM API를 사용하며, `marked` + `DOMPurify` 로 마크다운을 안전한 HTML로 변환한다. Cloudflare Workers 에 정적 자산으로 배포한다.
 
-서버·데이터베이스·네트워크 호출이 없는 **100% 클라이언트 앱**이다. 문서는 사용자 브라우저(localStorage)와 로컬 디스크에만 존재한다.
+**공유 링크(F-60)를 제외하면** 서버·데이터베이스·네트워크 호출이 없다. 편집·저장·프리뷰·내보내기·인쇄는 전부 브라우저 안에서 끝나고, 문서는 사용자 브라우저(localStorage)와 로컬 디스크에만 존재한다.
+
+**F-60 이 이 성격을 부분적으로 바꿨다.** 공유 버튼을 누를 때만 `POST /api/share` 가 나가고, 그 문서는 Cloudflare R2 에 저장된다. `wrangler.jsonc` 에 `main`(Worker 진입점)과 R2 바인딩이 생긴 것도 이 때문이다. 공유를 쓰지 않는 사용자에게는 여전히 네트워크 요청이 **한 건도 없다**(E2E `SH8` 이 이를 단언한다).
 
 > **v2.0.0 에서 방향이 바뀌었다.** v1.x 는 macOS 네이티브 앱(SwiftUI + WKWebView)이었고, Xcode 프로젝트·`build.sh`·DMG·JS↔Swift 브리지(`window.webkit`/`window._bridge`)·`app://` 스킴이 있었다. 이 모두가 제거됐으므로 **오래된 문서나 커밋을 참고할 때 주의한다.** 전환 내역: `docs/history/2026-08-12-web-pivot.md`
 
@@ -17,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npm run dev` | Vite 개발 서버 (`http://127.0.0.1:5173`) |
 | `npm run build` | TypeScript 컴파일 + Vite 빌드 (→ `dist/`) |
 | `npm run preview` | 빌드 결과물 미리보기 |
+| `npm run typecheck` | 타입 검사 (앱 + Worker 각각) |
 | `npm test` | 단위 테스트 (vitest, jsdom) |
 | `npm run test:watch` | 워치 모드 |
 | `npm run test:coverage` | 단위 + v8 커버리지 |
@@ -55,6 +58,15 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`shareId.ts`** — 공유 ID·검증(F-60). **Worker 와 브라우저 양쪽에서 쓰인다** — DOM 도 Node API 도 만지지 않고 `crypto.subtle` 만 쓴다.
+- **`share.ts`** — 공유 클라이언트(F-60). 주입형 리프. **이 앱에서 유일하게 네트워크를 타는 모듈**이다.
+- **`worker/index.ts`** — 공유 API Worker(F-60). `tsconfig.worker.json` 으로 따로 타입 검사한다.
+- **`clipboardExport.ts`** — 클립보드 복사(F-40). 주입형 리프. **`text/html` 과 `text/plain` 을 함께** 넣어야 한다.
+- **`recentFiles.ts`** — 최근 파일 목록 계산만 담당하는 순수 리프(F-36).
+- **`recentFilesUi.ts`** — 최근 파일 `<dialog>`(F-36). 주입형 리프.
+- **`editorPrefs.ts`** — 편집 글꼴·크기 계산만 담당하는 순수 리프(F-35). **웹폰트 금지** — 네트워크 요청이 없는 앱이고 CSP 가 `font-src 'self' data:` 다.
+- **`editorSettings.ts`** — 편집 설정 `<dialog>`(F-35). 주입형 리프.
+- **`tabOrder.ts`** — 탭 재정렬 인덱스 계산만 담당하는 순수 리프(F-34).
 - **`htmlExport.ts`** — HTML 내보내기 조립(F-38). 순수 모듈. **마크다운을 파싱하지 않는다** — 정화된 HTML 을 받아 감싸기만 한다.
 - **`viewMode.ts`** — 보기 모드(F-33). 주입형 리프. **버튼 클릭은 듣지 않는다** — 툴바가 이미 다루므로 중복하면 한 번 눌러 두 단계 넘어간다.
 - **`splitLayout.ts`** — 분할 비율 계산만 담당하는 순수 리프(F-32).
@@ -105,7 +117,16 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 35. **`Cmd/Ctrl+P` 는 가로채지 않는다.** 브라우저 인쇄가 곧 원하는 동작이라 가로채면 대화상자 취소·미리보기만 잃는다. PDF 라이브러리도 넣지 말 것 — "PDF 로 저장" 은 인쇄 대화상자 안에 이미 있다. **인쇄 스타일은 `#preview` 를 `!important` 로 되살려야 한다** — 편집 전용 모드(F-33)에서 인쇄하면 빈 종이가 나온다.
 36. **자동 접근성 점검(axe) 통과가 "쓸 수 있다" 를 뜻하지 않는다.** 이 저장소의 탭은 axe 를 통과하면서도 **키보드로 전환이 불가능**했다(`<div>` + 클릭 핸들러). 새 UI 를 추가하면 `a11y.spec.ts` 의 상태 목록에 넣고, **키보드 도달·포커스 가시성·상태 전달**은 별도 시나리오로 확인하라.
 37. **색을 토큰화할 때 링크를 빠뜨리지 말 것.** F-57 이 표면·본문은 토큰화했지만 링크를 놓쳐, 다크에서 UA 기본 `#0000ee` 가 대비 **1.37:1** 로 떨어졌다. `:visited` 도 함께 지정해야 한다 — UA 는 방문한 링크에 다른 색을 쓴다.
-38. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+38. **`dragover` 에서 `preventDefault()` 를 빼지 말 것.** 브라우저가 "놓을 수 없음" 으로 판정해 `drop` 이 **아예 발생하지 않는다**. 합성 `DragEvent` 로는 이 결과가 재현되지 않으므로, 테스트는 `dragover` 가 **취소됐는지 자체**를 단언한다.
+39. **탭 순서는 `Map` 의 삽입 순서다.** 재정렬은 비우고 다시 넣는 것이고, 세션 영속화가 그 순서를 그대로 쓴다. 재구성 중 하나라도 빠지면 **원본으로 되돌린다** — 탭이 사라지는 것보다 순서가 그대로인 편이 낫다.
+40. **F-35 글꼴·크기는 편집 영역에만 적용한다.** 프리뷰까지 바꾸면 내보내기(F-38)·인쇄(F-39) 결과가 사람마다 달라진다 — 그건 문서를 받는 쪽의 몫이다. CSS 폴백값(`var(--editor-font-size, 14px)`)을 지우지 말 것 — 설정 모듈이 실패해도 편집기는 떠야 한다.
+41. **최근 목록에 문서 내용을 넣지 말 것.** localStorage 용량을 세션 저장과 다투게 되고, 그러면 **자동 저장이 먼저 죽는다**. 이름과 시각만 저장한다. 그리고 **핸들이 살아 있는지를 항목마다 표시**해야 한다 — 구분하지 않으면 사용자는 목록을 눌렀는데 파일 선택 창이 뜨는 것을 버그로 받아들인다(트랩 #6).
+42. **클립보드 복사는 `text/plain` 대체본을 반드시 함께 넣는다.** 서식을 모르는 곳(터미널·코드 편집기·plain 메일)에 붙이면 **태그가 날것 그대로** 들어간다. 대체본은 마크다운 원문이다. 그리고 **무엇이 복사됐는지 정확히 알려라** — "복사됨" 만 띄우면 붙여넣고 나서야 서식이 없다는 걸 알게 된다.
+43. **클립보드 E2E 는 폴링해야 한다.** 쓰기가 비동기라 클릭 직후 읽으면 비어 있어, 기능이 멀쩡한데도 실패한다.
+44. **정적 자산 계층은 Worker 보다 **먼저** 요청을 가로챈다.** `not_found_handling: single-page-application` 이면 매칭되는 자산이 없는 GET 이 곧바로 `index.html` 로 응답되고 **Worker 코드는 실행조차 되지 않는다**. `assets.run_worker_first` 로 API 경로를 지정해야 한다. 실제로 이것 없이 배포해 `GET /api/share/<id>` 가 마크다운 대신 앱 HTML 을 돌려준 적이 있다 — **POST 는 자산 계층이 다루지 않아 통과했기 때문에 절반만 동작했다.**
+45. **API 목(mock)을 쓰는 테스트는 배포 라우팅을 검증하지 못한다.** 단위 473건·E2E 253건이 전부 통과한 상태에서 위 결함이 실물 배포에서만 드러났다. 그래서 `scripts/healthcheck.sh` 가 **공유 API 왕복**을 확인한다 — 그리고 **캐시를 우회해야 한다**(공유 응답은 `immutable` 이라 엣지가 대신 답하면 라우팅이 깨져도 통과한다).
+46. **Worker 코드는 `tsconfig.worker.json` 으로 따로 검사한다.** 처음에는 `worker/` 가 `tsconfig.json` 의 `include` 밖에 있어 **타입 검사를 전혀 받지 않았다.** `npm run typecheck` 가 둘 다 돌리고, `npm run build` 가 그것을 부른다.
+47. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
@@ -121,7 +142,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 
 | 브랜치 | 환경 | Worker | URL |
 |--------|------|--------|-----|
-| `dev` | dev | `markdown-editor-dev` | `*.workers.dev` |
+| `dev` | dev | `markdown-editor-dev` | `md-editor-dev.devworld.co.kr` |
 | `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
 
 **`main`·`dev` 모두 브랜치 보호 규칙이 걸려 있다.** 직접 push 가 거부되므로 문서 한 줄 수정이라도 `feature/*` → PR → 머지 경로를 거쳐야 한다.

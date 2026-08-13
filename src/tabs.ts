@@ -1,4 +1,5 @@
 import { renderPreview } from "./preview";
+import { dropIndex, moveItem, stepItem } from "./tabOrder";
 import {
   createSession,
   isStorageAvailable,
@@ -262,6 +263,60 @@ export function updateActiveTab(
   schedulePersist();
 }
 
+/**
+ * 탭 순서를 새 배열대로 다시 세운다 (F-34).
+ *
+ * `Map` 은 삽입 순서를 보존하므로 **비우고 새 순서로 다시 넣는 것**이 곧
+ * 재정렬이다. 세션 영속화도 이 순서를 그대로 쓰므로 새로고침 후에도 유지된다.
+ */
+function applyOrder(orderedIds: string[]): void {
+  if (orderedIds.length !== tabs.size) return; // 계산이 어긋났으면 건드리지 않는다
+
+  const snapshot = new Map(tabs);
+  tabs.clear();
+  for (const id of orderedIds) {
+    const tab = snapshot.get(id);
+    if (tab) tabs.set(id, tab);
+  }
+
+  // 하나라도 빠졌으면 되돌린다 — 탭이 사라지는 것보다 순서가 그대로인 편이 낫다.
+  if (tabs.size !== snapshot.size) {
+    tabs.clear();
+    for (const [id, tab] of snapshot) tabs.set(id, tab);
+    return;
+  }
+
+  renderTabs();
+  schedulePersist();
+}
+
+/** 현재 탭 순서 (F-34 계산부에 넘길 값). */
+export function getTabOrder(): string[] {
+  return [...tabs.keys()];
+}
+
+/** 드래그 결과를 반영한다. */
+export function reorderTabByDrop(draggedId: string, targetId: string, insertAfter: boolean): void {
+  const order = getTabOrder();
+  const from = order.indexOf(draggedId);
+  const to = dropIndex(order, draggedId, targetId, insertAfter);
+  applyOrder(moveItem(order, from, to));
+}
+
+/** 활성 탭을 한 칸 옮긴다 (키보드 경로). 끝에서는 움직이지 않는다. */
+export function moveActiveTab(direction: number): void {
+  applyOrder(stepItem(getTabOrder(), activeTabId, direction));
+}
+
+/** 드래그 중인 탭 id. 드롭 대상 계산에만 쓰인다. */
+let draggingTabId: string | null = null;
+
+function clearDropMarkers(): void {
+  for (const el of tabBarEl.querySelectorAll(".drop-before, .drop-after")) {
+    el.classList.remove("drop-before", "drop-after");
+  }
+}
+
 function renderTabs(): void {
   tabBarEl.innerHTML = "";
 
@@ -295,6 +350,52 @@ function renderTabs(): void {
 
     el.addEventListener("click", () => {
       if (tab.id !== activeTabId) switchTab(tab.id);
+    });
+
+    // F-34 드래그 재정렬. 컨테이너를 draggable 로 두면 안쪽 <button> 에서
+    // 끌기 시작해도 이 요소가 드래그 소스가 된다.
+    el.draggable = true;
+
+    el.addEventListener("dragstart", (e) => {
+      draggingTabId = tab.id;
+      el.classList.add("dragging");
+      // setData 를 호출해야 Firefox 에서 드래그가 시작된다.
+      e.dataTransfer?.setData("text/plain", tab.id);
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+    });
+
+    el.addEventListener("dragend", () => {
+      draggingTabId = null;
+      clearDropMarkers();
+      el.classList.remove("dragging");
+    });
+
+    el.addEventListener("dragover", (e) => {
+      if (!draggingTabId || draggingTabId === tab.id) return;
+      // preventDefault 를 하지 않으면 브라우저가 "놓을 수 없음" 으로 판정해
+      // drop 이 아예 발생하지 않는다.
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+
+      // 놓은 탭의 어느 절반인지로 앞/뒤를 가른다 — 항상 앞에 넣으면 마지막
+      // 자리로 옮길 방법이 없다.
+      const rect = el.getBoundingClientRect();
+      const after = e.clientX > rect.left + rect.width / 2;
+      clearDropMarkers();
+      el.classList.add(after ? "drop-after" : "drop-before");
+    });
+
+    el.addEventListener("dragleave", () => {
+      el.classList.remove("drop-before", "drop-after");
+    });
+
+    el.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const draggedId = draggingTabId ?? e.dataTransfer?.getData("text/plain") ?? "";
+      const after = el.classList.contains("drop-after");
+      clearDropMarkers();
+      draggingTabId = null;
+      if (draggedId && draggedId !== tab.id) reorderTabByDrop(draggedId, tab.id, after);
     });
 
     tabBarEl.appendChild(el);

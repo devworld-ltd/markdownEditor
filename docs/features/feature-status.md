@@ -70,6 +70,12 @@
 | F-38 | HTML 내보내기 (독립 실행 파일) | `src/htmlExport.ts`, `fileOps.exportFile()` | 단위 18 + E2E 7 |
 | F-39 | 인쇄 / PDF (인쇄 전용 스타일) | `src/style.css` `@media print` | E2E 9 |
 | F-59 | 접근성 정밀 점검 (axe + 수동 시나리오) | `index.html`, `src/tabs.ts`, `src/style.css` | E2E 18 |
+| F-34 | 탭 드래그·키보드 재정렬 | `src/tabOrder.ts`, `src/tabs.ts` | 단위 18 + E2E 11 |
+| F-35 | 편집 글꼴·글자 크기 설정 | `src/editorPrefs.ts`, `src/editorSettings.ts` | 단위 23 + E2E 12 |
+| F-36 | 최근 파일 목록 (핸들 수명 안내 포함) | `src/recentFiles.ts`, `src/recentFilesUi.ts` | 단위 31 + E2E 12 |
+| F-40 | 렌더된 HTML 클립보드 복사 | `src/clipboardExport.ts` | 단위 10 + E2E 7 |
+| F-60 | 공유 링크 (Cloudflare R2) | `worker/index.ts`, `src/shareId.ts`, `src/share.ts` | 단위 42 + E2E 10 |
+| F-67 | dev 환경 커스텀 도메인 | `wrangler.jsonc` | 배포 헬스체크 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -107,22 +113,16 @@
 
 | ID | 기능 |
 |----|------|
-| F-34 | 탭 드래그 재정렬 |
-| F-35 | 폰트·테마 설정 |
-| F-36 | 최근 파일 목록 |
 
 ### 4.4 내보내기 / 공유
 
 | ID | 기능 |
 |----|------|
-| F-40 | 렌더된 HTML 클립보드 복사 |
-| F-60 | 공유 링크 (문서 퍼블리시) — 서버 도입 필요 |
 
 ### 4.5 웹 플랫폼
 
 | ID | 기능 | 비고 |
 |----|------|------|
-| F-67 | dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` |
 
 ### 4.6 엔지니어링
 

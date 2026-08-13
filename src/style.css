@@ -137,6 +137,34 @@ body {
   color: #ccc;
 }
 
+/* F-34 드래그 재정렬 */
+.tab {
+  position: relative;
+}
+
+.tab.dragging {
+  opacity: 0.45;
+}
+
+/* 놓을 위치 표시. 테두리가 아니라 ::before 라야 탭 폭이 흔들리지 않는다. */
+.tab.drop-before::before,
+.tab.drop-after::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #007acc;
+}
+
+.tab.drop-before::before {
+  left: 0;
+}
+
+.tab.drop-after::before {
+  right: 0;
+}
+
 .tab.active {
   background: #1e1e1e;
   color: #fff;
@@ -190,8 +218,10 @@ body {
   padding: 16px;
   border: none;
   resize: none;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 14px;
+  /* F-35: 변수로 두면 설정이 한 곳에서만 적용된다. 값이 없을 때의 기본은
+     여기 적힌 폴백이라, 설정 모듈이 실패해도 편집기는 그대로 뜬다. */
+  font-family: var(--editor-font-family, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace);
+  font-size: var(--editor-font-size, 14px);
   line-height: 1.6;
   outline: none;
   background: var(--surface-editor);
@@ -513,6 +543,129 @@ body {
 .search-text-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* F-36 최근 파일 */
+.recent-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recent-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-open:hover {
+  background: var(--code-bg);
+}
+
+.recent-open:focus-visible,
+.recent-remove:focus-visible {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
+}
+
+.recent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 핸들이 끊긴 항목은 흐리게 — 다만 색만으로 알리지 않는다.
+   버튼의 접근 가능한 이름과 우측 텍스트가 상태를 함께 말한다. */
+.recent-row[data-live="false"] .recent-name {
+  opacity: 0.75;
+}
+
+.recent-meta {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.recent-remove {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.recent-remove:hover {
+  background: var(--code-bg);
+  color: var(--text);
+}
+
+/* F-35 편집 설정 */
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.setting-select {
+  padding: 5px 8px;
+  border: 1px solid var(--rule-subtle);
+  border-radius: 4px;
+  background: var(--surface-preview);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.setting-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-value {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.setting-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /*

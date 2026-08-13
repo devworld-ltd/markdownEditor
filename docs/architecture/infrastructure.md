@@ -22,7 +22,7 @@
 | 환경 | 소스 브랜치 | 배포 방식 | Worker 이름 | `APP_ENV` | 접근 |
 |------|-------------|-----------|-------------|-----------|------|
 | **local** | 작업 브랜치 | `npm run dev` (Vite) 또는 `npm run cf:dev` (workerd) | — | — | `http://127.0.0.1:5173` |
-| **dev** | `dev` | `dev` push 시 GitHub Actions 자동 | `markdown-editor-dev` | `dev` | `*.workers.dev` |
+| **dev** | `dev` | `dev` push 시 GitHub Actions 자동 | `markdown-editor-dev` | `dev` | `md-editor-dev.devworld.co.kr` (+ `*.workers.dev`) |
 | **prod** | `main` | `main` push 시 GitHub Actions 자동 | `markdown-editor-prod` | `prod` | **`md-editor.devworld.co.kr`** |
 
 ```mermaid
@@ -138,6 +138,27 @@ build.sourcemap: true  // 프로덕션 디버깅용
 
 > 이 가드는 처음에 헛돌았다. 토크나이저가 지원 문자만 매칭해서 `C` 를 **아예 버렸고**, 그 결과 곡선이 직선으로 파싱되어 가드가 한 번도 실행되지 않았다. 모든 알파벳을 토큰으로 잡은 뒤에야 실제로 멈춘다. **가드를 넣었으면 그 가드가 실제로 걸리는지 확인해야 한다.**
 
+## 3.10 공유 Worker 와 R2 (F-60)
+
+| 환경 | Worker | R2 버킷 |
+|------|--------|---------|
+| dev | `markdown-editor-dev` | `md-editor-shares-dev` |
+| prod | `markdown-editor-prod` | `md-editor-shares` |
+
+`wrangler.jsonc` 에 `main: "worker/index.ts"` 가 생겼다 — **F-60 이전에는 정적 자산 전용 Worker 라 진입점이 없었다.**
+
+**`assets.run_worker_first` 가 필수다.** 자산 계층이 Worker 보다 먼저 요청을 가로채기 때문에, 없으면 `GET /api/share/<id>` 가 Worker 에 닿지 않는다(§서비스 아키텍처 F-60).
+
+Worker 코드는 `tsconfig.worker.json` 으로 따로 타입 검사한다 — 브라우저와 workerd 는 전역이 겹치면서도 다르다. `npm run typecheck` 가 둘 다 돌리고 `npm run build` 가 그것을 부르므로 CI 에서도 걸린다.
+
+### 보존
+
+R2 객체는 무기한 보존된다. 수명 규칙은 계정 설정이라 코드로 강제할 수 없다. 내용 주소 지정이라 중복 공유는 객체를 늘리지 않지만, 주기적 확인이 필요하다:
+
+```bash
+npx wrangler r2 bucket info md-editor-shares
+```
+
 ## 4. CI/CD
 
 CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deploy` 는 `needs: verify` 로 묶여 있어 **검증을 통과한 커밋만 배포된다.**
@@ -214,7 +235,7 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 | XSS | `parser.ts` 에서 DOMPurify 로 정화. 웹 배포 시 필수 방어선 |
 | HTTPS | Cloudflare 가 기본 제공. File System Access API 요구 조건도 충족 |
 | CSP 헤더 | ✅ `public/_headers` — `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'` 등 |
-| 커스텀 도메인 | ✅ prod = `md-editor.devworld.co.kr` (dev 는 `*.workers.dev`) |
+| 커스텀 도메인 | ✅ prod = `md-editor.devworld.co.kr`, dev = `md-editor-dev.devworld.co.kr` (F-67) |
 | 관측 | `observability.enabled = true` (Workers Logs) |
 | 롤백 | Cloudflare 대시보드의 이전 버전 배포 또는 `main` revert 후 재배포 |
 
@@ -236,7 +257,7 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 | `style-src` | `'unsafe-inline'` 허용 | 마크다운 본문의 인라인 `style` 속성(DOMPurify 가 허용)이 렌더되려면 필요. 인라인 스크립트와 달리 실행 권한이 없어 위험도가 낮다 |
 | `img-src` | `https:` 허용 | 문서의 `![](https://…)` 외부 이미지 |
 | `img-src` | `data:` 허용 | 인라인 SVG·data URI 이미지 |
-| `script-src` | `https://static.cloudflareinsights.com` 허용 | Cloudflare Web Analytics 가 **커스텀 도메인에만** 비콘을 엣지 주입한다. `*.workers.dev`(dev)에는 주입되지 않아 dev 검증에서 드러나지 않았고, prod E2E 에서 처음 잡혔다. 차단하면 모든 사용자 콘솔에 CSP 위반 에러가 남는다 |
+| `script-src` | `https://static.cloudflareinsights.com` 허용 | Cloudflare Web Analytics 가 **커스텀 도메인에만** 비콘을 엣지 주입한다. 예전에는 dev 가 `*.workers.dev` 라 주입되지 않아 이 문제가 prod E2E 에서 처음 잡혔다. **F-67 로 dev 에도 커스텀 도메인이 붙어 이 비대칭이 사라졌다** — 같은 종류의 문제가 이제 dev 에서 먼저 드러난다 |
 | `connect-src` | `https://cloudflareinsights.com` 허용 | 위 비콘의 전송 대상 |
 
 `script-src` 는 `'self'` + Cloudflare Insights 비콘 호스트만 허용하며 `'unsafe-inline'`·`'unsafe-eval'` 은 절대 넣지 않는다. E2E 가 허용 호스트 목록을 **정확히 일치**로 단언하므로, 외부 스크립트를 추가하려면 테스트도 함께 고쳐야 한다.
@@ -251,7 +272,6 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 
 ## 7. 개선 권고
 
-1. **dev 환경 커스텀 도메인** — dev 는 아직 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 등을 추가한다.
 2. ~~**배포 후 헬스체크**~~ — §4.2.1(`scripts/healthcheck.sh`)로 완료 (F-64, 이슈 #15).
 3. **서비스 워커 업데이트 알림** — 새 배포가 있어도 사용자가 알 수 없다.
 4. ~~**버전 표기**~~ — `/sw.js` 의 `VERSION` 이 커밋 SHA 앞 7자리다(§3.1, §4.2.1). `APP_ENV` 외 화면 노출 버전 표기는 여전히 미구현.
