@@ -23,6 +23,8 @@ import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
 import { initFsLimitNotice } from "./fsLimitNotice";
 import { initScrollSync } from "./scrollSync";
+import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
+import { initSearch } from "./search";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -33,6 +35,15 @@ const noticeEl = document.querySelector<HTMLElement>("#notice");
 const swUpdateEl = document.querySelector<HTMLElement>("#sw-update");
 const offlineEl = document.querySelector<HTMLElement>("#offline-indicator");
 const fsLimitNoticeEl = document.querySelector<HTMLElement>("#fs-limit-notice");
+const shortcutHelpEl = document.querySelector<HTMLDialogElement>("#shortcut-help");
+const shortcutHelpListEl = document.querySelector<HTMLElement>("#shortcut-help-list");
+const shortcutHelpCloseEl = document.querySelector<HTMLElement>("#shortcut-help-close");
+const searchBarEl = document.querySelector<HTMLElement>("#search-bar");
+const searchInputEl = document.querySelector<HTMLInputElement>("#search-input");
+const searchCountEl = document.querySelector<HTMLElement>("#search-count");
+const searchPrevEl = document.querySelector<HTMLElement>("#search-prev");
+const searchNextEl = document.querySelector<HTMLElement>("#search-next");
+const searchCloseEl = document.querySelector<HTMLElement>("#search-close");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -47,10 +58,29 @@ if (editorEl && previewEl) {
   // 있어야 최초 복원 시점부터 M10/M11 이 성립한다.
   const scrollSync = initScrollSync({ editor: editorEl, preview: previewEl });
 
+  // F-22: 검색은 에디터 본문을 대상으로 하므로 editorEl 만 있으면 된다.
+  // 실패하면 단축키·툴바 진입점이 조용히 없는 것처럼 동작한다.
+  const search =
+    searchBarEl && searchInputEl && searchCountEl && searchPrevEl && searchNextEl && searchCloseEl
+      ? initSearch({
+          panelEl: searchBarEl,
+          inputEl: searchInputEl,
+          countEl: searchCountEl,
+          prevEl: searchPrevEl,
+          nextEl: searchNextEl,
+          closeEl: searchCloseEl,
+          editorEl,
+        })
+      : null;
+
   createEditor({
     editorEl,
     previewEl,
-    onAfterRender: () => scrollSync.reapplyAfterRender(),
+    onAfterRender: () => {
+      scrollSync.reapplyAfterRender();
+      // 본문이 바뀌면 일치 위치도 바뀐다. 열려 있을 때만 다시 계산한다.
+      search?.refresh();
+    },
   });
 
   // 파일 I/O 는 탭 상태를 건드리므로 탭 초기화(세션 복원 포함)보다 먼저 준비한다.
@@ -72,18 +102,35 @@ if (editorEl && previewEl) {
     initTabs(tabBarEl, editorEl, previewEl, titleEl);
   }
 
+  // F-58: 안내 UI 는 툴바 버튼과 단축키 양쪽에서 열린다. 초기화에 실패하면
+  // 두 진입점 모두 조용히 없는 것처럼 동작한다(에디터 기능은 그대로).
+  const shortcutHelp =
+    shortcutHelpEl && shortcutHelpListEl && shortcutHelpCloseEl
+      ? initShortcutHelp({
+          dialogEl: shortcutHelpEl,
+          listEl: shortcutHelpListEl,
+          closeEl: shortcutHelpCloseEl,
+          isApplePlatform: detectApplePlatform(navigator.userAgent),
+          returnFocusTo: editorEl,
+        })
+      : null;
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
     save: () => void saveFile(),
     saveAs: () => void saveFileAs(),
+    showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
   });
 
   if (toolbarEl) {
     initToolbar(toolbarEl, editorEl);
   }
 
-  initShortcuts();
+  initShortcuts({
+    toggleHelp: shortcutHelp ? () => shortcutHelp.toggle() : undefined,
+    toggleFind: search ? () => search.toggle() : undefined,
+  });
 
   // 새로고침·탭 닫기로 인한 유실 방지. 브라우저는 문구를 무시하고 기본 경고를 띄운다.
   // F-69: 서비스 워커 갱신 리로드가 진행 중이면(세션이 이미 확정 저장됐으므로) 이

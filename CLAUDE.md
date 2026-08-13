@@ -55,6 +55,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`searchEngine.ts`** — 문서 내 검색의 **계산만** 담당하는 순수 리프(F-22). 일치 탐색·순환·서수 보존.
+- **`search.ts`** — 검색 바 배선(F-22). 주입형 리프. 스크롤 측정(`measureOffsetTop`)이 주입 경계다.
+- **`shortcutDefs.ts`** — 단축키 **단일 출처**(조합 판별 + 표시용 키 캡). DOM 비의존 순수 모듈. `shortcuts.ts`(디스패치)와 `shortcutHelp.ts`(안내)가 둘 다 여기서 읽는다.
+- **`shortcutHelp.ts`** — 단축키 안내 `<dialog>`(F-58). 주입형 리프.
 - **`shortcuts.ts`** — `Cmd/Ctrl+O·S`, `Shift+S`, `Alt+N·W`.
 
 ## 반드시 알아야 할 함정
@@ -79,7 +83,15 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 17. **스크롤 동기화의 세 가지 순서 제약을 깨지 말 것.** (a) 프로그램적 스크롤 판별은 **불리언이 아니라 `expectedTop` 값 비교** — `scrollTop` 대입은 scroll 을 동기 발화하지 않아 플래그는 이벤트 도착 시 이미 내려가 있다. (b) `switchTab()` 의 억제 해제는 **`rAF`**, `setTimeout(…,0)` 은 순서 보장이 없어 F-06/F-51 이 회귀한다. (c) scroll 리스너는 **패널에 직접·비캡처** — `scroll` 은 버블링하지 않고, `document`/capture 로 붙이면 프리뷰 내부 `pre`·`table` 의 가로 스크롤이 세로 동기화를 트리거한다.
 18. **`0/0 = NaN` 을 `scrollTop` 에 대입하면 브라우저가 조용히 0 으로 클램프한다.** 예외가 안 나므로 가드 누락이 개발 중에 안 보인다. `!== 0` 이 아니라 **`> 0`** 으로 비교하라(레이아웃 전이 중 음수 가능).
 19. **배포 검증에는 캐시 우회와 재시도가 둘 다 필요하다.** 엣지 캐시(`cf-cache-status: HIT`)로 구버전을 보고 오판한 적이 두 번, 인증서 프로비저닝으로 1분간 500 이 난 적이 한 번 있다. `scripts/healthcheck.sh` 가 이를 처리한다.
-20. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+20. **폼 컨트롤은 `color` 를 상속하지 않는다.** `body` 에만 색을 주면 `textarea#editor` 가 UA 의 `fieldtext` 로 초기화돼 **다크 모드에서만** 검은 글씨가 어두운 표면 위에 남는다. 개발 중엔 라이트로 보고 있어 안 보인다. 표면색을 바꾸면 그 위의 글자색도 **같은 규칙에서** 함께 선언하라.
+21. **색은 반드시 bare `:root` 에 기준값을 두고 `@media (prefers-color-scheme: dark)` 는 덮어쓰기만 하라.** 미디어 쿼리 안에서만 정의된 색은 라이트에서 값이 없어 UA 기본값으로 떨어진다. 그리고 다크는 **토큰 값만** 바꾼다 — 다크 전용 레이아웃 분기를 만들면 F-72 구분과 720px 경계가 두 벌이 되어 한쪽만 갱신되는 사고가 난다.
+22. **PWA 아이콘 PNG 는 `npm run icons` 로만 갱신된다.** `public/icon.svg` 를 바꾸고 재생성을 잊으면 **PNG 만 옛 그림으로 남는다** — 빌드도 테스트도 통과하므로 배포 후 홈 화면에서야 드러난다. `apple-touch-icon`·maskable 은 **full-bleed**, `purpose: any` 는 **둥근 모서리**다(소비자가 자기 마스크를 씌우느냐로 갈린다). 생성기 파서는 좁아서 곡선·도형 추가를 만나면 예외로 멈춘다.
+23. **가드를 넣었으면 그 가드가 실제로 걸리는지 확인하라.** `gen-icons.mjs` 의 곡선 거부 가드는 토크나이저가 `C` 를 아예 버려서 **한 번도 실행되지 않았다** — 곡선이 직선으로 조용히 파싱됐다. 트랩 #16(단언 검증)의 생성기 버전이다.
+24. **단축키는 `shortcutDefs.ts` 에만 추가한다.** 안내 UI 가 같은 정의에서 파생되므로 자동 반영되고, 디스패치를 빠뜨리면 `Record<ShortcutId, …>` 가 타입 오류로 막는다. `shortcuts.ts` 에서 직접 `e.key` 를 비교하는 방식으로 되돌리면 **안내가 조용히 낡는다** — 안내가 거짓말하는 것은 안내가 없는 것보다 나쁘다.
+25. **전역 리셋 `* { margin: 0 }` 이 `<dialog>` 의 UA `margin: auto` 를 덮어쓴다.** 모달이 화면 **좌상단에 붙지만 기능은 멀쩡해서** 테스트 없이는 그대로 배포된다. 그리고 **백드롭 클릭의 히트 타깃은 `dialog` 가 아니다**(Chromium 은 아래 깔린 요소를 준다) — 좌표로 판단하고, `click` 이 아니라 **`pointerdown`** 으로 들어야 여는 클릭이 즉시 닫는 경합을 피한다.
+26. **검색 중에는 에디터로 포커스를 옮기지 말 것.** `reveal()` 이 `editorEl.focus()` 를 하면 **Enter 가 본문에 개행을 넣어 방금 찾은 일치를 지운다**(실제로 그랬고 E2E 가 `1/3 → 1/2` 로 잡았다). 선택만 걸고 포커스는 검색창에 남긴다 — Esc 로 닫는 순간 그 선택이 활성 선택이 된다.
+27. **`Cmd/Ctrl+F` 는 `Cmd+W`·`Cmd+N` 과 달리 가로챌 수 있다.** 페이지에 도달하고 `preventDefault()` 가 먹는다(실측). 트랩 #4 를 이 조합까지 확대 적용하지 말 것.
+28. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
