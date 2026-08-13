@@ -88,10 +88,10 @@ test("TB5: 열 정렬을 오른쪽으로 바꾸면 프리뷰에 반영된다", a
   await page.locator("#table-submit").click();
 
   await expect(page.locator("#editor")).toHaveValue(/\| *-+: *\|/);
-  const align = await page
-    .locator("#preview tbody tr:first-child td:nth-child(2)")
-    .evaluate((el) => getComputedStyle(el).textAlign);
-  expect(align).toBe("right");
+  // 프리뷰는 150ms 디바운스 뒤에 그려진다 — 한 번 읽고 끝내면 CI 에서 흔들린다.
+  await expect(
+    page.locator("#preview tbody tr:first-child td:nth-child(2)"),
+  ).toHaveCSS("text-align", "right");
 });
 
 test("TB6: 표 정렬을 되돌릴 수 있다 — execCommand 로 undo 스택이 보존된다", async ({
