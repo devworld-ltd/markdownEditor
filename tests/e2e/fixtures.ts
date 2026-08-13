@@ -253,3 +253,126 @@ export async function triggerSwControllerChange(page: Page): Promise<void> {
 export function getSwWaitingPostMessageCalls(page: Page): Promise<unknown[]> {
   return page.evaluate(() => window.__swStub?.getWaitingPostMessageCalls() ?? []);
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * F-25/F-72 스크롤 동기화 (이슈 #31) — 검증 헬퍼
+ *
+ * 이 이슈는 파일 시스템·서비스 워커처럼 "플랫폼 API 를 흉내 낼" 대상이 없다.
+ * `textarea#editor`/`div#preview` 는 둘 다 실제 DOM 요소이고 스크롤은 네이티브
+ * 동작이므로, 앞의 두 스텁과 달리 여기서는 **목(mock)이 아니라 측정·조작
+ * 유틸리티**만 필요하다. 아래 5개 함수는 신규 export 이며 기존 8종의 시그니처와
+ * 동작은 건드리지 않는다.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/** 스크롤 컨테이너 하나의 3대 메트릭. `scrollSync.ts` 의 매핑 함수가 쓰는 값과 동일하다. */
+export interface ScrollMetrics {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+}
+
+/** `selector` 요소의 현재 스크롤 메트릭을 읽는다. */
+export function getScrollMetrics(page: Page, selector: string): Promise<ScrollMetrics> {
+  return page.locator(selector).evaluate((el) => ({
+    scrollTop: el.scrollTop,
+    scrollHeight: el.scrollHeight,
+    clientHeight: el.clientHeight,
+  }));
+}
+
+/**
+ * `selector` 요소의 `scrollTop` 을 직접 대입해 스크롤을 유발한다.
+ *
+ * **주의 — `mouse.wheel` 과의 차이를 이해하고 골라 쓸 것**:
+ * - `setScrollTop()`(본 함수) 은 목표 위치에 **정확히, 한 번에** 도달한다.
+ *   브라우저는 이 대입에 대해서도 실제 `scroll` 이벤트를 (다음 렌더링 프레임 직전에)
+ *   발화하므로, 앱 쪽 `scrollSync.ts` 입장에서는 "누가 움직였는지" 구분할 수 없는
+ *   진짜 스크롤과 동일하게 처리된다 — 즉 **R1/R2 판별 로직을 속이는 편법이 아니라
+ *   유효한 자극**이다. 양 끝 정합(AC-08/09)처럼 **정확한 좌표**가 필요한 단언에 쓴다.
+ * - `page.mouse.wheel(dx, dy)` 는 실제 휠 이벤트 시퀀스를 보내 브라우저가 자체
+ *   가감속으로 `scrollTop` 을 여러 번에 걸쳐 바꾼다 — 정확한 목표 좌표를 보장하지
+ *   않지만, "연속 `scroll` 이벤트가 여러 번 온다"(AC-14 프레임 병합) 같은 **연속성
+ *   자체**를 검증해야 하는 단언에 쓴다.
+ * - 두 수단을 섞어 같은 단언에 쓰지 말 것 — 오차 허용치가 다르다.
+ */
+export async function setScrollTop(page: Page, selector: string, top: number): Promise<void> {
+  await page.locator(selector).evaluate((el, value) => {
+    el.scrollTop = value;
+  }, top);
+}
+
+/**
+ * 콘솔 `error`/`warning` 을 페이지 이동 전부터 수집한다.
+ *
+ * AC-19~21(엣지 케이스)은 "콘솔 오류·경고가 한 건도 없다" 를 요구한다.
+ * `page.goto()` 이전에 호출해야 초기 로드 시점의 메시지도 놓치지 않는다.
+ */
+export function watchConsoleIssues(page: Page): { errors: string[]; warnings: string[] } {
+  const issues = { errors: [] as string[], warnings: [] as string[] };
+  page.on("console", (msg) => {
+    if (msg.type() === "error") issues.errors.push(msg.text());
+    if (msg.type() === "warning") issues.warnings.push(msg.text());
+  });
+  return issues;
+}
+
+/**
+ * `containerSelector` 안에서 `text` 를 포함하는 요소가 (a) 현재 뷰포트 안에 보이는지,
+ * (b) 보이지 않는다면 뷰포트 경계로부터 몇 px 떨어져 있는지를 반환한다.
+ *
+ * AC-10/11(균질 산문은 화면 안, 코드 블록 혼재 문서는 "한 화면 이내") 판정에 쓴다.
+ * `distancePx` 는 요소가 이미 보이면 `0`, 위/아래 어느 쪽으로든 벗어난 만큼의
+ * 양수 거리다. "한 화면 이내" 판정은 호출부에서
+ * `distancePx <= containerClientHeight` 로 비교한다(컨테이너 높이는
+ * `getScrollMetrics()` 로 별도 조회).
+ */
+export function getAnchorProximity(
+  page: Page,
+  containerSelector: string,
+  text: string,
+): Promise<{ visible: boolean; distancePx: number }> {
+  return page.evaluate(
+    ({ containerSelector, text }) => {
+      const container = document.querySelector(containerSelector);
+      if (!container) return { visible: false, distancePx: Infinity };
+
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      let target: Element | null = null;
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (node.textContent?.includes(text)) {
+          target = node.parentElement;
+          break;
+        }
+      }
+      if (!target) return { visible: false, distancePx: Infinity };
+
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+
+      if (targetRect.bottom >= containerRect.top && targetRect.top <= containerRect.bottom) {
+        return { visible: true, distancePx: 0 };
+      }
+      const distancePx =
+        targetRect.top > containerRect.bottom
+          ? targetRect.top - containerRect.bottom
+          : containerRect.top - targetRect.bottom;
+      return { visible: false, distancePx };
+    },
+    { containerSelector, text },
+  );
+}
+
+/**
+ * 지정한 길이의 균질 산문 문서를 만든다 (기술 스펙 §10.0 DOC-A 패턴).
+ * `markerLines` 에 준 줄 번호에는 대신 `## 마커-<label>` 제목을 심는다.
+ */
+export function buildProseDoc(
+  totalLines: number,
+  markers: Record<number, string> = {},
+): string {
+  const lines: string[] = [];
+  for (let i = 1; i <= totalLines; i++) {
+    lines.push(markers[i] ? `## 마커-${markers[i]}` : `문단 ${i} — 스크롤 동기화 검증용 본문입니다.`);
+  }
+  return lines.join("\n");
+}

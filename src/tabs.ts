@@ -41,6 +41,23 @@ let onCloseDirty: ((tab: TabState) => boolean) | null = null;
 /** 자동 저장 실패 알림을 500ms 마다 반복하지 않기 위한 플래그. */
 let saveFailureNotified = false;
 
+/**
+ * F-25: switchTab() 의 동기화 억제·재동기화 훅. `setCloseConfirm()` 과 동일한
+ * 주입 패턴이다 — tabs.ts 는 scrollSync.ts 를 import 하지 않는다(D-2).
+ */
+export interface TabScrollSyncHooks {
+  suspend(): void;
+  /** 억제 해제 + 에디터 복원 위치 기준 1회 동기화. 순서는 구현이 보장한다. */
+  resumeAndSync(): void;
+}
+
+let scrollSyncHooks: TabScrollSyncHooks | null = null;
+
+/** main.ts 가 주입한다. 주입하지 않으면 전 경로가 무동작이다(기존 동작 그대로). */
+export function setScrollSyncHooks(hooks: TabScrollSyncHooks): void {
+  scrollSyncHooks = hooks;
+}
+
 function generateId(): string {
   return `tab-${nextId++}`;
 }
@@ -151,24 +168,29 @@ export function closeTab(id: string): void {
 
 export function switchTab(id: string): void {
   const target = tabs.get(id);
-  if (!target) return;
+  if (!target) return; // 가드가 먼저 — 존재하지 않는 ID 는 억제조차 하지 않는다
 
-  syncActiveTab();
+  scrollSyncHooks?.suspend(); // M10 — 억제가 항상 먼저
+  try {
+    syncActiveTab();
 
-  activeTabId = id;
+    activeTabId = id;
 
-  editorEl.value = target.content;
-  editorEl.scrollTop = target.scrollTop;
-  // 탭 바 클릭으로 전환할 때 textarea 는 포커스를 잃은 상태다. 포커스 없는 textarea 의
-  // 선택 영역은 클릭 이벤트가 끝나면서 브라우저가 0,0 으로 되돌리므로, 먼저 포커스를
-  // 되돌려 준 뒤 선택을 복원해야 커서 위치가 유지된다. (편집 계속하기에도 이쪽이 맞다.)
-  editorEl.focus({ preventScroll: true });
-  editorEl.setSelectionRange(target.selectionStart, target.selectionEnd);
-  renderPreview(previewEl, target.content);
+    editorEl.value = target.content;
+    editorEl.scrollTop = target.scrollTop;
+    // 탭 바 클릭으로 전환할 때 textarea 는 포커스를 잃은 상태다. 포커스 없는 textarea 의
+    // 선택 영역은 클릭 이벤트가 끝나면서 브라우저가 0,0 으로 되돌리므로, 먼저 포커스를
+    // 되돌려 준 뒤 선택을 복원해야 커서 위치가 유지된다. (편집 계속하기에도 이쪽이 맞다.)
+    editorEl.focus({ preventScroll: true });
+    editorEl.setSelectionRange(target.selectionStart, target.selectionEnd);
+    renderPreview(previewEl, target.content);
 
-  renderTabs();
-  updateTitle();
-  schedulePersist();
+    renderTabs();
+    updateTitle();
+    schedulePersist();
+  } finally {
+    scrollSyncHooks?.resumeAndSync(); // M11 — 억제 해제는 항상 나중. 예외가 나도 억제가 영구히 남지 않게 한다
+  }
 }
 
 /**

@@ -52,6 +52,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`offline.ts`** — 오프라인 상태 배지(F-70). 같은 주입형 리프 패턴(`OfflineHost`).
 - **`fsLimitNotice.ts`** — 폴백 브라우저의 저장 동작 차이 안내(F-58). 같은 패턴. `fileOps.saveFileAs()` 폴백 분기에서 세션당 1회 호출된다.
 - **`textEdit.ts`** — 툴바 텍스트 조작의 **문자열 계산만** 담당하는 순수 리프. DOM 삽입은 `toolbar.ts` 가 `execCommand` 로 한다.
+- **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
 - **`shortcuts.ts`** — `Cmd/Ctrl+O·S`, `Shift+S`, `Alt+N·W`.
@@ -75,8 +76,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 15. **커버리지를 올리려면 테스트를 더 쓰지 말고 의존 방향을 정리하라.** 이 저장소에서 여섯 번 검증됐다 — DI 주입형 리프(`swUpdate.ts` 79%, `offline.ts` 79%, `fsLimitNotice.ts` 100%), 순수 함수 분리(`textEdit.ts` 100%), 가짜 DOM 주입(`tabs.ts` 97%), 플랫폼 API 만 주입 경계로 분리(`fileOps.ts` 5% → 90%). 전역(`navigator` 등)을 직접 읽는 순간 테스트가 전역 패치에 의존하게 된다.
     - 다만 **완전한 리프화가 항상 답은 아니다.** `fileOps.ts` 는 본질적으로 탭 상태를 바꾸는 모듈이라 `tabs.ts` 의존을 끊으면 호출부만 복잡해진다. 검증에 필요한 경계만 빼라.
 16. **단언을 추가하면 그것이 실제로 회귀를 잡는지 확인하라.** 프로덕션 코드에 의도적 버그를 주입해 테스트가 실패하는지 본다. F-69 에서 `MutationObserver` 단언이 마이크로태스크 타이밍 때문에 **vacuous** 였던 전례가 있다.
-17. **배포 검증에는 캐시 우회와 재시도가 둘 다 필요하다.** 엣지 캐시(`cf-cache-status: HIT`)로 구버전을 보고 오판한 적이 두 번, 인증서 프로비저닝으로 1분간 500 이 난 적이 한 번 있다. `scripts/healthcheck.sh` 가 이를 처리한다.
-18. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+17. **스크롤 동기화의 세 가지 순서 제약을 깨지 말 것.** (a) 프로그램적 스크롤 판별은 **불리언이 아니라 `expectedTop` 값 비교** — `scrollTop` 대입은 scroll 을 동기 발화하지 않아 플래그는 이벤트 도착 시 이미 내려가 있다. (b) `switchTab()` 의 억제 해제는 **`rAF`**, `setTimeout(…,0)` 은 순서 보장이 없어 F-06/F-51 이 회귀한다. (c) scroll 리스너는 **패널에 직접·비캡처** — `scroll` 은 버블링하지 않고, `document`/capture 로 붙이면 프리뷰 내부 `pre`·`table` 의 가로 스크롤이 세로 동기화를 트리거한다.
+18. **`0/0 = NaN` 을 `scrollTop` 에 대입하면 브라우저가 조용히 0 으로 클램프한다.** 예외가 안 나므로 가드 누락이 개발 중에 안 보인다. `!== 0` 이 아니라 **`> 0`** 으로 비교하라(레이아웃 전이 중 음수 가능).
+19. **배포 검증에는 캐시 우회와 재시도가 둘 다 필요하다.** 엣지 캐시(`cf-cache-status: HIT`)로 구버전을 보고 오판한 적이 두 번, 인증서 프로비저닝으로 1분간 500 이 난 적이 한 번 있다. `scripts/healthcheck.sh` 가 이를 처리한다.
+20. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

@@ -15,12 +15,14 @@ import {
   initTabs,
   persistNow,
   setCloseConfirm,
+  setScrollSyncHooks,
 } from "./tabs";
 import { initNotice, showNotice } from "./notice";
 import { isStorageAvailable } from "./storage";
 import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
 import { initFsLimitNotice } from "./fsLimitNotice";
+import { initScrollSync } from "./scrollSync";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -40,7 +42,16 @@ if (editorEl && previewEl) {
   // 동일하게 동작하고, HMR 등 dev 서버 동작을 방해하지 않는다.
   if (offlineEl) initOfflineIndicator({ badgeEl: offlineEl });
 
-  createEditor({ editorEl, previewEl });
+  // F-25: initTabs() 가 내부에서 restoreSession()/createTab() → switchTab() 을
+  // 동기적으로 호출하므로, setScrollSyncHooks() 는 initTabs() 보다 먼저 주입되어
+  // 있어야 최초 복원 시점부터 M10/M11 이 성립한다.
+  const scrollSync = initScrollSync({ editor: editorEl, preview: previewEl });
+
+  createEditor({
+    editorEl,
+    previewEl,
+    onAfterRender: () => scrollSync.reapplyAfterRender(),
+  });
 
   // 파일 I/O 는 탭 상태를 건드리므로 탭 초기화(세션 복원 포함)보다 먼저 준비한다.
   initFileOps(editorEl);
@@ -48,6 +59,14 @@ if (editorEl && previewEl) {
   setCloseConfirm((tab) =>
     window.confirm(`"${tab.fileName}" 의 변경 사항이 저장되지 않았습니다. 닫을까요?`),
   );
+
+  setScrollSyncHooks({
+    suspend: () => scrollSync.suspend(),
+    resumeAndSync: () => {
+      scrollSync.syncFromEditorOnce(); // M11 — 억제 상태에서 프로그램적으로 1회
+      scrollSync.resumeAfterFrame(); // 해제는 그 다음 프레임
+    },
+  });
 
   if (titleEl && tabBarEl) {
     initTabs(tabBarEl, editorEl, previewEl, titleEl);
