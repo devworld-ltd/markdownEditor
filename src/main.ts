@@ -19,6 +19,7 @@ import {
 import { initNotice, showNotice } from "./notice";
 import { isStorageAvailable } from "./storage";
 import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
+import { initOfflineIndicator } from "./offline";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -27,9 +28,15 @@ const titleEl = document.querySelector<HTMLElement>(".toolbar h1");
 const tabBarEl = document.querySelector<HTMLElement>("#tab-bar");
 const noticeEl = document.querySelector<HTMLElement>("#notice");
 const swUpdateEl = document.querySelector<HTMLElement>("#sw-update");
+const offlineEl = document.querySelector<HTMLElement>("#offline-indicator");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
+
+  // F-70: 서비스 워커 등록 여부와 무관하게(개발 서버 포함) 항상 초기화한다 —
+  // online/offline 이벤트는 PROD 가드가 필요한 SW 등록과 달리 모든 환경에서
+  // 동일하게 동작하고, HMR 등 dev 서버 동작을 방해하지 않는다.
+  if (offlineEl) initOfflineIndicator({ badgeEl: offlineEl });
 
   createEditor({ editorEl, previewEl });
 
