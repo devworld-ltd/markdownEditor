@@ -58,6 +58,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`highlight.ts`** — 코드 하이라이팅 토크나이저(F-23). 순수 모듈. **의존성 0** — 라이브러리를 들이지 말 것. 출력은 `<span class>` 뿐이다.
 - **`shareId.ts`** — 공유 ID·검증(F-60). **Worker 와 브라우저 양쪽에서 쓰인다** — DOM 도 Node API 도 만지지 않고 `crypto.subtle` 만 쓴다.
 - **`share.ts`** — 공유 클라이언트(F-60). 주입형 리프. **이 앱에서 유일하게 네트워크를 타는 모듈**이다.
 - **`worker/index.ts`** — 공유 API Worker(F-60). `tsconfig.worker.json` 으로 따로 타입 검사한다.
@@ -126,7 +127,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 44. **정적 자산 계층은 Worker 보다 **먼저** 요청을 가로챈다.** `not_found_handling: single-page-application` 이면 매칭되는 자산이 없는 GET 이 곧바로 `index.html` 로 응답되고 **Worker 코드는 실행조차 되지 않는다**. `assets.run_worker_first` 로 API 경로를 지정해야 한다. 실제로 이것 없이 배포해 `GET /api/share/<id>` 가 마크다운 대신 앱 HTML 을 돌려준 적이 있다 — **POST 는 자산 계층이 다루지 않아 통과했기 때문에 절반만 동작했다.**
 45. **API 목(mock)을 쓰는 테스트는 배포 라우팅을 검증하지 못한다.** 단위 473건·E2E 253건이 전부 통과한 상태에서 위 결함이 실물 배포에서만 드러났다. 그래서 `scripts/healthcheck.sh` 가 **공유 API 왕복**을 확인한다 — 그리고 **캐시를 우회해야 한다**(공유 응답은 `immutable` 이라 엣지가 대신 답하면 라우팅이 깨져도 통과한다).
 46. **Worker 코드는 `tsconfig.worker.json` 으로 따로 검사한다.** 처음에는 `worker/` 가 `tsconfig.json` 의 `include` 밖에 있어 **타입 검사를 전혀 받지 않았다.** `npm run typecheck` 가 둘 다 돌리고, `npm run build` 가 그것을 부른다.
-47. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+47. **하이라이팅 출력은 `<span class>` 뿐이어야 한다.** `style`·이벤트 속성을 넣기 시작하면 DOMPurify 허용 목록을 계속 열어야 하고 F-18 이 약해진다. `class` 는 DOMPurify **기본 허용**이라 `ADD_ATTR` 이 필요 없다(넣었다가 불필요함을 확인하고 지웠다). 토크나이저는 **문자 단위 선형 스캔**을 유지하라 — 정규식 대안으로 바꾸면 ReDoS 가 들어온다.
+48. **토큰 색을 바꾸면 네 곳을 모두 고쳐야 한다**: `:root`(라이트) · `prefers-color-scheme: dark` · `@media print` · `htmlExport.ts`. 한 곳만 고치면 그 환경에서만 대비가 깨지고, 다크·인쇄는 눈으로 잘 안 본다.
+49. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

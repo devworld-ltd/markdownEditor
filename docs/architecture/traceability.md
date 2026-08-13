@@ -48,6 +48,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-35 | 편집 글꼴·크기 | 툴바 버튼 | `editorPrefs.ts` → `editorSettings.ts` → CSS 변수 | `fontId`·`fontSize` (localStorage) | — | `settings.spec.ts` |
 | F-36 | 최근 파일 | 툴바 버튼 · 파일 열기/저장 | `fileOps` 훅 → `recentFilesUi.ts` | `recent` (localStorage) + 메모리 핸들 | `showOpenFilePicker` | `recent.spec.ts` |
 | F-40 | 클립보드 복사 | 툴바 버튼 | `preview.innerHTML` → `clipboardExport.ts` | — | `navigator.clipboard` · `ClipboardItem` | `clipboard.spec.ts` |
+| F-23 | 코드 하이라이팅 | 프리뷰 렌더 | `highlight.ts` → `parser.ts` marked renderer | — | — | `highlight.spec.ts` |
 | F-60 | 공유 링크 | 툴바 버튼 · `/s/:id` 방문 | `share.ts` ↔ `worker/index.ts` → R2 | R2 객체 (내용 주소) | `fetch` · `crypto.subtle` | `share.spec.ts`, `worker.test.ts`, healthcheck |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
@@ -167,6 +168,8 @@ graph LR
 | `tests/share.test.ts` | 8 | F-60 |
 | `tests/worker.test.ts` | 16 | F-60 |
 | `tests/e2e/share.spec.ts` | 10 | F-60 |
+| `tests/highlight.test.ts` | 23 | F-23 |
+| `tests/e2e/highlight.spec.ts` | 9 | F-23 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
@@ -174,6 +177,7 @@ graph LR
 | 변경 대상 | 갱신해야 할 문서 |
 |-----------|------------------|
 | `src/htmlExport.ts` | [서비스 아키텍처 §7.4](./service-architecture.md) — **마크다운을 파싱하지 않는다**. 정화 경로를 늘리지 말 것 |
+| `src/highlight.ts` (언어·색 추가) | [서비스 아키텍처 §7.4](./service-architecture.md), `docs/testing/coverage.md` — **라이트·다크·인쇄·내보내기 네 곳의 색을 모두 갱신**해야 한다 |
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | [서비스 아키텍처 §3](./service-architecture.md), [API 명세 §8](../api/browser-apis.md#8-보안-노트), `tests/parser.test.ts` |
 | `src/tabs.ts` (`TabState` 필드) | [데이터 모델 §2](./data-model.md), 본 문서 §1·§3 |
 | `src/storage.ts` (세션 스키마·버전) | [데이터 모델 §3](./data-model.md), [API 명세 §4](../api/browser-apis.md#4-세션-저장-localstorage) |

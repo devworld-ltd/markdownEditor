@@ -62,6 +62,12 @@ const EXPORT_STYLES = `
   table { border-collapse: collapse; margin: 0 0 1em; display: block; overflow-x: auto; }
   th, td { border: 1px solid #dddddd; padding: 6px 10px; text-align: left; }
   img { max-width: 100%; }
+  /* F-23 토큰 색. 내보낸 파일은 라이트 고정이므로 라이트 팔레트만 심는다. */
+  .tok-keyword { color: #a11b8c; font-weight: 600; }
+  .tok-string { color: #0a6640; }
+  .tok-comment { color: #5a6169; font-style: italic; }
+  .tok-number { color: #b3541e; }
+  .tok-punct { color: #57606a; }
   hr { border: none; border-top: 1px solid #dddddd; margin: 2em 0; }
 `.trim();
 
