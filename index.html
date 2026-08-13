@@ -35,6 +35,18 @@
         ></textarea>
         <div id="preview" aria-label="미리보기"></div>
       </main>
+      <!-- F-58: 단축키 안내. 네이티브 <dialog> 를 쓰면 포커스 트랩·Esc 닫기·
+           백드롭·바깥 요소 inert 처리를 브라우저가 정확히 해 준다. -->
+      <dialog id="shortcut-help" class="shortcut-help" aria-labelledby="shortcut-help-title">
+        <div class="shortcut-help-header">
+          <h2 id="shortcut-help-title">단축키</h2>
+          <button type="button" id="shortcut-help-close" class="shortcut-help-close" aria-label="닫기">
+            &times;
+          </button>
+        </div>
+        <div id="shortcut-help-list" class="shortcut-help-list"></div>
+      </dialog>
+
       <div id="notice-stack" class="notice-stack">
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 

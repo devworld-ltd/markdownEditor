@@ -66,6 +66,8 @@ export interface FileActions {
   open: () => void;
   save: () => void;
   saveAs: () => void;
+  /** F-58 단축키 안내 열기. 안내 UI 초기화 실패 시 넘어오지 않는다. */
+  showShortcuts?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -199,6 +201,14 @@ const actions: ToolbarAction[] = [
     icon: `<svg ${SVG_ATTRS}><line x1="2" y1="12" x2="22" y2="12"/></svg>`,
     action: (ta) => insertBlock(ta, "---"),
     editsText: true,
+    separator: true,
+  },
+  {
+    // F-58: 단축키를 알려주는 기능을 단축키로만 열 수 있으면 순환이다.
+    // 웹에는 메뉴바가 없으므로 눈에 보이는 진입점이 반드시 하나 있어야 한다.
+    label: "Shortcuts",
+    icon: `<svg ${SVG_ATTRS}><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6.01" y2="10"/><line x1="10" y1="10" x2="10.01" y2="10"/><line x1="14" y1="10" x2="14.01" y2="10"/><line x1="18" y1="10" x2="18.01" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>`,
+    action: () => fileActions?.showShortcuts?.(),
   },
 ];
 

@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **192** | 0 | 0 | 192 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **111** | **0** | 15 ※ | 126 |
-| **합계 (dev 기준)** | | **303** | **0** | 15 | 318 |
+| 단위 | Vitest 4.1.10 (jsdom) | **222** | 0 | 0 | 222 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **122** | **0** | 15 ※ | 137 |
+| **합계 (dev 기준)** | | **344** | **0** | 15 | 359 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -57,6 +57,7 @@
 | `scrollsync.spec.ts` | 11 | ✅ F-72 시각 구분 + F-25 스크롤 동기화 |
 | `darkmode.spec.ts` | 6 | ✅ F-57 다크 모드 — 대비비를 Node 에서 실제 계산해 단언 |
 | `icons.spec.ts` | 7 | ✅ F-68 PWA 아이콘 — IHDR 을 읽어 선언과 실물을 대조 |
+| `shortcuthelp.spec.ts` | 11 | ✅ F-58 단축키 안내 — 모달 동작·포커스 복귀·macOS 표기 |
 
 ### 2.1 URL 응답 (15)
 

@@ -8,8 +8,8 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **192건** + E2E 126건 (전부 통과) |
-| 기능 커버리지 | 31/34 자동 검증 · 라인 커버리지 **76.82%** |
+| 테스트 | 단위 **222건** + E2E 137건 (전부 통과) |
+| 기능 커버리지 | 34/37 자동 검증 · 라인 커버리지 **78.08%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
 
@@ -33,6 +33,7 @@
 - 실시간 마크다운 프리뷰 (좌우 분할, 150ms 디바운스)
 - **편집/프리뷰 영역 시각 구분 + 양방향 스크롤 동기화**
 - **다크 모드** (OS 설정 추종)
+- **단축키 안내** (툴바 버튼 또는 `Alt+/`)
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
@@ -40,7 +41,7 @@
 - **세션 자동 저장·복원** (localStorage) + 미저장 이탈 경고 + 용량 초과 알림
 - **PWA** — 설치형 앱, 서비스 워커 기반 오프라인 지원, 새 버전 갱신 알림, **오프라인 상태 표시**
 - **CSP 및 보안 헤더** — `script-src 'self'`, `object-src 'none'` 등
-- 서식 툴바 16종, 키보드 단축키
+- 서식 툴바 12종 + 파일 4종, 키보드 단축키 (앱 내 안내 포함)
 - 720px 이하 반응형 (상하 분할)
 
 ## 브라우저별 파일 기능
@@ -86,6 +87,8 @@ markdownEditor/
 │   ├── offline.ts            # 오프라인 상태 배지
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
 │   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
+│   ├── shortcutDefs.ts       # 단축키 단일 출처 (판별 + 표기)
+│   ├── shortcutHelp.ts       # 단축키 안내 <dialog>
 │   ├── textEdit.ts           # 텍스트 조작 계산 (순수)
 │   ├── toolbar.ts            # 툴바 16종
 │   ├── shortcuts.ts          # 키보드 단축키
@@ -107,7 +110,8 @@ markdownEditor/
 │       ├── offline.spec.ts   # 오프라인 상태 표시
 │       ├── scrollsync.spec.ts # 시각 구분 · 스크롤 동기화
 │       ├── darkmode.spec.ts  # 다크 모드
-│       └── icons.spec.ts     # PWA 아이콘
+│       ├── icons.spec.ts     # PWA 아이콘
+│       └── shortcuthelp.spec.ts # 단축키 안내
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
@@ -192,5 +196,8 @@ npm run healthcheck:prod
 | `Cmd/Ctrl + Shift + S` | 다른 이름으로 저장 |
 | `Alt + N` | 새 문서 |
 | `Alt + W` | 탭 닫기 |
+| `Alt + /` | 단축키 목록 열기 / 닫기 |
 
 `Cmd/Ctrl + N` 과 `Cmd/Ctrl + W` 는 브라우저가 선점해 사용할 수 없어 `Alt` 조합으로 대체했다.
+
+이 표는 앱 안에서도 볼 수 있다 — 툴바의 키보드 아이콘 또는 `Alt + /`. 목록은 [`src/shortcutDefs.ts`](./src/shortcutDefs.ts) 에서 파생되므로 실제 동작과 어긋날 수 없다.

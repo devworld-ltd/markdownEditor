@@ -63,6 +63,7 @@
 | F-72 | 편집/프리뷰 영역 시각 구분 | `src/style.css` 토큰 3종 | E2E |
 | F-57 | 다크 모드 (`prefers-color-scheme`) | `src/style.css` 토큰 7종 | E2E 6 |
 | F-68 | PWA 아이콘 PNG (`apple-touch-icon` · maskable) | `scripts/gen-icons.mjs`, `public/*.png` | E2E 7 |
+| F-58 (완결) | 단축키 안내 UI | `src/shortcutDefs.ts`, `src/shortcutHelp.ts` | 단위 30 + E2E 11 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -106,7 +107,6 @@
 | F-34 | 탭 드래그 재정렬 |
 | F-35 | 폰트·테마 설정 |
 | F-36 | 최근 파일 목록 |
-| F-58 잔여 | **단축키** 안내 UI (웹은 메뉴바가 없어 발견성이 낮다). 파일 기능 한계 안내는 완료 |
 | F-59 | 접근성 정밀 점검 (키보드 내비게이션·스크린리더) |
 
 ### 4.4 내보내기 / 공유

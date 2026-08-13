@@ -130,6 +130,16 @@ const url = URL.createObjectURL(blob);
 
 ---
 
+## 3.9 `<dialog>` — 단축키 안내 (F-58)
+
+| API | 용도 | 주의 |
+|-----|------|------|
+| `showModal()` | 모달 열기 | `show()` 를 쓰면 포커스 트랩·백드롭이 붙지 않아 바깥 타이핑이 에디터로 들어간다 |
+| `close()` | 닫기 | 사유(버튼·Esc·`close()`)와 무관하게 `close` 이벤트가 한 번 발생한다 → 포커스 복귀를 여기 한 곳에서 처리 |
+| `::backdrop` | 배경 | 클릭 히트 타깃은 `dialog` 가 **아니다**(Chromium 은 아래 요소를 준다) |
+
+전역 리셋 `* { margin: 0 }` 이 UA 의 `dialog:modal { margin: auto }` 를 덮어쓰므로 `margin: auto` 를 되살려야 중앙에 온다.
+
 ## 4. 세션 저장 (`localStorage`)
 
 | 항목 | 값 |

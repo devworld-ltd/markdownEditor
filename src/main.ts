@@ -23,6 +23,7 @@ import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
 import { initFsLimitNotice } from "./fsLimitNotice";
 import { initScrollSync } from "./scrollSync";
+import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -33,6 +34,9 @@ const noticeEl = document.querySelector<HTMLElement>("#notice");
 const swUpdateEl = document.querySelector<HTMLElement>("#sw-update");
 const offlineEl = document.querySelector<HTMLElement>("#offline-indicator");
 const fsLimitNoticeEl = document.querySelector<HTMLElement>("#fs-limit-notice");
+const shortcutHelpEl = document.querySelector<HTMLDialogElement>("#shortcut-help");
+const shortcutHelpListEl = document.querySelector<HTMLElement>("#shortcut-help-list");
+const shortcutHelpCloseEl = document.querySelector<HTMLElement>("#shortcut-help-close");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -72,18 +76,32 @@ if (editorEl && previewEl) {
     initTabs(tabBarEl, editorEl, previewEl, titleEl);
   }
 
+  // F-58: 안내 UI 는 툴바 버튼과 단축키 양쪽에서 열린다. 초기화에 실패하면
+  // 두 진입점 모두 조용히 없는 것처럼 동작한다(에디터 기능은 그대로).
+  const shortcutHelp =
+    shortcutHelpEl && shortcutHelpListEl && shortcutHelpCloseEl
+      ? initShortcutHelp({
+          dialogEl: shortcutHelpEl,
+          listEl: shortcutHelpListEl,
+          closeEl: shortcutHelpCloseEl,
+          isApplePlatform: detectApplePlatform(navigator.userAgent),
+          returnFocusTo: editorEl,
+        })
+      : null;
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
     save: () => void saveFile(),
     saveAs: () => void saveFileAs(),
+    showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
   });
 
   if (toolbarEl) {
     initToolbar(toolbarEl, editorEl);
   }
 
-  initShortcuts();
+  initShortcuts({ toggleHelp: shortcutHelp ? () => shortcutHelp.toggle() : undefined });
 
   // 새로고침·탭 닫기로 인한 유실 방지. 브라우저는 문구를 무시하고 기본 경고를 띄운다.
   // F-69: 서비스 워커 갱신 리로드가 진행 중이면(세션이 이미 확정 저장됐으므로) 이
