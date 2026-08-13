@@ -354,12 +354,42 @@ describe("scrollSync — suspend()/resumeAfterFrame() 억제·해제 순서 (M10
     const { editor, host } = setup();
     const controller = initScrollSync(host);
 
+    // 두 종류의 대기 작업을 **모두** 만들어야 이 테스트가 이름값을 한다.
+    // (1) 사용자 스크롤이 예약한 동기화 프레임
     editor.scrollTop = 750;
     editor.fireScroll();
-    expect(host.pendingCount()).toBe(1);
+    // (2) 예약된 억제 해제 — 이것을 만들지 않으면 doSuspend() 의
+    //     pendingResumeId 취소 분기가 아예 실행되지 않는다.
+    controller.resumeAfterFrame();
+    expect(host.pendingCount()).toBe(2);
 
     controller.suspend();
     expect(host.pendingCount()).toBe(0);
+  });
+
+  it("예약된 해제가 취소되므로, 억제 구간이 프레임 경과로 조기 종료되지 않는다", async () => {
+    // 회귀 방지의 핵심: 이 가드가 없으면 예약된 해제가 나중 억제 구간 한복판에서
+    // 발화해 suspended 를 조기 해제한다. 그러면 renderPreview() 의 innerHTML
+    // 교체가 큐에 넣은 scroll 이 사용자 스크롤로 분류되어 ratio=0 이 되고,
+    // 에디터 복원값이 날아간다(F-06/F-51 회귀 — 기술 스펙 함정 #2).
+    const { initScrollSync } = await loadScrollSync();
+    const { editor, preview, host } = setup();
+    const controller = initScrollSync(host);
+
+    // 예약된 해제를 만든 뒤 곧바로 다시 억제한다 (탭 전환 중 렌더가 겹치는 상황).
+    controller.resumeAfterFrame();
+    controller.suspend();
+
+    // 프레임을 흘려보내도 억제가 풀리면 안 된다.
+    host.flush();
+
+    // 억제 중이므로 이 scroll 은 폐기되어야 한다 — 프리뷰가 움직이면 조기 해제된 것이다.
+    const previewBefore = preview.scrollTop;
+    editor.scrollTop = 750;
+    editor.fireScroll();
+    host.flush();
+
+    expect(preview.scrollTop).toBe(previewBefore);
   });
 
   it("suspend() 중 발생한 scroll 은 expectedTop 을 남기지 않아, 해제 후 재개된 사용자 스크롤이 정상 분류된다", async () => {
