@@ -5,12 +5,13 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#editor")).toBeVisible();
 });
 
-test("툴바 버튼이 16개 렌더링된다", async ({ page }) => {
-  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(16);
+test("툴바 버튼이 17개 렌더링된다", async ({ page }) => {
+  // 파일 4 + 서식 12 + 단축키 안내 1 (F-58)
+  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(17);
 });
 
-test("파일 액션과 서식 액션 사이에 구분선이 있다", async ({ page }) => {
-  await expect(page.locator("#toolbar-actions .toolbar-separator")).toHaveCount(1);
+test("파일·서식·도움말 세 묶음이 구분선으로 나뉜다", async ({ page }) => {
+  await expect(page.locator("#toolbar-actions .toolbar-separator")).toHaveCount(2);
 });
 
 const INLINE_CASES: Array<{ title: string; expected: string }> = [

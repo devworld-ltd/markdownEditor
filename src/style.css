@@ -334,6 +334,124 @@ body {
   outline-offset: 2px;
 }
 
+/*
+ * F-58 단축키 안내 (이슈 #40). 네이티브 <dialog> 라 위치·백드롭·포커스 트랩은
+ * 브라우저가 처리한다. 여기서는 표면색만 토큰으로 맞춘다 — 그래서 다크 모드가
+ * 자동으로 따라온다(F-57).
+ */
+.shortcut-help {
+  /* 전역 리셋의 `* { margin: 0 }` 이 UA 의 `dialog:modal { margin: auto }` 를
+     덮어써서 다이얼로그가 화면 좌상단에 붙는다. 리셋이 있는 저장소에서 네이티브
+     <dialog> 를 처음 쓸 때 반드시 밟는 함정이라 여기서 되돌린다. */
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border-split);
+  border-radius: 8px;
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 64px));
+  background: var(--surface-preview);
+  color: var(--text);
+  box-shadow: 0 12px 48px rgb(0 0 0 / 30%);
+}
+
+.shortcut-help::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.shortcut-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--rule-subtle);
+}
+
+.shortcut-help-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.shortcut-help-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.shortcut-help-close:hover {
+  background: var(--code-bg);
+  color: var(--text);
+}
+
+.shortcut-help-close:focus-visible {
+  outline: 2px solid #007acc;
+  outline-offset: 2px;
+}
+
+.shortcut-help-list {
+  padding: 8px 16px 16px;
+  overflow-y: auto;
+}
+
+.shortcut-group-title {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* 키 캡과 설명을 2열로. dt 가 좁은 고정폭이라 캡이 세로로 정렬된다. */
+.shortcut-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  align-items: baseline;
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.shortcut-keys kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 6px;
+  border: 1px solid var(--rule-subtle);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  text-align: center;
+}
+
+.shortcut-label {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.shortcut-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 /* 좁은 화면에서는 에디터/프리뷰를 위아래로 쌓는다. */
 @media (max-width: 720px) {
   .toolbar {
