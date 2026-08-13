@@ -83,6 +83,7 @@
 | F-28 | 이미지 드래그앤드롭·붙여넣기 (R2) | `src/imageUpload.ts`, `src/editorDrop.ts`, `worker/index.ts` | 단위 38 |
 | F-29 | 문서 통계 (어절·글자·읽기 시간) | `src/docStats.ts`, `src/statusBar.ts` | 단위 31 + E2E 8 |
 | F-30 | 표 편집 보조 (삽입·정렬·파이프 맞춤) | `src/tableFormat.ts`, `src/tableUi.ts` | 단위 52 + E2E 9 |
+| F-56 | 마크다운 파일 드래그앤드롭으로 열기 | `src/dropFiles.ts`, `src/editorDrop.ts`, `src/fileOps.ts` | 단위 39 + E2E 10 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -108,7 +109,6 @@
 | ID | 기능 |
 |----|------|
 | F-23 잔여 | **편집 영역** 하이라이팅 (오버레이 필요 — F-22·F-25·F-35·F-59 재검증 동반) |
-| F-56 | 마크다운 파일 드래그앤드롭으로 열기 |
 
 ### 4.3 UI / UX
 

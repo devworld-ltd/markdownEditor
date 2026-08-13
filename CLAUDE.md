@@ -58,6 +58,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`dropFiles.ts`** — 드롭 파일 분류(F-56). 순수. **확장자가 1순위** — `.md` 의 MIME 타입은 환경마다 다르다.
 - **`tableFormat.ts`** — 표 계산(F-30). 순수. **표시 폭**(한글·이모지 2칸)으로 파이프를 맞춘다.
 - **`tableUi.ts`** — 표 대화상자(F-30). 커서가 표 안이면 편집, 밖이면 삽입.
 - **`docStats.ts`** — 문서 통계 계산(F-29). 순수. **한국어에서는 "단어" 가 아니라 "어절" 이라고 쓴다** — 공백으로 자른 결과에 정확히 맞는 이름이다.
@@ -149,7 +150,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 57. **`<dialog>` 가 `showModal()` 로 열린 동안 바깥 요소는 inert 다.** 그 상태에서 `editorEl.focus()` + `execCommand` 는 **예외 없이 조용히 무시된다.** 대화상자를 먼저 닫고 본문을 고쳐라. jsdom 은 inert 를 구현하지 않아 **단위 테스트로는 절대 안 잡힌다** — E2E 가 필요하다.
 58. **표 정렬은 `align` 속성으로 나온다.** marked 가 `<td align="right">` 를 내는데, 표현 속성은 CSS 규칙(`#preview td { text-align: left }`)보다 약하다. `[align]` 선택자를 따로 쓰지 않으면 정렬 기능이 **통째로 안 보인다**(오류 없이).
 59. **표시 폭은 `length` 가 아니다.** 한글은 `length` 1 에 2칸, 이모지는 `length` 2 에 2칸 — 두 방향으로 틀린다. `tableFormat.displayWidth()` 를 써라.
-60. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+60. **`getAsFileSystemHandle()` 은 드롭 이벤트 처리 중에 불러야 한다.** `DataTransferItem` 은 핸들러가 끝나면 비워져, 나중에 부르면 빈손이 된다(오류 없이). 반환값은 Promise 라 `await` 는 뒤에서 해도 된다. 그리고 **E2E 에서 항목에 메서드를 붙이지 말 것** — `transfer.items[i]` 는 접근할 때마다 새 래퍼를 준다. `DataTransferItem.prototype` 을 갈아끼워야 한다.
+61. **`.md` 의 MIME 타입을 믿지 말 것.** `text/markdown`·`text/plain`·**빈 문자열** 전부 나온다(맥에서 흔하다). 확장자를 1순위로 본다. 반대로 이미지는 타입을 믿는다 — 업로드 검증이 타입 기준이라 확장자만 고친 파일을 통과시키면 안 된다.
+62. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

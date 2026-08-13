@@ -203,6 +203,24 @@ async function openHandle(handle: FileSystemFileHandle): Promise<void> {
   notifyFileTouched(file.name, handle); // F-36
 }
 
+/**
+ * F-56 드롭으로 연다.
+ *
+ * 핸들이 있으면 **파일 선택 창으로 연 것과 완전히 같게** 다룬다 — 중복 탭 방지도,
+ * 그 파일에 바로 저장하는 것도 된다. 핸들이 없는 브라우저에서는 업로드 경로와
+ * 같아져 저장할 때 위치를 다시 묻는다(트랩 #6).
+ */
+export async function openDroppedFile(
+  file: File,
+  handle: FileSystemFileHandle | null,
+): Promise<void> {
+  if (handle) {
+    await openFileFromHandle(handle);
+    return;
+  }
+  await openViaUpload(file);
+}
+
 async function openViaUpload(file: File): Promise<void> {
   try {
     // 업로드 경로에는 핸들이 없어 중복 열기를 판별할 수 없다. 항상 새 탭이 열린다.

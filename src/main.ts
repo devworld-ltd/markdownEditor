@@ -3,6 +3,7 @@ import { initToolbar, setFileActions } from "./toolbar";
 import {
   exportFile,
   initFileOps,
+  openDroppedFile,
   openFileFromHandle,
   setFileTouchListener,
   isFileSystemAccessSupported,
@@ -189,6 +190,15 @@ if (editorEl && previewEl) {
       document.execCommand("insertText", false, text);
     },
     notify: (message, kind) => showNotice(message, kind ?? "info", 7000),
+    // F-56: 마크다운·텍스트는 새 탭으로 연다. 같은 drop 핸들러에서 갈린다.
+    handleOtherFiles: (documents) => {
+      void (async () => {
+        for (const { file, handle } of documents) {
+          await openDroppedFile(file, handle);
+        }
+      })();
+      return true;
+    },
   });
 
   createEditor({
