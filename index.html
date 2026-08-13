@@ -99,6 +99,10 @@
              키보드로 스크롤할 방법이 아예 없었다. -->
         <div id="preview" role="region" aria-label="미리보기" tabindex="0"></div>
       </main>
+      <!-- F-29 문서 통계. aria-live 를 쓰지 않는다 — 글자를 칠 때마다
+           스크린리더가 숫자를 읽으면 편집이 불가능해진다. -->
+      <div id="status-bar" class="status-bar"></div>
+
       <!-- F-36 최근 파일 -->
       <dialog id="recent-files" class="shortcut-help" aria-labelledby="recent-files-title">
         <div class="shortcut-help-header">
@@ -141,6 +145,10 @@
                 &plus;
               </button>
             </div>
+          </div>
+          <div class="setting-row">
+            <label for="setting-doc-stats">문서 통계</label>
+            <input type="checkbox" id="setting-doc-stats" class="setting-check" />
           </div>
           <div class="setting-row">
             <label for="setting-line-numbers">줄 번호</label>

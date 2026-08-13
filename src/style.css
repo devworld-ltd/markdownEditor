@@ -364,6 +364,29 @@ body {
  * #notice(일시)가 위, #sw-update(지속)가 아래에 놓인다. #notice 가 사라져도
  * #sw-update 는 1px 도 움직이지 않는다.
  */
+/* F-29 문서 통계. 편집 영역 아래 한 줄 — 방해되지 않을 만큼 작고 흐리게. */
+.status-bar {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  background: var(--surface-editor);
+  border-top: 1px solid var(--border-split);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.status-bar[hidden] {
+  display: none;
+}
+
+@media print {
+  .status-bar {
+    display: none !important;
+  }
+}
+
 .notice-stack {
   position: absolute;
   right: 16px;
