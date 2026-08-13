@@ -332,6 +332,32 @@ sequenceDiagram
 
 `tabs.ts` 는 `scrollSync.ts` 를 **import 하지 않는다.** `setScrollSyncHooks()` 로 주입받으며(기본값 `null` = 무동작), 이 덕에 기존 단위 테스트 34건이 영향을 받지 않는다.
 
+### 초기화 실패와 리스너 롤백 (#33)
+
+리스너 부착은 이 초기화에서 **유일하게 되돌릴 수 없는 부작용**이다. 한쪽 패널만 붙은 채 실패하면, 재시도가 두 번째 엔진을 만들어 **서로 다른 상태를 가진 두 클로저가 같은 `scrollTop` 을 다툰다.**
+
+| 상황 | 동작 |
+|------|------|
+| 부착 전 실패 | 잠금 없음 → 재시도 가능 |
+| 부분 부착 후 실패, `removeEventListener` 있음 | 붙은 것을 떼고 잠금 없음 → 재시도 가능 |
+| 부분 부착 후 실패, `removeEventListener` 없음 | **잠근 채 실패** — 엔진 중복보다 무동작이 낫다 |
+
+`initialized = true` 는 성공 경로 끝에서만 설정한다. 이 순서를 되돌리면 한 번도 성공한 적 없는데 "이미 초기화되어 재호출을 무시합니다" 라는 **사실과 다른 경고**가 뜬다.
+
+### 렌더가 진행 중이던 동기화를 삼키지 않는다 (#34)
+
+`reapplyAfterRender()` 는 내부적으로 `suspend()` 를 부르고, `suspend()` 는 대기 중인 `applyFrame` 을 취소한다. 사용자가 **스크롤과 타이핑을 동시에** 하면 방금 만든 스크롤 한 프레임이 사라지고, 낡은 `lastRatio` 가 덮어써져 **다음 스크롤까지 어긋난 채 남는다.**
+
+그래서 취소 **전에** 최신 비율을 확정한다:
+
+```ts
+const pendingRatio =
+  frameId !== null && source === "editor" ? computeRatio(panels.editor) : null;
+const ratio = pendingRatio ?? lastRatio;
+```
+
+**소스가 에디터일 때만 되살릴 수 있다.** 소스가 프리뷰였다면 그 비율의 근거인 `preview.scrollTop` 을 이미 `innerHTML` 교체가 0 으로 지운 뒤라, 이 시점에 복원할 정보가 남아 있지 않다. 에디터에 타이핑하면서 동시에 프리뷰를 스크롤해야 닿는 경로다.
+
 ### 시각 구분 (F-72)
 
 | 토큰 | 값 | 의미 |

@@ -36,6 +36,13 @@ export interface ScrollPanel {
     listener: () => void,
     options?: { passive?: boolean },
   ): void;
+  /**
+   * 초기화 롤백 전용(#33). 두 패널 중 한쪽만 리스너가 붙은 채 초기화가 실패하면,
+   * 재시도 시 죽은 클로저의 리스너가 살아남아 두 개의 동기화 엔진이 서로 다른
+   * 상태로 같은 `scrollTop` 을 다투게 된다. 실제 DOM 요소는 항상 갖고 있으며,
+   * 없으면 롤백을 포기하고 초기화 잠금을 유지한다.
+   */
+  removeEventListener?(type: "scroll", listener: () => void): void;
 }
 
 export interface ScrollSyncHost {
@@ -107,7 +114,6 @@ export function initScrollSync(
     console.warn("[scrollSync] 이미 초기화되어 재호출을 무시합니다.");
     return noopController;
   }
-  initialized = true;
 
   try {
     const host = resolveHost(partialHost);
@@ -199,8 +205,29 @@ export function initScrollSync(
       scheduleFrame();
     }
 
-    panels.editor.addEventListener("scroll", () => onScroll("editor"), { passive: true });
-    panels.preview.addEventListener("scroll", () => onScroll("preview"), { passive: true });
+    // 리스너 부착은 이 초기화에서 **유일하게 되돌릴 수 없는 부작용**이다. 한쪽만
+    // 붙은 채 실패하면 재시도가 두 번째 엔진을 만들어 두 클로저가 같은 scrollTop 을
+    // 다툰다. 그래서 부착 실패 시 붙은 것을 떼어내고, 뗄 수단이 없으면 재시도를
+    // 막는다(#33).
+    const onEditorScroll = () => onScroll("editor");
+    const onPreviewScroll = () => onScroll("preview");
+    const attached: Array<[ScrollPanel, () => void]> = [];
+    try {
+      panels.editor.addEventListener("scroll", onEditorScroll, { passive: true });
+      attached.push([panels.editor, onEditorScroll]);
+      panels.preview.addEventListener("scroll", onPreviewScroll, { passive: true });
+      attached.push([panels.preview, onPreviewScroll]);
+    } catch (error) {
+      for (const [panel, listener] of attached) {
+        if (typeof panel.removeEventListener !== "function") {
+          // 뗄 수 없다 — 재시도가 더 나쁜 상태를 만든다. 잠근 채로 실패한다.
+          initialized = true;
+          throw error;
+        }
+        panel.removeEventListener("scroll", listener);
+      }
+      throw error;
+    }
 
     function doSuspend(): void {
       suspended = true;
@@ -246,13 +273,29 @@ export function initScrollSync(
         // 모두 옳다. lastRatio 가 null(아직 한 번도 스크롤하지 않음)이면
         // 아무것도 하지 않는다 — 프리뷰는 정상적으로 맨 위에 머문다.
         // 내부적으로 suspend() → 적용 → resumeAfterFrame() 3단계를 그대로 쓴다.
-        if (lastRatio === null) return;
+        //
+        // 단, doSuspend() 는 대기 중이던 applyFrame 을 취소한다(#34). 사용자가
+        // 스크롤과 타이핑을 동시에 하면 방금 만든 스크롤 한 프레임이 조용히
+        // 사라지고, 여기서 낡은 lastRatio 를 덮어써서 다음 스크롤까지 어긋난
+        // 채로 남는다. 그래서 취소 **전에** 최신 비율을 확정한다.
+        //
+        // 소스가 에디터일 때만 되살릴 수 있다. 소스가 프리뷰였다면 그 비율의
+        // 근거인 preview.scrollTop 을 이미 innerHTML 교체가 0 으로 지운 뒤라
+        // 이 시점에 복원할 정보가 남아 있지 않다 — 에디터에 타이핑하면서 동시에
+        // 프리뷰를 스크롤해야 닿는 경로다.
+        const pendingRatio =
+          frameId !== null && source === "editor" ? computeRatio(panels.editor) : null;
+        const ratio = pendingRatio ?? lastRatio;
+        if (ratio === null) return;
+
         doSuspend();
-        applyToPanel("preview", lastRatio);
+        applyToPanel("preview", ratio);
         doResumeAfterFrame();
+        lastRatio = ratio;
       },
     };
 
+    initialized = true; // 성공 경로에서만 잠근다 — 실패는 재시도 가능해야 한다 (#33)
     return controller;
   } catch (error) {
     console.warn("[scrollSync] 초기화 실패:", error);
