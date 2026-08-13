@@ -35,6 +35,25 @@
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
         <div
+          id="fs-limit-notice"
+          class="notice fs-limit-notice"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <p class="sw-update-text">
+            이 브라우저에서는 파일을 직접 덮어쓸 수 없어 저장할 때마다 새 파일이
+            다운로드 폴더에 추가됩니다.<br />최신 내용은 다운로드 폴더에서
+            확인하세요. Chrome·Edge에서는 원본에 바로 저장됩니다.
+          </p>
+          <div class="sw-update-actions">
+            <button type="button" id="fs-limit-notice-dismiss" class="sw-update-btn">
+              확인
+            </button>
+          </div>
+        </div>
+
+        <div
           id="sw-update"
           class="notice sw-update"
           role="status"

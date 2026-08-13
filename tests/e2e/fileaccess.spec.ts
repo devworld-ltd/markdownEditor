@@ -179,3 +179,86 @@ test.describe("폴백 경로 (Safari·Firefox)", () => {
     expect(download.suggestedFilename()).toBe("note.md");
   });
 });
+
+test.describe("F-58 브라우저별 기능 한계 안내 (폴백 경로 전용)", () => {
+  test.beforeEach(async ({ page }) => {
+    await installFallbackMode(page);
+    await page.goto("/");
+    await expect(page.locator("#editor")).toBeVisible();
+  });
+
+  test("앱 진입 직후에는 안내가 뜨지 않는다 — 저장을 시도할 때까지는 조용하다", async ({
+    page,
+  }) => {
+    await expect(page.locator("#fs-limit-notice")).toBeHidden();
+  });
+
+  test("첫 저장 시도에 브라우저 한계를 안내한다", async ({ page }) => {
+    await page.locator("#editor").fill("내려받을 내용");
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.keyboard.press("ControlOrMeta+s");
+    await downloadPromise;
+
+    const notice = page.locator("#fs-limit-notice");
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("덮어쓸 수 없어");
+    // 저장 성공 토스트(#notice)도 그대로 뜬다 — 서로 다른 요소라 겹쳐 써지지 않는다.
+    await expect(page.locator("#notice")).toContainText("내려받았습니다");
+  });
+
+  test("두 번째 저장부터는 다시 뜨지 않는다(세션당 1회)", async ({ page }) => {
+    await page.locator("#editor").fill("첫 번째 저장");
+    const firstDownload = page.waitForEvent("download");
+    await page.keyboard.press("ControlOrMeta+s");
+    await firstDownload;
+
+    await page
+      .locator("#fs-limit-notice-dismiss")
+      .click();
+    await expect(page.locator("#fs-limit-notice")).toBeHidden();
+
+    await page.locator("#editor").fill("두 번째 저장");
+    const secondDownload = page.waitForEvent("download");
+    await page.keyboard.press("ControlOrMeta+s");
+    await secondDownload;
+
+    await expect(page.locator("#fs-limit-notice")).toBeHidden();
+  });
+
+  test("확인 버튼으로 안내를 닫을 수 있다", async ({ page }) => {
+    await page.locator("#editor").fill("내용");
+    const downloadPromise = page.waitForEvent("download");
+    await page.keyboard.press("ControlOrMeta+s");
+    await downloadPromise;
+
+    const notice = page.locator("#fs-limit-notice");
+    await expect(notice).toBeVisible();
+
+    await page.locator("#fs-limit-notice-dismiss").click();
+    await expect(notice).toBeHidden();
+  });
+});
+
+test.describe("F-58 — Chrome·Edge 경로에서는 안 보인다", () => {
+  test.beforeEach(async ({ page }) => {
+    await installFsMock(page);
+    await page.goto("/");
+    await expect(page.locator("#editor")).toBeVisible();
+  });
+
+  test("File System Access API 지원 브라우저에서는 저장해도 안내가 뜨지 않는다", async ({
+    page,
+  }) => {
+    await setFsMock(page, { saveName: "새문서.md" });
+    await page.locator("#editor").fill("# 새 문서");
+    await page.keyboard.press("ControlOrMeta+s");
+
+    await expect.poll(() => getWrites(page)).toEqual([
+      { name: "새문서.md", content: "# 새 문서" },
+    ]);
+    await expect(page.locator("#fs-limit-notice")).toBeHidden();
+    // DOM 에 아예 표시되지 않아야 한다는 요구를 강하게 검증한다 — hidden 속성 유지 확인.
+    await expect(page.locator("#fs-limit-notice")).toHaveAttribute("hidden", "");
+  });
+});
