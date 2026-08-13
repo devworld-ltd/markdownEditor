@@ -95,3 +95,34 @@ export function formatCount(matchCount: number, currentIndex: number, hasQuery: 
   if (matchCount === 0) return "결과 없음";
   return `${currentIndex + 1}/${matchCount}`;
 }
+
+/**
+ * 모든 일치를 치환한 **전체 문서 문자열**을 만든다.
+ *
+ * 부분 치환을 반복하지 않고 전체 문자열을 한 번에 만드는 이유:
+ *
+ * 1) **무한 루프 방지.** `"a"` → `"aa"` 처럼 치환 결과가 질의를 포함하면, 치환할
+ *    때마다 새 일치가 생겨 반복 방식은 끝나지 않는다. 일치 위치를 **먼저 전부**
+ *    구해 두고 그 좌표로만 조립하면 이 문제가 원천적으로 없다.
+ * 2) **실행 취소 1회.** 호출부가 이 결과를 `execCommand("insertText")` 한 번으로
+ *    넣으므로 전체 치환이 Cmd+Z 한 번에 되돌아간다. `value` 를 직접 대입하거나
+ *    부분 치환을 반복하면 undo 스택이 날아가거나 N 번 눌러야 한다.
+ */
+export function replaceAll(text: string, query: string, replacement: string): string {
+  const matches = findMatches(text, query);
+  if (matches.length === 0) return text;
+
+  const pieces: string[] = [];
+  let cursor = 0;
+  for (const match of matches) {
+    pieces.push(text.slice(cursor, match.start), replacement);
+    cursor = match.end;
+  }
+  pieces.push(text.slice(cursor));
+  return pieces.join("");
+}
+
+/** 치환 뒤 커서가 놓일 위치 — 치환된 텍스트의 끝. 다음 "찾기" 가 여기서 이어진다. */
+export function caretAfterReplace(match: MatchRange, replacement: string): number {
+  return match.start + replacement.length;
+}

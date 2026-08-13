@@ -25,11 +25,13 @@
  */
 
 import {
+  caretAfterReplace,
   findMatches,
   formatCount,
   indexAtOrAfter,
   indexBefore,
   remapIndex,
+  replaceAll,
   stepIndex,
   type MatchRange,
 } from "./searchEngine";
@@ -43,6 +45,19 @@ export interface SearchHost {
   nextEl: HTMLElement;
   closeEl: HTMLElement;
   editorEl: HTMLTextAreaElement;
+  /** 치환 UI (F-22 잔여). 없으면 찾기만 동작한다 — 기존 배선과의 역호환. */
+  toggleReplaceEl?: HTMLElement;
+  replaceRowEl?: HTMLElement;
+  replaceInputEl?: HTMLInputElement;
+  replaceOneEl?: HTMLElement;
+  replaceAllEl?: HTMLElement;
+  /**
+   * 선택 영역을 치환한다. 기본 구현은 `execCommand("insertText")` — **이것을
+   * `value` 대입으로 바꾸면 Cmd+Z 실행 취소 스택이 통째로 날아간다**
+   * (`toolbar.ts` 와 같은 이유). jsdom 은 execCommand 를 구현하지 않으므로
+   * 단위 테스트가 이 경계를 주입한다.
+   */
+  insertText?: (textarea: HTMLTextAreaElement, text: string) => void;
   /**
    * 일치 지점이 에디터 상단에서 몇 px 아래인지. 기본 구현은 미러 요소로 잰다.
    * 테스트는 레이아웃이 없는 jsdom 에서도 검증할 수 있도록 이걸 주입한다.
@@ -111,6 +126,15 @@ function measureWithMirror(textarea: HTMLTextAreaElement, index: number): number
   return height;
 }
 
+/**
+ * 기본 치환 구현. **`execCommand("insertText")` 를 유지해야 한다** — 이것이
+ * `textarea.value = …` 로 바뀌는 순간 Cmd+Z 실행 취소 스택이 통째로 날아간다.
+ * 폐기 예정 API 이지만 undo 스택을 보존하는 유일한 표준 경로다(`toolbar.ts` 동일).
+ */
+function defaultInsertText(textarea: HTMLTextAreaElement, text: string): void {
+  textarea.ownerDocument.execCommand("insertText", false, text);
+}
+
 export function initSearch(host: SearchHost): SearchController {
   if (initialized) {
     console.warn("[search] 이미 초기화되어 재호출을 무시합니다.");
@@ -120,6 +144,7 @@ export function initSearch(host: SearchHost): SearchController {
   try {
     const { panelEl, inputEl, countEl, prevEl, nextEl, closeEl, editorEl } = host;
     const measureOffsetTop = host.measureOffsetTop ?? measureWithMirror;
+    const insertText = host.insertText ?? defaultInsertText;
 
     let matches: MatchRange[] = [];
     let current = -1;
@@ -205,6 +230,9 @@ export function initSearch(host: SearchHost): SearchController {
       close() {
         if (panelEl.hidden) return;
         panelEl.hidden = true;
+        if (host.replaceRowEl) host.replaceRowEl.hidden = true;
+        host.toggleReplaceEl?.setAttribute("aria-expanded", "false");
+        host.toggleReplaceEl?.setAttribute("aria-label", "치환 열기");
         matches = [];
         current = -1;
         editorEl.focus({ preventScroll: true });
@@ -220,6 +248,84 @@ export function initSearch(host: SearchHost): SearchController {
         recompute();
       },
     };
+
+    /**
+     * 선택 영역을 새 텍스트로 바꾼다.
+     *
+     * `execCommand("insertText")` 를 쓰려면 textarea 가 **포커스를 가져야 한다.**
+     * 그래서 찾기와 달리 치환에서는 잠깐 포커스를 옮겼다가 되돌린다 — 되돌리지
+     * 않으면 다음 Enter 가 본문에 개행을 넣는다(찾기에서 이미 겪은 함정).
+     */
+    function applyEdit(start: number, end: number, text: string, caret: number): void {
+      const activeBefore = editorEl.ownerDocument.activeElement as HTMLElement | null;
+      editorEl.focus({ preventScroll: true });
+      editorEl.setSelectionRange(start, end);
+      insertText(editorEl, text);
+      editorEl.setSelectionRange(caret, caret);
+      if (activeBefore && activeBefore !== editorEl) activeBefore.focus();
+    }
+
+    function replaceCurrent(): void {
+      const replaceInputEl = host.replaceInputEl;
+      if (!replaceInputEl) return;
+
+      recompute();
+      const match = matches[current];
+      if (!match) return;
+
+      const replacement = replaceInputEl.value;
+      applyEdit(match.start, match.end, replacement, caretAfterReplace(match, replacement));
+
+      // 치환 결과가 질의를 포함하면(예: "a" → "aa") 같은 자리에 새 일치가 생긴다.
+      // 커서 이후로 넘겨 다음 일치를 가리켜야 같은 자리를 무한히 맴돌지 않는다.
+      matches = findMatches(editorEl.value, inputEl.value);
+      current = matches.length === 0 ? -1 : indexAtOrAfter(matches, editorEl.selectionStart);
+      updateCount();
+      if (current >= 0) reveal();
+    }
+
+    function replaceEvery(): void {
+      const replaceInputEl = host.replaceInputEl;
+      if (!replaceInputEl) return;
+
+      recompute();
+      if (matches.length === 0) return;
+
+      // 문서 전체를 한 번에 넣는다 — Cmd+Z 한 번으로 되돌아가야 한다.
+      const next = replaceAll(editorEl.value, inputEl.value, replaceInputEl.value);
+      applyEdit(0, editorEl.value.length, next, next.length);
+
+      current = -1;
+      recompute();
+    }
+
+    if (host.toggleReplaceEl && host.replaceRowEl) {
+      const toggleReplaceEl = host.toggleReplaceEl;
+      const replaceRowEl = host.replaceRowEl;
+      toggleReplaceEl.addEventListener("click", () => {
+        const opening = replaceRowEl.hidden;
+        replaceRowEl.hidden = !opening;
+        toggleReplaceEl.setAttribute("aria-expanded", String(opening));
+        toggleReplaceEl.setAttribute("aria-label", opening ? "치환 닫기" : "치환 열기");
+        if (opening) host.replaceInputEl?.focus();
+      });
+    }
+
+    host.replaceOneEl?.addEventListener("click", () => replaceCurrent());
+    host.replaceAllEl?.addEventListener("click", () => replaceEvery());
+    host.replaceInputEl?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        // Shift+Enter = 모두 바꾸기. 되돌리기 쉬운 쪽(1건)을 기본으로 둔다.
+        if (event.shiftKey) replaceEvery();
+        else replaceCurrent();
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        controller.close();
+      }
+    });
 
     inputEl.addEventListener("input", () => {
       current = -1; // 질의가 바뀌면 위치를 처음부터 다시 고른다

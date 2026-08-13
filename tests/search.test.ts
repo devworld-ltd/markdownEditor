@@ -27,6 +27,17 @@ function buildHost(text = "") {
 
   document.body.append(panelEl, inputEl, countEl, prevEl, nextEl, closeEl, editorEl);
 
+  const toggleReplaceEl = document.createElement("button");
+  const replaceRowEl = document.createElement("div");
+  replaceRowEl.hidden = true;
+  const replaceInputEl = document.createElement("input");
+  const replaceOneEl = document.createElement("button");
+  const replaceAllEl = document.createElement("button");
+  document.body.append(toggleReplaceEl, replaceRowEl, replaceInputEl, replaceOneEl, replaceAllEl);
+
+  /** 삽입 호출을 기록한다 — execCommand 경로가 유지되는지 확인하기 위해서다. */
+  const inserts: Array<{ start: number; end: number; text: string }> = [];
+
   return {
     panelEl,
     inputEl,
@@ -35,6 +46,18 @@ function buildHost(text = "") {
     nextEl,
     closeEl,
     editorEl,
+    toggleReplaceEl,
+    replaceRowEl,
+    replaceInputEl,
+    replaceOneEl,
+    replaceAllEl,
+    inserts,
+    // jsdom 은 execCommand 를 구현하지 않는다. 선택 영역 교체만 흉내내고,
+    // **몇 번 호출됐는지**를 기록한다 — 전체 치환이 1회여야 undo 가 1회다.
+    insertText: (ta: HTMLTextAreaElement, text: string) => {
+      inserts.push({ start: ta.selectionStart, end: ta.selectionEnd, text });
+      ta.value = ta.value.slice(0, ta.selectionStart) + text + ta.value.slice(ta.selectionEnd);
+    },
     // jsdom 은 레이아웃이 없어 미러 측정이 항상 0 이다. 배선만 보면 되므로
     // 결정적인 가짜 측정기를 주입한다(주입 경계를 둔 이유, D-4).
     measureOffsetTop: (_ta: HTMLTextAreaElement, index: number) => index * 10,
@@ -287,5 +310,147 @@ describe("search — 초기화", () => {
     expect(controller.isOpen()).toBe(false);
     expect(warn.mock.calls.map((call) => String(call[0]))).toEqual(["[search] 초기화 실패:"]);
     warn.mockRestore();
+  });
+});
+
+describe("search — 치환 (F-22 잔여)", () => {
+  it("치환 토글이 행을 열고 aria-expanded 를 갱신한다", async () => {
+    const { initSearch } = await loadSearch();
+    const host = buildHost("바늘");
+    const controller = initSearch(host);
+    controller.open();
+
+    expect(host.replaceRowEl.hidden).toBe(true);
+    host.toggleReplaceEl.click();
+    expect(host.replaceRowEl.hidden).toBe(false);
+    expect(host.toggleReplaceEl.getAttribute("aria-expanded")).toBe("true");
+
+    host.toggleReplaceEl.click();
+    expect(host.replaceRowEl.hidden).toBe(true);
+    expect(host.toggleReplaceEl.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("현재 일치 1건만 바꾼다", async () => {
+    const { initSearch } = await loadSearch();
+    const host = buildHost("바늘 A 바늘");
+    const controller = initSearch(host);
+    controller.open();
+    type(host.inputEl, "바늘");
+    host.replaceInputEl.value = "실";
+
+    host.replaceOneEl.click();
+
+    expect(host.editorEl.value).toBe("실 A 바늘");
+    expect(host.countEl.textContent).toBe("1/1"); // 남은 일치 1건
+  });
+
+  it("치환 후 커서가 넘어가 같은 자리를 맴돌지 않는다", async () => {
+    // "a" → "aa" 는 치환 결과가 질의를 포함한다. 커서를 넘기지 않으면 같은
+    // 자리를 무한히 다시 잡는다.
+    const { initSearch } = await loadSearch();
+    const host = buildHost("a b a");
+    const controller = initSearch(host);
+    controller.open();
+    type(host.inputEl, "a");
+    host.replaceInputEl.value = "aa";
+
+    host.replaceOneEl.click();
+    expect(host.editorEl.value).toBe("aa b a");
+    // 방금 넣은 "aa" 안의 a 가 아니라 그 뒤의 일치를 가리켜야 한다.
+    expect(host.editorEl.selectionStart).toBeGreaterThanOrEqual(2);
+  });
+
+  it("모두 바꾸기는 삽입을 **한 번만** 한다 — Cmd+Z 한 번으로 되돌아가야 한다", async () => {
+    const { initSearch } = await loadSearch();
+    const host = buildHost("바늘 A 바늘 B 바늘");
+    const controller = initSearch(host);
+    controller.open();
+    type(host.inputEl, "바늘");
+    host.replaceInputEl.value = "실";
+
+    host.replaceAllEl.click();
+
+    expect(host.editorEl.value).toBe("실 A 실 B 실");
+    // 부분 치환을 반복하면 3회가 되어 undo 를 3번 눌러야 한다.
+    expect(host.inserts).toHaveLength(1);
+    // 문서 전체(0..길이)를 한 번에 교체했는지 — 부분 치환 반복이 아니다.
+    expect(host.inserts[0].start).toBe(0);
+    expect(host.inserts[0].end).toBe("바늘 A 바늘 B 바늘".length);
+    expect(host.inserts[0].text).toBe("실 A 실 B 실");
+  });
+
+  it("치환에도 execCommand 경로를 쓴다 — value 직접 대입이 아니다", async () => {
+    // value 대입은 undo 스택을 통째로 날린다(toolbar.ts 와 같은 이유).
+    const { initSearch } = await loadSearch();
+    const host = buildHost("바늘");
+    const controller = initSearch(host);
+    controller.open();
+    type(host.inputEl, "바늘");
+    host.replaceInputEl.value = "실";
+
+    host.replaceOneEl.click();
+    expect(host.inserts).toHaveLength(1);
+  });
+
+  it("치환 뒤 포커스가 검색 쪽으로 돌아온다", async () => {
+    // execCommand 를 쓰려면 잠깐 에디터에 포커스를 줘야 한다. 되돌리지 않으면
+    // 다음 Enter 가 본문에 개행을 넣는다(찾기에서 이미 겪은 함정).
+    const { initSearch } = await loadSearch();
+    const host = buildHost("바늘");
+    const controller = initSearch(host);
+    controller.open();
+    type(host.inputEl, "바늘");
+    host.replaceInputEl.focus();
+    host.replaceInputEl.value = "실";
+
+    host.replaceOneEl.click();
+    expect(document.activeElement).toBe(host.replaceInputEl);
+  });
+
+  it("Enter 는 1건, Shift+Enter 는 모두 바꾼다", async () => {
+    const { initSearch } = await loadSearch();
+    const host = buildHost("바늘 바늘 바늘");
+    const controller = initSearch(host);
+    controller.open();
+    type(host.inputEl, "바늘");
+    host.replaceInputEl.value = "실";
+
+    host.replaceInputEl.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+    expect(host.editorEl.value).toBe("실 바늘 바늘");
+
+    host.replaceInputEl.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }),
+    );
+    expect(host.editorEl.value).toBe("실 실 실");
+  });
+
+  it("일치가 없으면 아무것도 바꾸지 않는다", async () => {
+    const { initSearch } = await loadSearch();
+    const host = buildHost("건초");
+    const controller = initSearch(host);
+    controller.open();
+    type(host.inputEl, "바늘");
+    host.replaceInputEl.value = "실";
+
+    host.replaceOneEl.click();
+    host.replaceAllEl.click();
+
+    expect(host.editorEl.value).toBe("건초");
+    expect(host.inserts).toHaveLength(0);
+  });
+
+  it("검색을 닫으면 치환 행도 접힌다", async () => {
+    const { initSearch } = await loadSearch();
+    const host = buildHost("바늘");
+    const controller = initSearch(host);
+    controller.open();
+    host.toggleReplaceEl.click();
+    expect(host.replaceRowEl.hidden).toBe(false);
+
+    controller.close();
+    expect(host.replaceRowEl.hidden).toBe(true);
+    expect(host.toggleReplaceEl.getAttribute("aria-expanded")).toBe("false");
   });
 });

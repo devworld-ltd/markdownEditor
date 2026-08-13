@@ -401,9 +401,44 @@ body {
   color: var(--text);
 }
 
-.search-btn:focus-visible {
+.search-btn:focus-visible,
+.search-text-btn:focus-visible {
   outline: 2px solid #007acc;
   outline-offset: 1px;
+}
+
+.search-btn[aria-expanded="true"] {
+  background: var(--code-bg);
+  color: var(--text);
+}
+
+/* 치환 행은 검색 바 바로 아래에 붙는다 — 위쪽 경계선을 지워 한 덩어리로 보이게. */
+.search-replace-row {
+  border-top: none;
+}
+
+.search-replace-row[hidden] {
+  display: none;
+}
+
+.search-text-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--rule-subtle);
+  border-radius: 4px;
+  background: var(--surface-preview);
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.search-text-btn:hover {
+  background: var(--code-bg);
+}
+
+.search-text-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /*
