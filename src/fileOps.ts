@@ -10,6 +10,7 @@ import {
   updateActiveTab,
 } from "./tabs";
 import { showNotice } from "./notice";
+import { notifyFallbackSave } from "./fsLimitNotice";
 
 /**
  * 브라우저 파일 I/O.
@@ -59,11 +60,64 @@ const ACCEPT_ATTR = ".md,.markdown,.txt,text/markdown,text/plain";
 let editorEl: HTMLTextAreaElement;
 let fileInputEl: HTMLInputElement;
 
+/**
+ * 플랫폼 경계 — picker/Blob/anchor 전역 API 를 이 인터페이스 뒤로 모은다.
+ *
+ * `fileOps.ts` 는 `tabs.ts`/`notice.ts` 를 import 하므로 offline.ts/swUpdate.ts/
+ * fsLimitNotice.ts 처럼 완전한 리프 모듈로 만들 수는 없다(그럴 필요도 없다 —
+ * 이 파일이 검증해야 하는 위험한 분기는 "핸들 유무·AbortError 판별·dirty 해제
+ * 시점"이지 tabs/notice 자체의 동작이 아니다. tabs/notice 는 각각 자기 테스트를
+ * 갖고 있으므로 그대로 두고 함께 호출해 통합 검증한다).
+ *
+ * 대신 실제로 "가짜로 대체하지 않으면 전 분기를 못 만드는" 것만 주입 경계로
+ * 뺀다 — `window.showOpenFilePicker`/`showSaveFilePicker`(대화상자 결과·AbortError·
+ * 그 외 오류를 자유롭게 흉내낼 수 있어야 함) 와 `Blob`/`URL.createObjectURL`/
+ * `document.createElement("a")`(폴백 다운로드 경로). `isFileSystemAccessSupported()`
+ * 도 같은 판정을 쓰므로 host 를 통해 지원/미지원을 강제로 뒤집을 수 있게 한다.
+ */
+export interface FileOpsHost {
+  isSupported(): boolean;
+  showOpenFilePicker(
+    options: OpenFilePickerOptions,
+  ): Promise<FileSystemFileHandle[]>;
+  showSaveFilePicker(
+    options: SaveFilePickerOptions,
+  ): Promise<FileSystemFileHandle>;
+  createBlob(content: string, type: string): Blob;
+  createObjectURL(blob: Blob): string;
+  revokeObjectURL(url: string): void;
+  createAnchor(): HTMLAnchorElement;
+  appendToBody(el: HTMLElement): void;
+}
+
+function defaultHost(): FileOpsHost {
+  return {
+    isSupported: () =>
+      typeof window.showOpenFilePicker === "function" &&
+      typeof window.showSaveFilePicker === "function",
+    showOpenFilePicker: (options) => window.showOpenFilePicker!(options),
+    showSaveFilePicker: (options) => window.showSaveFilePicker!(options),
+    createBlob: (content, type) => new Blob([content], { type }),
+    createObjectURL: (blob) => URL.createObjectURL(blob),
+    revokeObjectURL: (url) => URL.revokeObjectURL(url),
+    createAnchor: () => document.createElement("a"),
+    appendToBody: (el) => document.body.appendChild(el),
+  };
+}
+
+let host: FileOpsHost = defaultHost();
+
+/**
+ * 테스트 전용 주입 지점. 프로덕션(`main.ts`)은 절대 호출하지 않으므로 기본
+ * `host` 는 항상 실제 전역 API 를 그대로 쓴다. 인자를 생략하면 기본값으로
+ * 되돌린다(테스트 간 누수 방지 — `afterEach` 에서 호출).
+ */
+export function setFileOpsHost(partial?: Partial<FileOpsHost>): void {
+  host = { ...defaultHost(), ...partial };
+}
+
 export function isFileSystemAccessSupported(): boolean {
-  return (
-    typeof window.showOpenFilePicker === "function" &&
-    typeof window.showSaveFilePicker === "function"
-  );
+  return host.isSupported();
 }
 
 /** 사용자가 대화상자를 취소한 경우. 오류로 취급하지 않는다. */
@@ -87,7 +141,7 @@ export async function openFile(): Promise<void> {
 
 async function openViaFileSystemAccess(): Promise<void> {
   try {
-    const [handle] = await window.showOpenFilePicker!({
+    const [handle] = await host.showOpenFilePicker({
       types: MARKDOWN_TYPES,
       multiple: false,
     });
@@ -140,6 +194,9 @@ export async function saveFileAs(): Promise<void> {
   const suggestedName = suggestFileName(tab.fileName);
 
   if (!isFileSystemAccessSupported()) {
+    // F-58: 저장을 실제로 실행하는 이 시점에 브라우저 한계를 안내한다(세션당 1회).
+    // 저장 동작 자체(다운로드 방식·파일명·성공 알림)는 그대로 두고 부가 안내만 더한다.
+    notifyFallbackSave();
     downloadFile(content, suggestedName);
     updateActiveTab({ fileName: suggestedName, isDirty: false });
     showNotice(`${suggestedName} 을(를) 내려받았습니다.`);
@@ -147,7 +204,7 @@ export async function saveFileAs(): Promise<void> {
   }
 
   try {
-    const handle = await window.showSaveFilePicker!({
+    const handle = await host.showSaveFilePicker({
       types: MARKDOWN_TYPES,
       suggestedName,
     });
@@ -176,15 +233,15 @@ async function writeToHandle(
 }
 
 function downloadFile(content: string, fileName: string): void {
-  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
+  const blob = host.createBlob(content, "text/markdown;charset=utf-8");
+  const url = host.createObjectURL(blob);
+  const anchor = host.createAnchor();
   anchor.href = url;
   anchor.download = fileName;
-  document.body.appendChild(anchor);
+  host.appendToBody(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  host.revokeObjectURL(url);
 }
 
 /** 순수 함수 — 저장 대화상자에 제안할 파일명 계산. UNTITLED/공백은 "Untitled.md",
