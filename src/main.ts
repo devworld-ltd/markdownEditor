@@ -48,6 +48,7 @@ import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
+import { initTableUi } from "./tableUi";
 import { initLineNumbers } from "./lineNumbers";
 import { initStatusBar } from "./statusBar";
 import { initEditorBehavior } from "./editorBehavior";
@@ -331,6 +332,40 @@ if (editorEl && previewEl) {
         })
       : null;
 
+  // F-30 표. 대화상자 하나가 커서 위치에 따라 삽입/편집으로 갈린다.
+  const tableDialogEl = document.querySelector<HTMLDialogElement>("#table-dialog");
+  const tableInsertEl = document.querySelector<HTMLElement>("#table-insert");
+  const tableRowsEl = document.querySelector<HTMLInputElement>("#table-rows");
+  const tableColumnsEl = document.querySelector<HTMLInputElement>("#table-columns");
+  const tableEditEl = document.querySelector<HTMLElement>("#table-edit");
+  const tableAlignEl = document.querySelector<HTMLElement>("#table-align");
+  const tableSubmitEl = document.querySelector<HTMLButtonElement>("#table-submit");
+  const tableCloseEl = document.querySelector<HTMLElement>("#table-close");
+
+  const tableUi =
+    tableDialogEl &&
+    tableInsertEl &&
+    tableRowsEl &&
+    tableColumnsEl &&
+    tableEditEl &&
+    tableAlignEl &&
+    tableSubmitEl &&
+    tableCloseEl
+      ? initTableUi({
+          dialogEl: tableDialogEl,
+          insertEl: tableInsertEl,
+          rowsEl: tableRowsEl,
+          columnsEl: tableColumnsEl,
+          editEl: tableEditEl,
+          alignEl: tableAlignEl,
+          submitEl: tableSubmitEl,
+          closeEl: tableCloseEl,
+          editorEl,
+          notify: (message) => showNotice(message, "info", 3000),
+          returnFocusTo: editorEl,
+        })
+      : null;
+
   setFileTouchListener((name, handle) => {
     if (handle) liveHandles.set(name, handle);
     recentFiles?.record(name);
@@ -369,6 +404,7 @@ if (editorEl && previewEl) {
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
     showSettings: editorSettings ? () => editorSettings.open() : undefined,
+    showTable: tableUi ? () => tableUi.open() : undefined,
     showRecent: recentFiles ? () => recentFiles.open() : undefined,
 
     // F-60: 이 앱에서 유일하게 네트워크를 타는 동작이다. 버튼을 눌러야만 fetch 한다.

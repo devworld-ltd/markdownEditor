@@ -168,6 +168,37 @@
         </div>
       </dialog>
 
+      <!-- F-30 표 편집 보조. 커서가 표 안이면 편집, 밖이면 삽입으로 열린다. -->
+      <dialog id="table-dialog" class="shortcut-help" aria-labelledby="table-dialog-title">
+        <div class="shortcut-help-header">
+          <h2 id="table-dialog-title">표</h2>
+          <button type="button" id="table-close" class="shortcut-help-close" aria-label="닫기">
+            &times;
+          </button>
+        </div>
+        <div class="shortcut-help-list settings-body">
+          <div id="table-insert">
+            <div class="setting-row">
+              <label for="table-rows">행 (헤더 제외)</label>
+              <input type="number" id="table-rows" class="setting-number" min="1" max="50" value="3" />
+            </div>
+            <div class="setting-row">
+              <label for="table-columns">열</label>
+              <input type="number" id="table-columns" class="setting-number" min="1" max="20" value="3" />
+            </div>
+          </div>
+          <div id="table-edit" hidden>
+            <div id="table-align"></div>
+            <p class="setting-note">
+              정렬을 맞추면 한글·이모지의 표시 폭을 고려해 파이프를 정렬합니다.
+            </p>
+          </div>
+          <div class="sw-update-actions">
+            <button type="button" id="table-submit" class="search-text-btn">표 삽입</button>
+          </div>
+        </div>
+      </dialog>
+
       <!-- F-58: 단축키 안내. 네이티브 <dialog> 를 쓰면 포커스 트랩·Esc 닫기·
            백드롭·바깥 요소 inert 처리를 브라우저가 정확히 해 준다. -->
       <dialog id="shortcut-help" class="shortcut-help" aria-labelledby="shortcut-help-title">
