@@ -10,6 +10,7 @@ import {
   updateActiveTab,
 } from "./tabs";
 import { showNotice } from "./notice";
+import { notifyFallbackSave } from "./fsLimitNotice";
 
 /**
  * 브라우저 파일 I/O.
@@ -140,6 +141,9 @@ export async function saveFileAs(): Promise<void> {
   const suggestedName = suggestFileName(tab.fileName);
 
   if (!isFileSystemAccessSupported()) {
+    // F-58: 저장을 실제로 실행하는 이 시점에 브라우저 한계를 안내한다(세션당 1회).
+    // 저장 동작 자체(다운로드 방식·파일명·성공 알림)는 그대로 두고 부가 안내만 더한다.
+    notifyFallbackSave();
     downloadFile(content, suggestedName);
     updateActiveTab({ fileName: suggestedName, isDirty: false });
     showNotice(`${suggestedName} 을(를) 내려받았습니다.`);

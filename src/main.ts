@@ -20,6 +20,7 @@ import { initNotice, showNotice } from "./notice";
 import { isStorageAvailable } from "./storage";
 import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
+import { initFsLimitNotice } from "./fsLimitNotice";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -29,6 +30,7 @@ const tabBarEl = document.querySelector<HTMLElement>("#tab-bar");
 const noticeEl = document.querySelector<HTMLElement>("#notice");
 const swUpdateEl = document.querySelector<HTMLElement>("#sw-update");
 const offlineEl = document.querySelector<HTMLElement>("#offline-indicator");
+const fsLimitNoticeEl = document.querySelector<HTMLElement>("#fs-limit-notice");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -80,7 +82,15 @@ if (editorEl && previewEl) {
     if (document.visibilityState === "hidden") persistNow();
   });
 
-  document.body.dataset.fsAccess = String(isFileSystemAccessSupported());
+  const fsAccessSupported = isFileSystemAccessSupported();
+  document.body.dataset.fsAccess = String(fsAccessSupported);
+
+  // F-58: Chrome·Edge 에는 아무것도 보이면 안 되므로, 폴백 모드일 때만 초기화한다.
+  // 호출 자체를 생략하는 편이 리스너 유무까지 포함해 "아무것도 안 뜬다"를 가장
+  // 확실하게 보장한다(§fsLimitNotice.ts 판단 근거).
+  if (fsLimitNoticeEl && !fsAccessSupported) {
+    initFsLimitNotice({ panelEl: fsLimitNoticeEl, returnFocusTo: editorEl });
+  }
 
   // 서비스 워커는 프로덕션 빌드에서만 등록한다. 개발 서버에서 등록하면 HMR 결과가
   // 캐시에 가려 "고쳤는데 안 바뀌는" 상황을 만든다.
