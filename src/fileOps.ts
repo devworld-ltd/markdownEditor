@@ -232,8 +232,43 @@ async function writeToHandle(
   }
 }
 
-function downloadFile(content: string, fileName: string): void {
-  const blob = host.createBlob(content, "text/markdown;charset=utf-8");
+/**
+ * F-38: 파일을 **탭 상태와 무관하게** 내보낸다.
+ *
+ * `saveFile()`/`saveFileAs()` 와 달리 탭의 핸들·파일명·dirty 를 건드리지 않는다.
+ * HTML 내보내기는 "이 문서를 다른 형식으로 한 부 뽑는" 것이지 저장이 아니다 —
+ * 탭이 `note.html` 을 가리키게 되면 다음 Cmd+S 가 마크다운 원문을 .html 파일에
+ * 덮어쓴다.
+ */
+export async function exportFile(
+  content: string,
+  fileName: string,
+  mimeType: string,
+  accept: Record<string, string[]>,
+): Promise<void> {
+  if (!isFileSystemAccessSupported()) {
+    downloadBlob(content, fileName, mimeType);
+    showNotice(`${fileName} 을(를) 내려받았습니다.`);
+    return;
+  }
+
+  try {
+    const handle = await host.showSaveFilePicker({
+      types: [{ description: mimeType, accept }],
+      suggestedName: fileName,
+    });
+    const writable = await handle.createWritable();
+    await writable.write(content);
+    await writable.close();
+    showNotice(`${handle.name} 으로 내보냈습니다.`);
+  } catch (error) {
+    if (isAbort(error)) return;
+    showNotice(`내보내지 못했습니다: ${errorMessage(error)}`, "error");
+  }
+}
+
+function downloadBlob(content: string, fileName: string, mimeType: string): void {
+  const blob = host.createBlob(content, mimeType);
   const url = host.createObjectURL(blob);
   const anchor = host.createAnchor();
   anchor.href = url;
@@ -242,6 +277,10 @@ function downloadFile(content: string, fileName: string): void {
   anchor.click();
   anchor.remove();
   host.revokeObjectURL(url);
+}
+
+function downloadFile(content: string, fileName: string): void {
+  downloadBlob(content, fileName, "text/markdown;charset=utf-8");
 }
 
 /** 순수 함수 — 저장 대화상자에 제안할 파일명 계산. UNTITLED/공백은 "Untitled.md",

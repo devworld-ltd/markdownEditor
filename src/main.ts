@@ -1,6 +1,7 @@
 import { createEditor } from "./editor";
 import { initToolbar, setFileActions } from "./toolbar";
 import {
+  exportFile,
   initFileOps,
   isFileSystemAccessSupported,
   openFile,
@@ -11,6 +12,7 @@ import { initShortcuts } from "./shortcuts";
 import {
   UNTITLED,
   createTab,
+  getActiveTab,
   hasDirtyTabs,
   initTabs,
   persistNow,
@@ -33,6 +35,7 @@ import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
+import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -172,6 +175,19 @@ if (editorEl && previewEl) {
     saveAs: () => void saveFileAs(),
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
+
+    // F-38: 프리뷰에 이미 들어가 있는 **정화된** HTML 을 그대로 쓴다.
+    // 원문을 다시 파싱하는 두 번째 경로를 만들면 정화 정책이 갈라진다(F-18).
+    exportHtml: () => {
+      const tab = getActiveTab();
+      const fileName = tab?.fileName ?? UNTITLED;
+      void exportFile(
+        buildHtmlDocument(titleFromFileName(fileName), previewEl.innerHTML),
+        suggestHtmlFileName(fileName),
+        "text/html;charset=utf-8",
+        { "text/html": [".html"] },
+      );
+    },
   });
 
   initShortcuts({

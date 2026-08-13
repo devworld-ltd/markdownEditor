@@ -67,6 +67,7 @@
 | F-22 | 문서 내 검색 · 치환 | `src/searchEngine.ts`, `src/search.ts` | 단위 58 + E2E 23 |
 | F-32 | 분할 비율 조절 (드래그 · 키보드) | `src/splitLayout.ts`, `src/splitter.ts` | 단위 36 + E2E 10 |
 | F-33 | 분할 / 편집 전용 / 미리보기 전용 모드 | `src/viewMode.ts` | 단위 13 + E2E 12 |
+| F-38 | HTML 내보내기 (독립 실행 파일) | `src/htmlExport.ts`, `fileOps.exportFile()` | 단위 18 + E2E 7 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -113,7 +114,6 @@
 
 | ID | 기능 |
 |----|------|
-| F-38 | HTML 내보내기 |
 | F-39 | PDF 내보내기 / 인쇄 스타일 |
 | F-40 | 렌더된 HTML 클립보드 복사 |
 | F-60 | 공유 링크 (문서 퍼블리시) — 서버 도입 필요 |

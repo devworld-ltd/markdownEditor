@@ -41,6 +41,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-22 | 문서 내 검색·치환 | `⌘/Ctrl+F` | `searchEngine.ts` → `search.ts` | `matches`·`current` | `execCommand` | `search.spec.ts` |
 | F-32 | 분할 비율 조절 | 드래그 · 화살표 | `splitLayout.ts` → `splitter.ts` | `ratio` (localStorage) | `setPointerCapture` | `splitter.spec.ts` |
 | F-33 | 보기 모드 | 툴바 버튼 · `⌥M` | `viewMode.ts` → `data-mode` | `mode` (localStorage) | — | `viewmode.spec.ts` |
+| F-38 | HTML 내보내기 | 툴바 버튼 | `preview.innerHTML` → `htmlExport.ts` → `fileOps.exportFile()` | — | `showSaveFilePicker` \| Blob | `htmlexport.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -141,12 +142,15 @@ graph LR
 | `tests/e2e/splitter.spec.ts` | 10 | F-32 |
 | `tests/viewMode.test.ts` | 13 | F-33 |
 | `tests/e2e/viewmode.spec.ts` | 12 | F-33 |
+| `tests/htmlExport.test.ts` | 18 | F-38 |
+| `tests/e2e/htmlexport.spec.ts` | 7 | F-38 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
 
 | 변경 대상 | 갱신해야 할 문서 |
 |-----------|------------------|
+| `src/htmlExport.ts` | [서비스 아키텍처 §7.4](./service-architecture.md) — **마크다운을 파싱하지 않는다**. 정화 경로를 늘리지 말 것 |
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | [서비스 아키텍처 §3](./service-architecture.md), [API 명세 §8](../api/browser-apis.md#8-보안-노트), `tests/parser.test.ts` |
 | `src/tabs.ts` (`TabState` 필드) | [데이터 모델 §2](./data-model.md), 본 문서 §1·§3 |
 | `src/storage.ts` (세션 스키마·버전) | [데이터 모델 §3](./data-model.md), [API 명세 §4](../api/browser-apis.md#4-세션-저장-localstorage) |

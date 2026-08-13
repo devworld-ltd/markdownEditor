@@ -72,6 +72,8 @@ export interface FileActions {
   showShortcuts?: () => void;
   /** F-33 보기 모드 순환. */
   cycleView?: () => void;
+  /** F-38 HTML 내보내기. */
+  exportHtml?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -206,6 +208,13 @@ const actions: ToolbarAction[] = [
     action: (ta) => insertBlock(ta, "---"),
     editsText: true,
     separator: true,
+  },
+  {
+    // F-38 HTML 내보내기. 파일 액션이지만 "저장" 과 성격이 달라(탭 상태를
+    // 건드리지 않는다) 서식 뒤 도구 묶음에 둔다.
+    label: "Export HTML",
+    icon: `<svg ${SVG_ATTRS}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    action: () => fileActions?.exportHtml?.(),
   },
   {
     // F-33 보기 모드 순환. 툴바 버튼이 있어야 단축키를 모르는 사용자도 쓴다.
