@@ -8,8 +8,8 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 42건 + E2E 94건 (전부 통과) |
-| 기능 커버리지 | 24/27 자동 검증 |
+| 테스트 | 단위 **129건** + E2E 97건 (전부 통과) |
+| 기능 커버리지 | 27/30 자동 검증 · 라인 커버리지 **60.76%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
 
@@ -36,7 +36,7 @@
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
 - 로컬 파일 열기/저장 — File System Access API + 업로드/다운로드 폴백
 - **세션 자동 저장·복원** (localStorage) + 미저장 이탈 경고 + 용량 초과 알림
-- **PWA** — 설치형 앱, 서비스 워커 기반 오프라인 지원, **새 버전 갱신 알림**
+- **PWA** — 설치형 앱, 서비스 워커 기반 오프라인 지원, 새 버전 갱신 알림, **오프라인 상태 표시**
 - **CSP 및 보안 헤더** — `script-src 'self'`, `object-src 'none'` 등
 - 서식 툴바 16종, 키보드 단축키
 - 720px 이하 반응형 (상하 분할)
@@ -79,6 +79,8 @@ markdownEditor/
 │   ├── storage.ts            # localStorage 세션 저장/복원
 │   ├── notice.ts             # 사용자 알림
 │   ├── swUpdate.ts           # 서비스 워커 갱신 알림
+│   ├── offline.ts            # 오프라인 상태 배지
+│   ├── textEdit.ts           # 텍스트 조작 계산 (순수)
 │   ├── toolbar.ts            # 툴바 16종
 │   ├── shortcuts.ts          # 키보드 단축키
 │   └── style.css
@@ -95,12 +97,15 @@ markdownEditor/
 │       ├── fileaccess.spec.ts # 파일 I/O 2경로
 │       ├── session.spec.ts   # 세션 자동 저장 · 복원
 │       ├── hardening.spec.ts # CSP · PWA · 저장 실패
-│       └── swupdate.spec.ts  # 서비스 워커 갱신 (프리뷰 모드)
+│       ├── swupdate.spec.ts  # 서비스 워커 갱신 (프리뷰 모드)
+│       └── offline.spec.ts   # 오프라인 상태 표시
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
 │   ├── icon.svg              # 파비콘 + PWA 아이콘
 │   └── sw.js                 # 서비스 워커 (오프라인)
+├── scripts/
+│   └── healthcheck.sh        # 배포 후 헬스체크 (CI + 로컬 공용)
 ├── docs/                     # 프로젝트 문서 (→ docs/README.md)
 ├── .github/workflows/        # CI (ci.yml) · CD (deploy.yml)
 ├── index.html
@@ -161,6 +166,8 @@ npm run preview      # 빌드 결과 미리보기
 npm run cf:dev       # 로컬 workerd 런타임으로 dist/ 서빙
 npm run deploy:dev   # Cloudflare Workers dev 환경
 npm run deploy:prod  # Cloudflare Workers prod 환경
+npm run healthcheck:dev   # 배포 검증 (캐시 우회 + 재시도 + SHA 일치)
+npm run healthcheck:prod
 ```
 
 `dev` 브랜치 push → dev 환경(`*.workers.dev`), `main` 브랜치 push → prod 환경(`md-editor.devworld.co.kr`)으로 GitHub Actions 가 자동 배포한다.
