@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **192건** + E2E 119건 (전부 통과) |
+| 테스트 | 단위 **192건** + E2E 126건 (전부 통과) |
 | 기능 커버리지 | 31/34 자동 검증 · 라인 커버리지 **76.82%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -106,7 +106,8 @@ markdownEditor/
 │       ├── swupdate.spec.ts  # 서비스 워커 갱신 (프리뷰 모드)
 │       ├── offline.spec.ts   # 오프라인 상태 표시
 │       ├── scrollsync.spec.ts # 시각 구분 · 스크롤 동기화
-│       └── darkmode.spec.ts  # 다크 모드
+│       ├── darkmode.spec.ts  # 다크 모드
+│       └── icons.spec.ts     # PWA 아이콘
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
@@ -169,6 +170,7 @@ npm run test:e2e:report  # 직전 E2E HTML 리포트
 ### 빌드 · 배포
 
 ```bash
+npm run icons        # public/icon.svg → PWA PNG 4종 재생성 (아이콘 변경 시에만)
 npm run build        # tsc + vite build → dist/
 npm run preview      # 빌드 결과 미리보기
 npm run cf:dev       # 로컬 workerd 런타임으로 dist/ 서빙

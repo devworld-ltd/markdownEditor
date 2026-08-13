@@ -36,6 +36,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-25 | 스크롤 동기화 | 두 패널 `scroll` | `main.ts` → `scrollSync.ts` (`tabs`·`editor` 훅) | `source`·`expectedTop`·`lastRatio` | `requestAnimationFrame` | `scrollsync.spec.ts` |
 | F-72 | 영역 시각 구분 | 페이지 로드 | `src/style.css` 토큰 3종 | — | — | `scrollsync.spec.ts` |
 | F-57 | 다크 모드 | `prefers-color-scheme` | `src/style.css` 토큰 7종 | — | — | `darkmode.spec.ts` |
+| F-68 | PWA 아이콘 PNG | 홈 화면 추가 | `scripts/gen-icons.mjs` → `public/*.png` | — | — | `icons.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -124,6 +125,7 @@ graph LR
 | `tests/scrollSync.test.ts` | 34 | F-25 (초기화 롤백 #33 · 렌더 중 동기화 보존 #34 포함) |
 | `tests/e2e/scrollsync.spec.ts` | 11 | F-25, F-72 |
 | `tests/e2e/darkmode.spec.ts` | 6 | F-57 |
+| `tests/e2e/icons.spec.ts` | 7 | F-68 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
@@ -144,6 +146,7 @@ graph LR
 | `playwright.config.ts` 프리뷰 모드 | [테스트 계획 §2](../testing/test-plan.md) |
 | `tsconfig.json` · `package.json` build | [인프라 §3.3](./infrastructure.md) |
 | `src/fileOps.ts` (파일 I/O 분기) | [API 명세 §2·§3](../api/browser-apis.md), [서비스 아키텍처 §5.3](./service-architecture.md) |
+| `public/icon.svg` · `scripts/gen-icons.mjs` | [인프라 §3.9](./infrastructure.md), `tests/e2e/icons.spec.ts` — SVG 를 바꾸면 `npm run icons` 재실행 필수 |
 | `src/style.css` (색 토큰) | [서비스 아키텍처 §7.4](./service-architecture.md) — 다크 대응 토큰을 함께 정의해야 한다 |
 | `src/toolbar.ts` (버튼 증감) | [기능 현황](../features/feature-status.md), `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
 | `src/textEdit.ts` (감싸기·줄머리·블록 삽입 계산) | `tests/textEdit.test.ts`, `tests/e2e/toolbar.spec.ts` (동작 회귀 게이트) |

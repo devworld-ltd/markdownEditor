@@ -9,6 +9,10 @@
     />
     <meta name="theme-color" content="#1e1e1e" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <!-- iOS 홈 화면. SVG 를 지원하지 않아 PNG 가 없으면 페이지 스크린샷으로
+         대체된다. 알파도 지원하지 않으므로 이 PNG 는 모서리가 둥글지 않은
+         full-bleed 다 — iOS 가 자기 마스크를 덧씌운다(F-68). -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Markdown Editor</title>
     <link rel="stylesheet" href="/src/style.css" />
