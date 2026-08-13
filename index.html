@@ -40,7 +40,32 @@
         <span id="search-count" class="search-count" role="status" aria-live="polite"></span>
         <button type="button" id="search-prev" class="search-btn" aria-label="이전 결과">&#8593;</button>
         <button type="button" id="search-next" class="search-btn" aria-label="다음 결과">&#8595;</button>
+        <button
+          type="button"
+          id="search-toggle-replace"
+          class="search-btn"
+          aria-label="치환 열기"
+          aria-expanded="false"
+          aria-controls="search-replace-row"
+        >
+          &#8644;
+        </button>
         <button type="button" id="search-close" class="search-btn" aria-label="검색 닫기">&times;</button>
+      </div>
+
+      <!-- 치환은 찾기보다 훨씬 덜 쓰이므로 기본으로 접어 둔다(F-22 잔여). -->
+      <div id="search-replace-row" class="search-bar search-replace-row" hidden>
+        <input
+          type="text"
+          id="search-replace-input"
+          class="search-input"
+          placeholder="바꿀 내용"
+          aria-label="바꿀 내용"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="button" id="search-replace-one" class="search-text-btn">바꾸기</button>
+        <button type="button" id="search-replace-all" class="search-text-btn">모두 바꾸기</button>
       </div>
       <main class="editor-container">
         <textarea

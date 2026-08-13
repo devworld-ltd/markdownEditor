@@ -211,3 +211,109 @@ test("F13: 검색 바가 본문을 가리지 않는다", async ({ page }) => {
   expect(editorAfter!.y).toBeGreaterThan(editorBefore!.y);
   expect(editorAfter!.height).toBeLessThan(editorBefore!.height);
 });
+
+/**
+ * F-22 잔여 — 치환.
+ *
+ * 단위 테스트가 "삽입을 몇 번 하는가" 를 세지만, **실행 취소가 정말 되는지**는
+ * 실제 `execCommand` 가 있는 브라우저에서만 확인된다. jsdom 은 이 API 자체가
+ * 없어 주입으로 대체하므로, undo 는 여기서만 증명된다.
+ */
+test.describe("F-22 잔여: 치환", () => {
+  async function openReplace(page: import("@playwright/test").Page, text: string, query: string) {
+    await page.locator("#editor").fill(text);
+    await page.keyboard.press("ControlOrMeta+f");
+    await page.locator(INPUT).fill(query);
+    await page.locator("#search-toggle-replace").click();
+    await expect(page.locator("#search-replace-row")).toBeVisible();
+  }
+
+  test("R1: 치환 행은 기본으로 접혀 있고 토글로 열린다", async ({ page }) => {
+    await page.locator("#editor").click();
+    await page.keyboard.press("ControlOrMeta+f");
+
+    await expect(page.locator("#search-replace-row")).toBeHidden();
+    await expect(page.locator("#search-toggle-replace")).toHaveAttribute("aria-expanded", "false");
+
+    await page.locator("#search-toggle-replace").click();
+    await expect(page.locator("#search-replace-row")).toBeVisible();
+    await expect(page.locator("#search-toggle-replace")).toHaveAttribute("aria-expanded", "true");
+  });
+
+  test("R2: 현재 일치 1건만 바꾼다", async ({ page }) => {
+    await openReplace(page, "바늘 A 바늘", "바늘");
+    await page.locator("#search-replace-input").fill("실");
+    await page.locator("#search-replace-one").click();
+
+    await expect(page.locator("#editor")).toHaveValue("실 A 바늘");
+  });
+
+  test("R3: 모두 바꾸기가 전부 바꾼다", async ({ page }) => {
+    await openReplace(page, "바늘 A 바늘 B 바늘", "바늘");
+    await page.locator("#search-replace-input").fill("실");
+    await page.locator("#search-replace-all").click();
+
+    await expect(page.locator("#editor")).toHaveValue("실 A 실 B 실");
+  });
+
+  test("R4: 모두 바꾸기가 Cmd+Z 한 번으로 되돌아간다", async ({ page }) => {
+    // value 직접 대입이면 undo 스택이 통째로 날아가 되돌릴 수 없다.
+    // 부분 치환을 반복하면 3번 눌러야 한다.
+    const original = "바늘 A 바늘 B 바늘";
+    await openReplace(page, original, "바늘");
+    await page.locator("#search-replace-input").fill("실");
+    await page.locator("#search-replace-all").click();
+    await expect(page.locator("#editor")).toHaveValue("실 A 실 B 실");
+
+    await page.locator("#editor").click();
+    await page.keyboard.press("ControlOrMeta+z");
+
+    await expect(page.locator("#editor")).toHaveValue(original);
+  });
+
+  test("R5: 1건 치환도 Cmd+Z 로 되돌아간다", async ({ page }) => {
+    await openReplace(page, "바늘 A 바늘", "바늘");
+    await page.locator("#search-replace-input").fill("실");
+    await page.locator("#search-replace-one").click();
+    await expect(page.locator("#editor")).toHaveValue("실 A 바늘");
+
+    await page.locator("#editor").click();
+    await page.keyboard.press("ControlOrMeta+z");
+    await expect(page.locator("#editor")).toHaveValue("바늘 A 바늘");
+  });
+
+  test("R6: 치환 결과가 프리뷰에 반영된다", async ({ page }) => {
+    await openReplace(page, "# 바늘", "바늘");
+    await page.locator("#search-replace-input").fill("실");
+    await page.locator("#search-replace-all").click();
+
+    await expect(page.locator("#preview h1")).toHaveText("실");
+  });
+
+  test("R7: 치환 후에도 포커스가 본문으로 새지 않는다", async ({ page }) => {
+    await openReplace(page, "바늘 바늘", "바늘");
+    const replaceInput = page.locator("#search-replace-input");
+    await replaceInput.fill("실");
+    await page.locator("#search-replace-one").click();
+
+    // 포커스가 에디터에 남으면 다음 타이핑이 본문으로 들어간다.
+    await expect(page.locator("#editor")).not.toBeFocused();
+  });
+
+  test("R8: 치환이 탭의 dirty 표시를 갱신한다", async ({ page }) => {
+    await openReplace(page, "바늘", "바늘");
+    await page.locator("#search-replace-input").fill("실");
+    await page.locator("#search-replace-all").click();
+
+    // execCommand 는 input 이벤트를 발생시키므로 탭 상태가 따라와야 한다.
+    await expect(page.locator("#tab-bar .tab-name")).toHaveText("Untitled *");
+  });
+
+  test("R9: 검색을 닫으면 치환 행도 접힌다", async ({ page }) => {
+    await openReplace(page, "바늘", "바늘");
+    await page.keyboard.press("Escape");
+
+    await expect(page.locator(BAR)).toBeHidden();
+    await expect(page.locator("#search-replace-row")).toBeHidden();
+  });
+});

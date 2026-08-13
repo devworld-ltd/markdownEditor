@@ -44,6 +44,11 @@ const searchCountEl = document.querySelector<HTMLElement>("#search-count");
 const searchPrevEl = document.querySelector<HTMLElement>("#search-prev");
 const searchNextEl = document.querySelector<HTMLElement>("#search-next");
 const searchCloseEl = document.querySelector<HTMLElement>("#search-close");
+const searchToggleReplaceEl = document.querySelector<HTMLElement>("#search-toggle-replace");
+const searchReplaceRowEl = document.querySelector<HTMLElement>("#search-replace-row");
+const searchReplaceInputEl = document.querySelector<HTMLInputElement>("#search-replace-input");
+const searchReplaceOneEl = document.querySelector<HTMLElement>("#search-replace-one");
+const searchReplaceAllEl = document.querySelector<HTMLElement>("#search-replace-all");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -70,6 +75,12 @@ if (editorEl && previewEl) {
           nextEl: searchNextEl,
           closeEl: searchCloseEl,
           editorEl,
+          // 치환 UI 는 선택 사항 — 없으면 찾기만 동작한다(F-22 잔여).
+          toggleReplaceEl: searchToggleReplaceEl ?? undefined,
+          replaceRowEl: searchReplaceRowEl ?? undefined,
+          replaceInputEl: searchReplaceInputEl ?? undefined,
+          replaceOneEl: searchReplaceOneEl ?? undefined,
+          replaceAllEl: searchReplaceAllEl ?? undefined,
         })
       : null;
 
