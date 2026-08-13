@@ -22,6 +22,8 @@ import {
 import { initNotice, showNotice } from "./notice";
 import {
   isStorageAvailable,
+  loadEditorPrefs,
+  saveEditorPrefs,
   loadSplitRatio,
   loadViewMode,
   saveSplitRatio,
@@ -35,6 +37,7 @@ import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
+import { initEditorSettings } from "./editorSettings";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
@@ -168,6 +171,38 @@ if (editorEl && previewEl) {
       })
     : null;
 
+  // F-35: 툴바가 버튼을 만든 뒤라야 #settings 관련 요소를 찾을 수 있다(F-33 과 같은 이유).
+  const settingsDialogEl = document.querySelector<HTMLDialogElement>("#editor-settings");
+  const settingsFontEl = document.querySelector<HTMLSelectElement>("#setting-font");
+  const settingsSizeEl = document.querySelector<HTMLElement>("#setting-size-value");
+  const settingsDownEl = document.querySelector<HTMLElement>("#setting-size-down");
+  const settingsUpEl = document.querySelector<HTMLElement>("#setting-size-up");
+  const settingsResetEl = document.querySelector<HTMLElement>("#setting-reset");
+  const settingsCloseEl = document.querySelector<HTMLElement>("#editor-settings-close");
+
+  const editorSettings =
+    settingsDialogEl &&
+    settingsFontEl &&
+    settingsSizeEl &&
+    settingsDownEl &&
+    settingsUpEl &&
+    settingsResetEl &&
+    settingsCloseEl
+      ? initEditorSettings({
+          rootEl: document.documentElement,
+          dialogEl: settingsDialogEl,
+          fontSelectEl: settingsFontEl,
+          sizeValueEl: settingsSizeEl,
+          decreaseEl: settingsDownEl,
+          increaseEl: settingsUpEl,
+          resetEl: settingsResetEl,
+          closeEl: settingsCloseEl,
+          loadPrefs: loadEditorPrefs,
+          savePrefs: saveEditorPrefs,
+          returnFocusTo: editorEl,
+        })
+      : null;
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
@@ -175,6 +210,7 @@ if (editorEl && previewEl) {
     saveAs: () => void saveFileAs(),
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
+    showSettings: editorSettings ? () => editorSettings.open() : undefined,
 
     // F-38: 프리뷰에 이미 들어가 있는 **정화된** HTML 을 그대로 쓴다.
     // 원문을 다시 파싱하는 두 번째 경로를 만들면 정화 정책이 갈라진다(F-18).

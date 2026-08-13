@@ -55,6 +55,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`editorPrefs.ts`** — 편집 글꼴·크기 계산만 담당하는 순수 리프(F-35). **웹폰트 금지** — 네트워크 요청이 없는 앱이고 CSP 가 `font-src 'self' data:` 다.
+- **`editorSettings.ts`** — 편집 설정 `<dialog>`(F-35). 주입형 리프.
 - **`tabOrder.ts`** — 탭 재정렬 인덱스 계산만 담당하는 순수 리프(F-34).
 - **`htmlExport.ts`** — HTML 내보내기 조립(F-38). 순수 모듈. **마크다운을 파싱하지 않는다** — 정화된 HTML 을 받아 감싸기만 한다.
 - **`viewMode.ts`** — 보기 모드(F-33). 주입형 리프. **버튼 클릭은 듣지 않는다** — 툴바가 이미 다루므로 중복하면 한 번 눌러 두 단계 넘어간다.
@@ -108,7 +110,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 37. **색을 토큰화할 때 링크를 빠뜨리지 말 것.** F-57 이 표면·본문은 토큰화했지만 링크를 놓쳐, 다크에서 UA 기본 `#0000ee` 가 대비 **1.37:1** 로 떨어졌다. `:visited` 도 함께 지정해야 한다 — UA 는 방문한 링크에 다른 색을 쓴다.
 38. **`dragover` 에서 `preventDefault()` 를 빼지 말 것.** 브라우저가 "놓을 수 없음" 으로 판정해 `drop` 이 **아예 발생하지 않는다**. 합성 `DragEvent` 로는 이 결과가 재현되지 않으므로, 테스트는 `dragover` 가 **취소됐는지 자체**를 단언한다.
 39. **탭 순서는 `Map` 의 삽입 순서다.** 재정렬은 비우고 다시 넣는 것이고, 세션 영속화가 그 순서를 그대로 쓴다. 재구성 중 하나라도 빠지면 **원본으로 되돌린다** — 탭이 사라지는 것보다 순서가 그대로인 편이 낫다.
-40. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+40. **F-35 글꼴·크기는 편집 영역에만 적용한다.** 프리뷰까지 바꾸면 내보내기(F-38)·인쇄(F-39) 결과가 사람마다 달라진다 — 그건 문서를 받는 쪽의 몫이다. CSS 폴백값(`var(--editor-font-size, 14px)`)을 지우지 말 것 — 설정 모듈이 실패해도 편집기는 떠야 한다.
+41. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

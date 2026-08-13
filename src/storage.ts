@@ -93,6 +93,8 @@ export function clearSession(): void {
 interface StoredLayout {
   ratio?: unknown;
   mode?: unknown;
+  fontId?: unknown;
+  fontSize?: unknown;
 }
 
 function readLayout(): StoredLayout {
@@ -144,6 +146,17 @@ export function loadViewMode(): string | null {
 /** 뷰 모드를 저장한다. */
 export function saveViewMode(mode: string): void {
   writeLayout({ mode });
+}
+
+/** 편집 글꼴·크기를 읽는다 (F-35). 검증은 호출부(editorPrefs)가 한다. */
+export function loadEditorPrefs(): { fontId?: unknown; fontSize?: unknown } {
+  const { fontId, fontSize } = readLayout();
+  return { fontId, fontSize };
+}
+
+/** 편집 글꼴·크기를 저장한다. */
+export function saveEditorPrefs(prefs: { fontId: string; fontSize: number }): void {
+  writeLayout(prefs);
 }
 
 export function createSession(

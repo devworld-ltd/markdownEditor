@@ -6,7 +6,7 @@
 
 | 키 | 스키마 | 손상 시 |
 |----|--------|---------|
-| `markdown-editor:layout:v1` | `{ ratio?: number, mode?: string }` | 항목별로 `null` → 호출부가 기본값 |
+| `markdown-editor:layout:v1` | `{ ratio?, mode?, fontId?, fontSize? }` | 항목별로 `null` → 호출부가 기본값 |
 
 **쓰기는 항상 병합이다.** 통째로 덮어쓰면 모드를 저장할 때 비율이 지워진다. 같은 세션에서는 메모리 값이 가려 주기 때문에 **새로고침해야 드러난다.**
 
