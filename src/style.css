@@ -1,9 +1,25 @@
 :root {
-  /* F-72 편집/프리뷰 시각 구분 (이슈 #31).
-     F-57 다크 모드는 이 세 값만 교체하면 된다 — 규칙 쪽은 손대지 않는다. */
+  /*
+   * 색 토큰 — 라이트가 기준값이고, 다크는 파일 끝의 미디어 쿼리에서 **값만** 바꾼다.
+   * 모든 색은 반드시 여기(bare :root)에 정의가 있어야 한다. 미디어 쿼리 안에서만
+   * 정의된 색은 라이트 모드에서 값이 없어 UA 기본값으로 떨어진다.
+   *
+   * F-72 편집/프리뷰 시각 구분 (이슈 #31) → F-57 다크 모드 (이슈 #38).
+   */
+
+  /* 표면 — 명도 계단: 툴바(가장 어두움) → 탭바 → 에디터 → 프리뷰(가장 밝음).
+     이 방향이 "원재료 → 완성물" 로 읽힌다. 다크에서도 방향은 뒤집지 않는다. */
   --surface-editor: #f2f2f0; /* 작업대: 미세하게 눌린 회색 */
   --surface-preview: #ffffff; /* 결과물: 순백(종이) */
   --border-split: #c8c8c8; /* 두 면의 접합부 */
+
+  /* 본문 — 두 표면 모두에서 WCAG AA(4.5:1) 이상이어야 한다. */
+  --text: #1a1a1a;
+  --text-muted: #666666; /* 인용문 등 보조 텍스트 */
+
+  /* 프리뷰 내부 요소 — F-72 이전에는 하드코딩이라 다크에서 흰 덩어리로 남았을 값들 */
+  --code-bg: #f4f4f4;
+  --rule-subtle: #dddddd; /* 표 테두리·인용 막대 */
 }
 
 * {
@@ -19,6 +35,10 @@ body {
   display: flex;
   flex-direction: column;
   overscroll-behavior: none;
+  /* UA 기본값(검정/흰색)에 기대면 다크 모드에서 검은 글씨가 어두운 표면 위에
+     남는다. 표면과 글자색은 항상 함께 선언한다. */
+  background: var(--surface-editor);
+  color: var(--text);
 }
 
 #app {
@@ -161,6 +181,11 @@ body {
   line-height: 1.6;
   outline: none;
   background: var(--surface-editor);
+  /* 폼 컨트롤은 color 를 상속하지 않는다(UA 가 fieldtext 로 초기화). body 에만
+     색을 주면 다크 모드에서 검은 글씨가 어두운 표면 위에 남는다 — 실제로
+     E2E D4 가 이 상태를 1.47:1 로 잡아냈다. */
+  color: var(--text);
+  caret-color: var(--text);
   border-right: 1px solid var(--border-split);
   /* F-25: 스크롤 동기화는 #editor 가 스크롤 컨테이너라는 사실에 전면 의존한다.
      textarea 는 UA 기본값이 overflow:auto 라 값 자체는 바뀌지 않지만, 이 선언이
@@ -190,14 +215,14 @@ body {
 }
 
 #preview code {
-  background: #f4f4f4;
+  background: var(--code-bg);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: "SFMono-Regular", Consolas, monospace;
 }
 
 #preview pre {
-  background: #f4f4f4;
+  background: var(--code-bg);
   padding: 12px;
   border-radius: 4px;
   overflow-x: auto;
@@ -205,9 +230,9 @@ body {
 }
 
 #preview blockquote {
-  border-left: 4px solid #ddd;
+  border-left: 4px solid var(--rule-subtle);
   padding-left: 12px;
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 8px;
 }
 
@@ -220,7 +245,7 @@ body {
 
 #preview th,
 #preview td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--rule-subtle);
   padding: 6px 10px;
   text-align: left;
 }
@@ -339,5 +364,37 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .toolbar-btn {
     transition: none;
+  }
+}
+
+/*
+ * F-57 다크 모드 (이슈 #38) — OS 설정 추종. 토글 UI 는 범위 밖이다.
+ *
+ * 여기서는 **토큰 값만** 바꾼다. 규칙(선택자·레이아웃·경계선 두께)은 위쪽 정의를
+ * 그대로 쓴다. 그래서 F-72 의 시각 구분과 720px 이하의 2px 가로 경계가 다크에서도
+ * 자동으로 유지된다 — 다크용 레이아웃 분기가 따로 없다는 게 핵심이다.
+ *
+ * 툴바(#1e1e1e)·탭바(#252526)는 라이트에서도 이미 어둡다. 다크에서 이 둘을
+ * 그대로 두면 툴바 → 탭바 → 에디터 → 프리뷰의 명도 계단이 라이트와 **같은
+ * 방향**으로 유지된다. 즉 다크 모드에서 바꿔야 할 것은 아래 두 면뿐이다.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 탭바(#252526)보다 밝고, 프리뷰가 그보다 한 단 더 밝다.
+       두 표면의 대비는 1.10:1 — 라이트(1.12:1)와 같은 강도다. 경계에서만
+       인지되고 영역 안에서는 의식되지 않아야 한다. */
+    --surface-editor: #2a2a2c;
+    --surface-preview: #313134;
+    --border-split: #4a4a4e;
+
+    /* #e4e4e6 기준 대비: 에디터 11.3:1, 프리뷰 10.2:1 */
+    --text: #e4e4e6;
+    /* 프리뷰 위 5.5:1 — AA 통과. 라이트의 #666(5.7:1)과 같은 급이다. */
+    --text-muted: #a8a8ad;
+
+    /* 다크에서는 코드가 표면보다 **어두운** 쪽으로 눌린다(라이트의 반대).
+       밝은 쪽으로 올리면 코드블록이 페이지에서 튀어나와 읽는 흐름을 끊는다. */
+    --code-bg: #232326;
+    --rule-subtle: #4a4a4e;
   }
 }
