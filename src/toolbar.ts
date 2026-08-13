@@ -78,6 +78,8 @@ export interface FileActions {
   print?: () => void;
   /** F-35 편집 설정 열기. */
   showSettings?: () => void;
+  /** F-36 최근 파일 목록 열기. */
+  showRecent?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -96,6 +98,12 @@ const actions: ToolbarAction[] = [
     label: "Open",
     icon: `<svg ${SVG_ATTRS}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
     action: () => fileActions?.open(),
+  },
+  {
+    // F-36: 최근 파일은 "여는" 동작이므로 Open 바로 옆에 둔다.
+    label: "Recent",
+    icon: `<svg ${SVG_ATTRS}><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`,
+    action: () => fileActions?.showRecent?.(),
   },
   {
     label: "Save",
