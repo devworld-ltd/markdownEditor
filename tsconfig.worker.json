@@ -1,0 +1,20 @@
+{
+  // Worker 코드는 브라우저가 아니라 workerd 런타임에서 돈다. 전역(Request·
+  // Response·R2Bucket)이 DOM 과 겹치면서도 다르기 때문에 tsconfig 를 나눈다.
+  //
+  // 이걸 나누기 전에는 worker/ 가 tsconfig include 밖에 있어 **타입 검사를 전혀
+  // 받지 않았다.** `npm run typecheck` 가 두 설정을 모두 돌린다.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"]
+  },
+  // shareId.ts 는 Worker 와 브라우저가 함께 쓰는 순수 모듈이라 양쪽에서 검사된다.
+  "include": ["worker", "src/shareId.ts"]
+}

@@ -138,6 +138,27 @@ build.sourcemap: true  // 프로덕션 디버깅용
 
 > 이 가드는 처음에 헛돌았다. 토크나이저가 지원 문자만 매칭해서 `C` 를 **아예 버렸고**, 그 결과 곡선이 직선으로 파싱되어 가드가 한 번도 실행되지 않았다. 모든 알파벳을 토큰으로 잡은 뒤에야 실제로 멈춘다. **가드를 넣었으면 그 가드가 실제로 걸리는지 확인해야 한다.**
 
+## 3.10 공유 Worker 와 R2 (F-60)
+
+| 환경 | Worker | R2 버킷 |
+|------|--------|---------|
+| dev | `markdown-editor-dev` | `md-editor-shares-dev` |
+| prod | `markdown-editor-prod` | `md-editor-shares` |
+
+`wrangler.jsonc` 에 `main: "worker/index.ts"` 가 생겼다 — **F-60 이전에는 정적 자산 전용 Worker 라 진입점이 없었다.**
+
+**`assets.run_worker_first` 가 필수다.** 자산 계층이 Worker 보다 먼저 요청을 가로채기 때문에, 없으면 `GET /api/share/<id>` 가 Worker 에 닿지 않는다(§서비스 아키텍처 F-60).
+
+Worker 코드는 `tsconfig.worker.json` 으로 따로 타입 검사한다 — 브라우저와 workerd 는 전역이 겹치면서도 다르다. `npm run typecheck` 가 둘 다 돌리고 `npm run build` 가 그것을 부르므로 CI 에서도 걸린다.
+
+### 보존
+
+R2 객체는 무기한 보존된다. 수명 규칙은 계정 설정이라 코드로 강제할 수 없다. 내용 주소 지정이라 중복 공유는 객체를 늘리지 않지만, 주기적 확인이 필요하다:
+
+```bash
+npx wrangler r2 bucket info md-editor-shares
+```
+
 ## 4. CI/CD
 
 CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deploy` 는 `needs: verify` 로 묶여 있어 **검증을 통과한 커밋만 배포된다.**
