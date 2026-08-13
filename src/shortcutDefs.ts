@@ -29,12 +29,13 @@ export type ShortcutId =
   | "newTab"
   | "closeTab"
   | "find"
+  | "cycleView"
   | "help";
 
 export interface ShortcutDef {
   id: ShortcutId;
   /** 안내 UI 의 묶음 제목 */
-  group: "파일" | "편집" | "탭" | "도움말";
+  group: "파일" | "편집" | "보기" | "탭" | "도움말";
   /** 무엇을 하는지 (안내 UI 에 그대로 노출된다) */
   label: string;
   /** 표시용 키 캡. Apple 은 ⌘/⌥, 그 외는 Ctrl/Alt 로 읽힌다. */
@@ -78,6 +79,14 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     label: "다른 이름으로 저장",
     keys: { apple: ["⌘", "⇧", "S"], other: ["Ctrl", "Shift", "S"] },
     match: (e) => isModOnly(e) && e.shiftKey && e.key.toLowerCase() === "s",
+  },
+  {
+    id: "cycleView",
+    group: "보기",
+    label: "분할 / 편집 전용 / 미리보기 전용 전환",
+    keys: { apple: ["⌥", "M"], other: ["Alt", "M"] },
+    note: "브라우저가 ⌘/Ctrl 조합 대부분을 선점해 Alt 조합을 씁니다.",
+    match: (e) => isAltOnly(e) && e.code === "KeyM",
   },
   {
     id: "newTab",

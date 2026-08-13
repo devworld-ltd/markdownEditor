@@ -5,9 +5,10 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#editor")).toBeVisible();
 });
 
-test("툴바 버튼이 17개 렌더링된다", async ({ page }) => {
-  // 파일 4 + 서식 12 + 단축키 안내 1 (F-58)
-  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(17);
+test("툴바 버튼이 18개 렌더링된다", async ({ page }) => {
+  // 파일 4 + 서식 12 + 보기 모드 1 (F-33) + 단축키 안내 1 (F-58).
+  // 이 숫자는 의도적인 감시선이다 — 버튼이 늘거나 줄면 여기서 먼저 걸린다.
+  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(18);
 });
 
 test("파일·서식·도움말 세 묶음이 구분선으로 나뉜다", async ({ page }) => {

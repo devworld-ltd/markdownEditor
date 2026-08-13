@@ -7,6 +7,8 @@ import {
   saveSession,
   loadSplitRatio,
   saveSplitRatio,
+  loadViewMode,
+  saveViewMode,
 } from "../src/storage";
 
 const STORAGE_KEY = "markdown-editor:session:v1";
@@ -159,6 +161,26 @@ describe("분할 비율 영속화 (F-32)", () => {
     for (const raw of ['{"ratio":"0.7"}', '{"ratio":null}', '{"ratio":{}}', '{"ratio":[]}', "[]", "null", "42"]) {
       localStorage.setItem("markdown-editor:layout:v1", raw);
       expect(loadSplitRatio(), raw).toBeNull();
+    }
+  });
+
+  it("모드를 저장해도 비율이 지워지지 않는다 — 항목별 병합 쓰기", () => {
+    // 통째로 덮어쓰면 나중에 저장한 항목이 앞선 항목을 지운다.
+    saveSplitRatio(0.4);
+    saveViewMode("editor");
+    expect(loadSplitRatio()).toBe(0.4);
+    expect(loadViewMode()).toBe("editor");
+
+    saveSplitRatio(0.6);
+    expect(loadViewMode()).toBe("editor");
+  });
+
+  it("레이아웃 값이 객체가 아니면 통째로 무시한다", () => {
+    // 배열도 typeof "object" 다 — 확인하지 않으면 인덱스가 키처럼 읽힌다.
+    for (const raw of ["[]", '"문자열"', "42", "true"]) {
+      localStorage.setItem("markdown-editor:layout:v1", raw);
+      expect(loadSplitRatio(), raw).toBeNull();
+      expect(loadViewMode(), raw).toBeNull();
     }
   });
 

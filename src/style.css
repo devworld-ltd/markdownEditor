@@ -341,6 +341,28 @@ body {
 }
 
 /*
+ * F-33 보기 모드. DOM 을 지우지 않고 표시만 바꾼다 — 요소를 없애면 에디터의
+ * 스크롤 위치·선택·포커스가 날아가고 탭 상태와도 어긋난다.
+ *
+ * `display: none` 을 쓰는 이유: 숨은 패널의 clientHeight 가 0 이 되어 F-25
+ * 스크롤 동기화의 `> 0` 가드에 걸린다 — 동기화가 조용히 무동작이 된다.
+ * visibility/opacity 로 숨기면 크기가 남아 동기화가 계속 돌면서 보이지 않는
+ * 패널을 따라 움직인다.
+ */
+.editor-container[data-mode="editor"] #preview,
+.editor-container[data-mode="editor"] .split-resizer,
+.editor-container[data-mode="preview"] #editor,
+.editor-container[data-mode="preview"] .split-resizer {
+  display: none;
+}
+
+/* 혼자 남은 패널은 지정된 비율을 무시하고 전체를 차지한다. */
+.editor-container[data-mode="editor"] #editor,
+.editor-container[data-mode="preview"] #preview {
+  flex: 1 1 auto;
+}
+
+/*
  * F-32 분할 리사이저. 시각적으로는 얇지만 잡기 쉬워야 하므로 히트 영역을
  * ::before 로 넓힌다 — 실제 폭을 키우면 경계선이 굵어 보인다.
  */

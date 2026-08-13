@@ -20,6 +20,8 @@ export interface ShortcutHandlers {
   toggleHelp?: () => void;
   /** 문서 내 검색 열기/닫기 (F-22). */
   toggleFind?: () => void;
+  /** 보기 모드 순환 (F-33). */
+  cycleView?: () => void;
 }
 
 export function initShortcuts(handlers: ShortcutHandlers = {}): void {
@@ -35,6 +37,7 @@ export function initShortcuts(handlers: ShortcutHandlers = {}): void {
       if (tab) closeTab(tab.id);
     },
     find: () => handlers.toggleFind?.(),
+    cycleView: () => handlers.cycleView?.(),
     help: () => handlers.toggleHelp?.(),
   };
 
