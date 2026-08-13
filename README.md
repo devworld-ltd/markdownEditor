@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **421건** + E2E 251건 (전부 통과) |
+| 테스트 | 단위 **431건** + E2E 258건 (전부 통과) |
 | 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -42,6 +42,7 @@
 - **탭 재정렬** — 드래그 또는 `Alt+Shift+←/→`
 - **편집 글꼴·크기 설정** (편집 영역에만 적용)
 - **최근 파일 목록** (핸들 수명 안내 포함)
+- **렌더 결과 클립보드 복사** (서식 유지 + 원문 대체본)
 - **키보드 접근성** — 전 기능 키보드 도달, 스크린리더 지원
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
@@ -96,6 +97,7 @@ markdownEditor/
 │   ├── offline.ts            # 오프라인 상태 배지
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
 │   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
+│   ├── clipboardExport.ts    # 클립보드 복사
 │   ├── recentFiles.ts        # 최근 파일 계산 (순수)
 │   ├── recentFilesUi.ts      # 최근 파일 <dialog>
 │   ├── editorPrefs.ts        # 편집 글꼴·크기 계산 (순수)
@@ -140,7 +142,8 @@ markdownEditor/
 │       ├── a11y.spec.ts      # 접근성 (axe + 키보드)
 │       ├── taborder.spec.ts  # 탭 재정렬
 │       ├── settings.spec.ts  # 편집 설정
-│       └── recent.spec.ts    # 최근 파일
+│       ├── recent.spec.ts    # 최근 파일
+│       └── clipboard.spec.ts # 클립보드 복사
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트

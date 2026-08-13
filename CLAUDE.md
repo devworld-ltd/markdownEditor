@@ -55,6 +55,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`clipboardExport.ts`** — 클립보드 복사(F-40). 주입형 리프. **`text/html` 과 `text/plain` 을 함께** 넣어야 한다.
 - **`recentFiles.ts`** — 최근 파일 목록 계산만 담당하는 순수 리프(F-36).
 - **`recentFilesUi.ts`** — 최근 파일 `<dialog>`(F-36). 주입형 리프.
 - **`editorPrefs.ts`** — 편집 글꼴·크기 계산만 담당하는 순수 리프(F-35). **웹폰트 금지** — 네트워크 요청이 없는 앱이고 CSP 가 `font-src 'self' data:` 다.
@@ -114,7 +115,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 39. **탭 순서는 `Map` 의 삽입 순서다.** 재정렬은 비우고 다시 넣는 것이고, 세션 영속화가 그 순서를 그대로 쓴다. 재구성 중 하나라도 빠지면 **원본으로 되돌린다** — 탭이 사라지는 것보다 순서가 그대로인 편이 낫다.
 40. **F-35 글꼴·크기는 편집 영역에만 적용한다.** 프리뷰까지 바꾸면 내보내기(F-38)·인쇄(F-39) 결과가 사람마다 달라진다 — 그건 문서를 받는 쪽의 몫이다. CSS 폴백값(`var(--editor-font-size, 14px)`)을 지우지 말 것 — 설정 모듈이 실패해도 편집기는 떠야 한다.
 41. **최근 목록에 문서 내용을 넣지 말 것.** localStorage 용량을 세션 저장과 다투게 되고, 그러면 **자동 저장이 먼저 죽는다**. 이름과 시각만 저장한다. 그리고 **핸들이 살아 있는지를 항목마다 표시**해야 한다 — 구분하지 않으면 사용자는 목록을 눌렀는데 파일 선택 창이 뜨는 것을 버그로 받아들인다(트랩 #6).
-42. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+42. **클립보드 복사는 `text/plain` 대체본을 반드시 함께 넣는다.** 서식을 모르는 곳(터미널·코드 편집기·plain 메일)에 붙이면 **태그가 날것 그대로** 들어간다. 대체본은 마크다운 원문이다. 그리고 **무엇이 복사됐는지 정확히 알려라** — "복사됨" 만 띄우면 붙여넣고 나서야 서식이 없다는 걸 알게 된다.
+43. **클립보드 E2E 는 폴링해야 한다.** 쓰기가 비동기라 클릭 직후 읽으면 비어 있어, 기능이 멀쩡한데도 실패한다.
+44. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

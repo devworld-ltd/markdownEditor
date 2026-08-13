@@ -14,6 +14,7 @@ import { initShortcuts } from "./shortcuts";
 import {
   UNTITLED,
   createTab,
+  getActiveContent,
   getActiveTab,
   hasDirtyTabs,
   initTabs,
@@ -45,6 +46,7 @@ import { initEditorSettings } from "./editorSettings";
 import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
+import { copyRenderedHtml } from "./clipboardExport";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -251,6 +253,30 @@ if (editorEl && previewEl) {
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
     showSettings: editorSettings ? () => editorSettings.open() : undefined,
     showRecent: recentFiles ? () => recentFiles.open() : undefined,
+
+    // F-40: F-38 과 같은 원칙 — 프리뷰의 정화된 HTML 만 쓴다. 붙여넣는 곳이
+    // 우리 앱이 아니므로 위험도는 오히려 높다.
+    copyHtml: () => {
+      void copyRenderedHtml(
+        {
+          supportsRichCopy: () =>
+            typeof ClipboardItem === "function" &&
+            typeof navigator.clipboard?.write === "function",
+          writeRich: async (html, text) => {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                "text/html": new Blob([html], { type: "text/html" }),
+                "text/plain": new Blob([text], { type: "text/plain" }),
+              }),
+            ]);
+          },
+          writeText: (text) => navigator.clipboard.writeText(text),
+          notify: (message, kind) => showNotice(message, kind ?? "info", 5000),
+        },
+        previewEl.innerHTML,
+        getActiveContent(),
+      );
+    },
 
     // F-38: 프리뷰에 이미 들어가 있는 **정화된** HTML 을 그대로 쓴다.
     // 원문을 다시 파싱하는 두 번째 경로를 만들면 정화 정책이 갈라진다(F-18).

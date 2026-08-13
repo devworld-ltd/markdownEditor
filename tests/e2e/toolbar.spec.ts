@@ -5,11 +5,11 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#editor")).toBeVisible();
 });
 
-test("툴바 버튼이 22개 렌더링된다", async ({ page }) => {
-  // 파일 4 + 최근 1 (F-36) + 서식 12 + 내보내기 1 (F-38) + 인쇄 1 (F-39) + 보기 모드 1 (F-33)
+test("툴바 버튼이 23개 렌더링된다", async ({ page }) => {
+  // 파일 4 + 최근 1 (F-36) + 서식 12 + 내보내기 1 (F-38) + 복사 1 (F-40) + 인쇄 1 (F-39) + 보기 모드 1 (F-33)
   // + 설정 1 (F-35) + 단축키 안내 1 (F-58).
   // 이 숫자는 의도적인 감시선이다 — 버튼이 늘거나 줄면 여기서 먼저 걸린다.
-  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(22);
+  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(23);
 });
 
 test("파일·서식·도움말 세 묶음이 구분선으로 나뉜다", async ({ page }) => {
