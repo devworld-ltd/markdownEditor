@@ -3,6 +3,7 @@ import { initToolbar, setFileActions } from "./toolbar";
 import {
   exportFile,
   initFileOps,
+  openDroppedFile,
   openFileFromHandle,
   setFileTouchListener,
   isFileSystemAccessSupported,
@@ -26,6 +27,10 @@ import {
 import { initNotice, showNotice } from "./notice";
 import {
   isStorageAvailable,
+  loadDocStats,
+  saveDocStats,
+  loadLineNumbers,
+  saveLineNumbers,
   loadRecentFilesRaw,
   saveRecentFiles,
   loadEditorPrefs,
@@ -44,6 +49,11 @@ import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
+import { initTableUi } from "./tableUi";
+import { initLineNumbers } from "./lineNumbers";
+import { initStatusBar } from "./statusBar";
+import { initEditorBehavior } from "./editorBehavior";
+import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
@@ -76,6 +86,7 @@ const searchReplaceOneEl = document.querySelector<HTMLElement>("#search-replace-
 const searchReplaceAllEl = document.querySelector<HTMLElement>("#search-replace-all");
 const editorContainerEl = document.querySelector<HTMLElement>(".editor-container");
 const splitResizerEl = document.querySelector<HTMLElement>("#split-resizer");
+const editorPaneEl = document.querySelector<HTMLElement>("#editor-pane");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -111,6 +122,85 @@ if (editorEl && previewEl) {
         })
       : null;
 
+  // F-24: **createEditor() 보다 먼저** 초기화해야 한다. onAfterRender 콜백이
+  // lineNumbers 를 참조하는데, createEditor 가 최초 렌더를 동기적으로 수행하므로
+  // 뒤에 두면 "Cannot access 'lineNumbers' before initialization" 이 난다
+  // (실제로 그랬다 — 화면은 뜨지만 콘솔에 오류가 남는다).
+  // F-24 줄 번호. 설정 다이얼로그(F-35) 안에 함께 둔다 — 편집 화면에 관한
+  // 설정이 두 곳으로 흩어지면 사용자가 어디를 봐야 할지 모른다.
+  const lineGutterEl = document.querySelector<HTMLElement>("#line-gutter");
+  const lineNumbers = lineGutterEl
+    ? initLineNumbers({
+        gutterEl: lineGutterEl,
+        editorEl,
+        loadEnabled: loadLineNumbers,
+        saveEnabled: saveLineNumbers,
+      })
+    : null;
+
+  // F-29 문서 통계. 렌더 디바운스에 얹어 매 글자마다 전체를 훑지 않는다.
+  const statusBarEl = document.querySelector<HTMLElement>("#status-bar");
+  const statusBar = statusBarEl
+    ? initStatusBar({
+        barEl: statusBarEl,
+        editorEl,
+        loadEnabled: loadDocStats,
+        saveEnabled: saveDocStats,
+      })
+    : null;
+
+  const statsCheckEl = document.querySelector<HTMLInputElement>("#setting-doc-stats");
+  if (statsCheckEl && statusBar) {
+    statsCheckEl.checked = statusBar.isEnabled();
+    statsCheckEl.addEventListener("change", () => statusBar.setEnabled(statsCheckEl.checked));
+  }
+
+  const lineNumbersCheckEl = document.querySelector<HTMLInputElement>("#setting-line-numbers");
+  if (lineNumbersCheckEl && lineNumbers) {
+    lineNumbersCheckEl.checked = lineNumbers.isEnabled();
+    lineNumbersCheckEl.addEventListener("change", () => {
+      lineNumbers.setEnabled(lineNumbersCheckEl.checked);
+    });
+  }
+
+  // F-26·F-27: 목록 이어쓰기와 Tab 들여쓰기. execCommand 로 넣으므로 실행
+  // 취소가 보존되고, Esc 를 먼저 누르면 다음 Tab 은 포커스 이동으로 돌아간다.
+  initEditorBehavior({
+    editorEl,
+    notify: (message) => showNotice(message, "info", 3000),
+  });
+
+  // F-28: 드롭 처리는 여기 한 곳뿐이다 — 두 곳에서 들으면 서로를 가린다.
+  initEditorDrop({
+    editorEl,
+    uploadImage: async (file) => {
+      const response = await fetch("/api/image", {
+        method: "POST",
+        headers: { "content-type": file.type },
+        body: file,
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${response.status}`);
+      }
+      return (await response.json()) as { url: string };
+    },
+    insertText: (textarea, text) => {
+      textarea.focus({ preventScroll: true });
+      document.execCommand("insertText", false, text);
+    },
+    notify: (message, kind) => showNotice(message, kind ?? "info", 7000),
+    // F-56: 마크다운·텍스트는 새 탭으로 연다. 같은 drop 핸들러에서 갈린다.
+    handleOtherFiles: (documents) => {
+      void (async () => {
+        for (const { file, handle } of documents) {
+          await openDroppedFile(file, handle);
+        }
+      })();
+      return true;
+    },
+  });
+
   createEditor({
     editorEl,
     previewEl,
@@ -118,6 +208,10 @@ if (editorEl && previewEl) {
       scrollSync.reapplyAfterRender();
       // 본문이 바뀌면 일치 위치도 바뀐다. 열려 있을 때만 다시 계산한다.
       search?.refresh();
+      // F-24: 줄 수·줄바꿈이 바뀌면 번호 칸 높이를 다시 잰다.
+      lineNumbers?.refresh();
+      // F-29: 같은 디바운스에 얹는다 — 매 글자마다 전체를 세면 느려진다.
+      statusBar?.refresh();
     },
   });
 
@@ -130,11 +224,13 @@ if (editorEl && previewEl) {
 
   // F-32: F-25 억제 훅을 붙이지 않는다 — 실측 결과 있으나 없으나 드래그 후
   // 두 패널의 비율 차이가 0 이었다(splitter.ts §2 참고).
-  if (editorContainerEl && splitResizerEl) {
+  if (editorContainerEl && splitResizerEl && editorPaneEl) {
     initSplitter({
       containerEl: editorContainerEl,
       resizerEl: splitResizerEl,
-      firstPaneEl: editorEl,
+      // F-24 이후 비율은 줄 번호를 포함한 .editor-pane 이 받는다 — #editor 를
+      // 직접 조절하면 번호 칸 폭만큼 비율이 어긋난다.
+      firstPaneEl: editorPaneEl,
       loadRatio: () => loadSplitRatio() ?? 0.5,
       saveRatio: saveSplitRatio,
     });
@@ -209,7 +305,11 @@ if (editorEl && previewEl) {
           resetEl: settingsResetEl,
           closeEl: settingsCloseEl,
           loadPrefs: loadEditorPrefs,
-          savePrefs: saveEditorPrefs,
+          savePrefs: (prefs) => {
+            saveEditorPrefs(prefs);
+            // F-24: 글자 크기·글꼴이 바뀌면 줄 높이가 달라진다 — 번호를 다시 잰다.
+            lineNumbers?.refresh();
+          },
           returnFocusTo: editorEl,
         })
       : null;
@@ -238,6 +338,40 @@ if (editorEl && previewEl) {
           },
           openPicker: () => void openFile(),
           notify: (message) => showNotice(message, "info", 6000),
+          returnFocusTo: editorEl,
+        })
+      : null;
+
+  // F-30 표. 대화상자 하나가 커서 위치에 따라 삽입/편집으로 갈린다.
+  const tableDialogEl = document.querySelector<HTMLDialogElement>("#table-dialog");
+  const tableInsertEl = document.querySelector<HTMLElement>("#table-insert");
+  const tableRowsEl = document.querySelector<HTMLInputElement>("#table-rows");
+  const tableColumnsEl = document.querySelector<HTMLInputElement>("#table-columns");
+  const tableEditEl = document.querySelector<HTMLElement>("#table-edit");
+  const tableAlignEl = document.querySelector<HTMLElement>("#table-align");
+  const tableSubmitEl = document.querySelector<HTMLButtonElement>("#table-submit");
+  const tableCloseEl = document.querySelector<HTMLElement>("#table-close");
+
+  const tableUi =
+    tableDialogEl &&
+    tableInsertEl &&
+    tableRowsEl &&
+    tableColumnsEl &&
+    tableEditEl &&
+    tableAlignEl &&
+    tableSubmitEl &&
+    tableCloseEl
+      ? initTableUi({
+          dialogEl: tableDialogEl,
+          insertEl: tableInsertEl,
+          rowsEl: tableRowsEl,
+          columnsEl: tableColumnsEl,
+          editEl: tableEditEl,
+          alignEl: tableAlignEl,
+          submitEl: tableSubmitEl,
+          closeEl: tableCloseEl,
+          editorEl,
+          notify: (message) => showNotice(message, "info", 3000),
           returnFocusTo: editorEl,
         })
       : null;
@@ -280,6 +414,7 @@ if (editorEl && previewEl) {
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
     showSettings: editorSettings ? () => editorSettings.open() : undefined,
+    showTable: tableUi ? () => tableUi.open() : undefined,
     showRecent: recentFiles ? () => recentFiles.open() : undefined,
 
     // F-60: 이 앱에서 유일하게 네트워크를 타는 동작이다. 버튼을 눌러야만 fetch 한다.

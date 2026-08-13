@@ -26,6 +26,14 @@ export interface PersistedTab {
   fileName: string;
   content: string;
   isDirty: boolean;
+  /**
+   * 용량이 부족해 내용을 비운 탭(F-54 잔여). 복원 시 "왜 비었는지" 를 설명하는
+   * 데 쓴다 — 빈 내용만 남기면 사용자는 문서가 사라진 줄 안다.
+   *
+   * 선택 필드라 **스키마 버전을 올리지 않는다.** 올리면 기존 세션이 통째로
+   * 폐기되어(F-55), 공간을 벌려다 문서를 잃는다.
+   */
+  reclaimed?: boolean;
 }
 
 export interface PersistedSession {
@@ -83,6 +91,7 @@ export function loadSession(): PersistedSession | null {
         typeof t?.fileName === "string" &&
         typeof t?.content === "string",
     );
+    // `reclaimed` 는 선택 필드다 — 예전 세션에는 없으므로 검증하지 않는다.
     if (tabs.length === 0) return null;
     return { version: SCHEMA_VERSION, activeTabId: parsed.activeTabId, tabs };
   } catch {
@@ -100,6 +109,8 @@ interface StoredLayout {
   mode?: unknown;
   fontId?: unknown;
   fontSize?: unknown;
+  lineNumbers?: unknown;
+  docStats?: unknown;
 }
 
 function readLayout(): StoredLayout {
@@ -162,6 +173,24 @@ export function loadEditorPrefs(): { fontId?: unknown; fontSize?: unknown } {
 /** 편집 글꼴·크기를 저장한다. */
 export function saveEditorPrefs(prefs: { fontId: string; fontSize: number }): void {
   writeLayout(prefs);
+}
+
+/** 줄 번호 표시 여부 (F-24). */
+export function loadLineNumbers(): boolean {
+  return readLayout().lineNumbers === true;
+}
+
+export function saveLineNumbers(enabled: boolean): void {
+  writeLayout({ lineNumbers: enabled });
+}
+
+/** 문서 통계 표시 여부 (F-29). 기본은 켜짐 — 방해되지 않는 한 줄이다. */
+export function loadDocStats(): boolean {
+  return readLayout().docStats !== false;
+}
+
+export function saveDocStats(enabled: boolean): void {
+  writeLayout({ docStats: enabled });
 }
 
 /** 최근 파일 목록 원본을 읽는다 (F-36). 검증은 호출부(recentFiles)가 한다. */

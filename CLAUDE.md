@@ -58,6 +58,18 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`sessionReclaim.ts`** — 용량 초과 회수 규칙(F-54). 순수. **더티 탭의 내용은 절대 버리지 않는다.**
+- **`dropFiles.ts`** — 드롭 파일 분류(F-56). 순수. **확장자가 1순위** — `.md` 의 MIME 타입은 환경마다 다르다.
+- **`tableFormat.ts`** — 표 계산(F-30). 순수. **표시 폭**(한글·이모지 2칸)으로 파이프를 맞춘다.
+- **`tableUi.ts`** — 표 대화상자(F-30). 커서가 표 안이면 편집, 밖이면 삽입.
+- **`docStats.ts`** — 문서 통계 계산(F-29). 순수. **한국어에서는 "단어" 가 아니라 "어절" 이라고 쓴다** — 공백으로 자른 결과에 정확히 맞는 이름이다.
+- **`statusBar.ts`** — 통계 표시(F-29). 주입형 리프.
+- **`imageUpload.ts`** — 이미지 형식·크기·키 검증(F-28). 순수. **Worker 와 브라우저가 함께 쓴다.**
+- **`editorDrop.ts`** — 드롭·붙여넣기(F-28). 주입형 리프. **드롭 처리는 여기 한 곳뿐이다.**
+- **`editorKeys.ts`** — 목록 이어쓰기·들여쓰기 **계산만** 담당하는 순수 리프(F-26·F-27).
+- **`editorBehavior.ts`** — 편집 키 배선(F-26·F-27). 주입형 리프.
+- **`lineNumbers.ts`** — 줄 번호(F-24). 주입형 리프. **줄별 표시 높이를 재서** 칸 높이를 잡는다 — 균등 간격은 줄바꿈에서 곧바로 어긋난다.
+- **`highlight.ts`** — 코드 하이라이팅 토크나이저(F-23). 순수 모듈. **의존성 0** — 라이브러리를 들이지 말 것. 출력은 `<span class>` 뿐이다.
 - **`shareId.ts`** — 공유 ID·검증(F-60). **Worker 와 브라우저 양쪽에서 쓰인다** — DOM 도 Node API 도 만지지 않고 `crypto.subtle` 만 쓴다.
 - **`share.ts`** — 공유 클라이언트(F-60). 주입형 리프. **이 앱에서 유일하게 네트워크를 타는 모듈**이다.
 - **`worker/index.ts`** — 공유 API Worker(F-60). `tsconfig.worker.json` 으로 따로 타입 검사한다.
@@ -126,7 +138,25 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 44. **정적 자산 계층은 Worker 보다 **먼저** 요청을 가로챈다.** `not_found_handling: single-page-application` 이면 매칭되는 자산이 없는 GET 이 곧바로 `index.html` 로 응답되고 **Worker 코드는 실행조차 되지 않는다**. `assets.run_worker_first` 로 API 경로를 지정해야 한다. 실제로 이것 없이 배포해 `GET /api/share/<id>` 가 마크다운 대신 앱 HTML 을 돌려준 적이 있다 — **POST 는 자산 계층이 다루지 않아 통과했기 때문에 절반만 동작했다.**
 45. **API 목(mock)을 쓰는 테스트는 배포 라우팅을 검증하지 못한다.** 단위 473건·E2E 253건이 전부 통과한 상태에서 위 결함이 실물 배포에서만 드러났다. 그래서 `scripts/healthcheck.sh` 가 **공유 API 왕복**을 확인한다 — 그리고 **캐시를 우회해야 한다**(공유 응답은 `immutable` 이라 엣지가 대신 답하면 라우팅이 깨져도 통과한다).
 46. **Worker 코드는 `tsconfig.worker.json` 으로 따로 검사한다.** 처음에는 `worker/` 가 `tsconfig.json` 의 `include` 밖에 있어 **타입 검사를 전혀 받지 않았다.** `npm run typecheck` 가 둘 다 돌리고, `npm run build` 가 그것을 부른다.
-47. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+47. **하이라이팅 출력은 `<span class>` 뿐이어야 한다.** `style`·이벤트 속성을 넣기 시작하면 DOMPurify 허용 목록을 계속 열어야 하고 F-18 이 약해진다. `class` 는 DOMPurify **기본 허용**이라 `ADD_ATTR` 이 필요 없다(넣었다가 불필요함을 확인하고 지웠다). 토크나이저는 **문자 단위 선형 스캔**을 유지하라 — 정규식 대안으로 바꾸면 ReDoS 가 들어온다.
+48. **토큰 색을 바꾸면 네 곳을 모두 고쳐야 한다**: `:root`(라이트) · `prefers-color-scheme: dark` · `@media print` · `htmlExport.ts`. 한 곳만 고치면 그 환경에서만 대비가 깨지고, 다크·인쇄는 눈으로 잘 안 본다.
+49. **F-32 분할 비율의 대상은 `#editor` 가 아니라 `.editor-pane` 이다** (F-24 이후). 줄 번호 칸을 포함한 상자를 조절해야 비율이 맞는다. F-33 보기 모드·F-39 인쇄의 숨김 대상도 이 상자다.
+50. **`initLineNumbers()` 는 `createEditor()` 보다 먼저 호출한다.** `onAfterRender` 가 이를 참조하는데 `createEditor` 가 최초 렌더를 동기 수행하므로, 뒤에 두면 TDZ 오류가 난다 — **화면은 뜨지만 콘솔에만 남아** 눈으로는 안 보인다.
+51. **Tab 을 무조건 가로채지 말 것.** 키보드 사용자가 편집 영역에 **갇힌다**(F-59). `Esc` 뒤의 **첫 Tab 한 번**은 포커스 이동으로 돌려준다 — 영구히 끄면 다시 켜는 방법을 사용자가 알 수 없다.
+52. **목록 이어쓰기는 빈 항목에서 표식을 지워야 한다.** 계속 이어 쓰기만 하면 사용자가 목록을 빠져나갈 방법이 없다 — 편의 기능이 오히려 가둔다.
+53. **조합 입력(IME) 중에는 Enter 를 가로채지 말 것.** 한글·일본어 조합에서 Enter 는 글자를 확정하는 키다. `isComposing` 과 `keyCode === 229` 둘 다 확인한다.
+54. **SVG 업로드를 허용하지 말 것.** SVG 는 스크립트를 담을 수 있는 **문서**다. 우리 오리진 URL 을 갖게 되면 사용자가 직접 열었을 때 **우리 오리진에서 스크립트가 실행되고**, 공유 링크(F-60)와 합쳐지면 문서가 털린다. 헤더로 막을 수도 있지만 헤더 하나가 빠지면 조용히 뚫린다 — 래스터만 받으면 그 경로가 아예 없다.
+55. **드롭 처리는 `editorDrop.ts` 한 곳에서만.** 두 곳에서 `drop` 을 들으면 서로를 가려 어느 쪽이 이길지 예측할 수 없다. F-56 은 `handleOtherFiles` 로 연결된다. 그리고 `dragover` 에서 `preventDefault` 를 빼면 브라우저가 파일을 그냥 열어 **편집 중인 문서가 통째로 사라진다.**
+56. **통계 표시에 `aria-live` 를 붙이지 말 것.** 글자를 칠 때마다 스크린리더가 숫자를 읽어 **편집이 불가능해진다.** `role="status"` 도 같은 이유로 안 된다 — 암묵적으로 `aria-live="polite"` 다. 대신 **`<footer>`(contentinfo) 로 둔다**: 랜드마크 밖의 콘텐츠는 axe `region` 위반이라 `<div>` 로 두면 a11y E2E 8건이 깨진다. 그리고 통계는 렌더 디바운스에 얹어라 — 매 글자마다 전체를 훑으면 큰 문서에서 타이핑이 느려진다.
+57. **`<dialog>` 가 `showModal()` 로 열린 동안 바깥 요소는 inert 다.** 그 상태에서 `editorEl.focus()` + `execCommand` 는 **예외 없이 조용히 무시된다.** 대화상자를 먼저 닫고 본문을 고쳐라. jsdom 은 inert 를 구현하지 않아 **단위 테스트로는 절대 안 잡힌다** — E2E 가 필요하다.
+58. **표 정렬은 `align` 속성으로 나온다.** marked 가 `<td align="right">` 를 내는데, 표현 속성은 CSS 규칙(`#preview td { text-align: left }`)보다 약하다. `[align]` 선택자를 따로 쓰지 않으면 정렬 기능이 **통째로 안 보인다**(오류 없이).
+59. **표시 폭은 `length` 가 아니다.** 한글은 `length` 1 에 2칸, 이모지는 `length` 2 에 2칸 — 두 방향으로 틀린다. `tableFormat.displayWidth()` 를 써라.
+60. **`getAsFileSystemHandle()` 은 드롭 이벤트 처리 중에 불러야 한다.** `DataTransferItem` 은 핸들러가 끝나면 비워져, 나중에 부르면 빈손이 된다(오류 없이). 반환값은 Promise 라 `await` 는 뒤에서 해도 된다. 그리고 **E2E 에서 항목에 메서드를 붙이지 말 것** — `transfer.items[i]` 는 접근할 때마다 새 래퍼를 준다. `DataTransferItem.prototype` 을 갈아끼워야 한다.
+61. **`.md` 의 MIME 타입을 믿지 말 것.** `text/markdown`·`text/plain`·**빈 문자열** 전부 나온다(맥에서 흔하다). 확장자를 1순위로 본다. 반대로 이미지는 타입을 믿는다 — 업로드 검증이 타입 기준이라 확장자만 고친 파일을 통과시키면 안 된다.
+62. **세션 회수는 "저장된 사본" 만 비운다.** 편집기의 내용은 건드리지 않는다 — 그래서 이번 세션에서는 아무것도 잃지 않는다. 대상은 **깨끗하고·활성이 아니고·파일 이름이 있고·내용이 있는** 탭뿐이고, **탭 자체는 닫지 않는다.** 다 비워도 저장이 안 되면 **회수하지 않은 것으로 보고**한다(공간도 못 벌면서 사본만 잃는 최악을 피한다).
+63. **세션 스키마에 필드를 더할 때는 선택 필드로.** `SCHEMA_VERSION` 을 올리면 기존 세션이 통째로 폐기된다(F-55) — 편의 기능을 넣으려다 사용자 문서를 잃는다.
+64. **용량 초과 E2E 는 초기 세션을 `addInitScript` 에서 심어야 한다.** 나중에 심고 `reload()` 하면 **이전 페이지의 `beforeunload` 저장이 그 위를 덮어써** 복원할 것이 사라진다.
+65. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

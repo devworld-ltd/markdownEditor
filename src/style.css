@@ -23,6 +23,14 @@
   /* 링크 — 정하지 않으면 UA 기본 #0000ee 가 쓰이고, 다크 표면 위에서 대비가
      1.37:1 로 떨어져 사실상 읽을 수 없다(F-59 자동 점검이 잡아냈다). */
   --link: #0b62c4;
+
+  /* F-23 코드 하이라이팅. 코드블록 배경(--code-bg) 위에서 전부 AA 이상이어야
+     한다 — 색이 읽기를 돕지 못하면 단색보다 나쁘다. */
+  --tok-keyword: #a11b8c;
+  --tok-string: #0a6640;
+  --tok-comment: #5a6169;
+  --tok-number: #b3541e;
+  --tok-punct: #57606a;
 }
 
 * {
@@ -210,11 +218,43 @@ body {
   overflow: hidden;
 }
 
-#editor {
-  /* F-32: flex-basis 를 splitter.ts 가 인라인으로 지정한다. grow 를 0 으로 두어야
-     지정한 비율이 유지된다 — grow 가 남아 있으면 남는 공간을 나눠 가져 비율이
-     의미를 잃는다. */
+/* F-24: 줄 번호와 편집 영역을 한 상자에 담는다. 비율(F-32)은 이 상자가 받는다. */
+.editor-pane {
+  position: relative;
+  display: flex;
   flex: 0 0 50%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface-editor);
+}
+
+.line-gutter {
+  flex: 0 0 auto;
+  padding: 16px 8px 16px 12px;
+  color: var(--text-muted);
+  font-family: var(--editor-font-family, "SFMono-Regular", Consolas, monospace);
+  font-size: var(--editor-font-size, 14px);
+  line-height: 1.6;
+  text-align: right;
+  /* 번호가 텍스트 선택에 딸려오면 복사한 코드가 못 쓰게 된다. */
+  user-select: none;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.line-gutter[hidden] {
+  display: none;
+}
+
+.line-number {
+  font-variant-numeric: tabular-nums;
+}
+
+#editor {
+  /* F-24 이후 비율은 .editor-pane 이 받는다. 텍스트 영역은 남는 공간 전부. */
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 16px;
   border: none;
   resize: none;
@@ -297,9 +337,33 @@ body {
   text-align: left;
 }
 
+/* F-30: marked 는 열 정렬을 `align` **속성**으로 낸다. 속성은 표현 힌트라
+   위의 `text-align: left` 규칙보다 약해서, 이 두 줄이 없으면 구분선에 정렬을
+   지정해도 프리뷰가 늘 왼쪽 정렬로 보인다 — 기능이 통째로 안 보인다. */
+#preview th[align="center"],
+#preview td[align="center"] {
+  text-align: center;
+}
+
+#preview th[align="right"],
+#preview td[align="right"] {
+  text-align: right;
+}
+
 #preview img {
   max-width: 100%;
 }
+
+/* F-23 토큰 색. class 만으로 칠한다 — DOMPurify 허용 목록을 class 하나만
+   여는 대가로, style 속성이나 인라인 색을 쓰지 않는다(F-18). */
+.tok-keyword {
+  color: var(--tok-keyword);
+  font-weight: 600;
+}
+.tok-string { color: var(--tok-string); }
+.tok-comment { color: var(--tok-comment); font-style: italic; }
+.tok-number { color: var(--tok-number); }
+.tok-punct { color: var(--tok-punct); }
 
 /* :visited 까지 지정해야 한다 — UA 는 방문한 링크에 다른 색(보라)을 쓴다. */
 #preview a,
@@ -313,6 +377,52 @@ body {
  * #notice(일시)가 위, #sw-update(지속)가 아래에 놓인다. #notice 가 사라져도
  * #sw-update 는 1px 도 움직이지 않는다.
  */
+/* F-29 문서 통계. 편집 영역 아래 한 줄 — 방해되지 않을 만큼 작고 흐리게. */
+.setting-number {
+  width: 5rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.table-align-name {
+  /* 열 제목이 길어도 정렬 버튼을 밀어내지 않는다. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-align-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.status-bar {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  background: var(--surface-editor);
+  border-top: 1px solid var(--border-split);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.status-bar[hidden] {
+  display: none;
+}
+
+@media print {
+  .status-bar {
+    display: none !important;
+  }
+}
+
 .notice-stack {
   position: absolute;
   right: 16px;
@@ -398,13 +508,13 @@ body {
  */
 .editor-container[data-mode="editor"] #preview,
 .editor-container[data-mode="editor"] .split-resizer,
-.editor-container[data-mode="preview"] #editor,
+.editor-container[data-mode="preview"] .editor-pane,
 .editor-container[data-mode="preview"] .split-resizer {
   display: none;
 }
 
 /* 혼자 남은 패널은 지정된 비율을 무시하고 전체를 차지한다. */
-.editor-container[data-mode="editor"] #editor,
+.editor-container[data-mode="editor"] .editor-pane,
 .editor-container[data-mode="preview"] #preview {
   flex: 1 1 auto;
 }
@@ -650,6 +760,13 @@ body {
   font-size: 13px;
 }
 
+.setting-check {
+  width: 18px;
+  height: 18px;
+  accent-color: #007acc;
+  cursor: pointer;
+}
+
 .setting-stepper {
   display: flex;
   align-items: center;
@@ -831,6 +948,12 @@ body {
 }
 
 /* 편집·미리보기 영역은 밝은 배면이라 파란 링이 잘 보인다. */
+/* F-28: 파일을 끌어왔을 때 놓을 수 있다는 것을 보여준다. */
+#editor[data-dropping="true"] {
+  outline: 2px dashed #007acc;
+  outline-offset: -4px;
+}
+
 #editor:focus-visible,
 #preview:focus-visible {
   outline: 2px solid #007acc;
@@ -874,6 +997,14 @@ body {
     --rule-subtle: #4a4a4e;
     /* 프리뷰 표면(#313134) 위 6.3:1 — AA 통과 */
     --link: #7fb8ff;
+
+    /* 다크의 코드 배경(#232326) 위 기준. 라이트 값을 그대로 쓰면 전부 어두워
+       읽을 수 없다 — 색도 표면을 따라간다. */
+    --tok-keyword: #e08bd4;
+    --tok-string: #7fd6a8;
+    --tok-comment: #9aa4ad;
+    --tok-number: #f0a878;
+    --tok-punct: #b6bfc9;
   }
 }
 
@@ -894,7 +1025,7 @@ body {
   .search-bar,
   .split-resizer,
   .notice-stack,
-  #editor {
+  .editor-pane {
     display: none !important;
   }
 
@@ -937,6 +1068,14 @@ body {
     background: #f4f4f4 !important;
     color: #000000 !important;
   }
+
+  /* F-23: 종이에서도 토큰 구분은 남기되, 다크 팔레트가 그대로 인쇄되지 않게
+     라이트 값으로 고정한다. */
+  #preview .tok-keyword { color: #a11b8c !important; }
+  #preview .tok-string { color: #0a6640 !important; }
+  #preview .tok-comment { color: #555555 !important; }
+  #preview .tok-number { color: #b3541e !important; }
+  #preview .tok-punct { color: #444444 !important; }
 
   #preview blockquote {
     border-left-color: #999999 !important;

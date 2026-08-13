@@ -27,11 +27,17 @@ import {
   isValidShareId,
   validateShareContent,
 } from "../src/shareId";
+import {
+  MAX_IMAGE_BYTES,
+  computeImageKey,
+  contentTypeForKey,
+  validateImage,
+} from "../src/imageUpload";
 
 export interface Env {
   /** 정적 자산 (wrangler 의 assets 바인딩) */
   ASSETS: { fetch(request: Request): Promise<Response> };
-  /** 공유 문서 저장소 */
+  /** 공유 문서 + 이미지 저장소. 키 형식이 달라 한 버킷을 함께 쓴다. */
   SHARES: R2Bucket;
 }
 
@@ -100,12 +106,77 @@ async function readShare(id: string, env: Env): Promise<Response> {
   });
 }
 
+/** `POST /api/image` — 이미지를 저장하고 키를 돌려준다 (F-28). */
+async function uploadImage(request: Request, env: Env): Promise<Response> {
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
+    return json({ error: "too-large", limit: MAX_IMAGE_BYTES }, 413);
+  }
+
+  const type = (request.headers.get("content-type") ?? "").split(";")[0].trim();
+  const bytes = await request.arrayBuffer();
+
+  const check = validateImage(type, bytes.byteLength);
+  if (!check.ok) {
+    return json(
+      { error: check.reason, limit: MAX_IMAGE_BYTES },
+      check.reason === "too-large" ? 413 : 400,
+    );
+  }
+
+  const key = await computeImageKey(bytes, check.extension);
+  const existing = await env.SHARES.head(key);
+  if (!existing) {
+    await env.SHARES.put(key, bytes, {
+      httpMetadata: { contentType: type },
+      customMetadata: { createdAt: new Date().toISOString() },
+    });
+  }
+
+  return json({ key, url: `/i/${key}`, reused: Boolean(existing) }, 201);
+}
+
+/** `GET /i/:key` — 이미지를 돌려준다. */
+async function readImage(key: string, env: Env): Promise<Response> {
+  // `contentTypeForKey` 가 키 형식 검증까지 겸한다 — 형식이 틀리면 null 이다.
+  // 처음에는 `isValidImageKey(key) ||` 를 함께 적었는데 **지워도 아무 테스트가
+  // 실패하지 않아**(= 하는 일이 없어) 지웠다. 검증 지점은 한 곳이어야 한다.
+  const contentType = contentTypeForKey(key);
+  if (!contentType) return json({ error: "not-found" }, 404);
+
+  const object = await env.SHARES.get(key);
+  if (!object) return json({ error: "not-found" }, 404);
+
+  return new Response(object.body, {
+    headers: {
+      "content-type": contentType,
+      // 내용 주소 지정이라 같은 키의 바이트는 절대 바뀌지 않는다.
+      "cache-control": "public, max-age=31536000, immutable",
+      // 래스터 형식만 받지만, 형식 추론으로 뒤집히는 경로까지 막는다.
+      "x-content-type-options": "nosniff",
+      // 이미지를 직접 열었을 때 그 문서가 우리 오리진에서 아무것도 못 하게 한다.
+      "content-security-policy": "default-src 'none'; sandbox",
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/share") {
       if (request.method === "POST") return createShare(request, env);
+      return json({ error: "method-not-allowed" }, 405);
+    }
+
+    if (url.pathname === "/api/image") {
+      if (request.method === "POST") return uploadImage(request, env);
+      return json({ error: "method-not-allowed" }, 405);
+    }
+
+    const imageMatch = /^\/i\/([^/]+)$/.exec(url.pathname);
+    if (imageMatch) {
+      if (request.method === "GET") return readImage(imageMatch[1], env);
       return json({ error: "method-not-allowed" }, 405);
     }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import worker, { type Env } from "../worker/index";
 import { MAX_SHARE_BYTES, computeShareId } from "../src/shareId";
+import { MAX_IMAGE_BYTES, computeImageKey } from "../src/imageUpload";
 
 /**
  * F-60 공유 Worker (이슈 #66).
@@ -34,8 +35,15 @@ function buildEnv() {
         const item = store.get(key);
         return item ? ({ body: item.body } as never) : null;
       },
-      put: async (key: string, value: string, options?: { customMetadata?: Record<string, string> }) => {
-        store.set(key, { body: value, meta: options?.customMetadata });
+      put: async (
+        key: string,
+        value: string | ArrayBuffer,
+        options?: { customMetadata?: Record<string, string> },
+      ) => {
+        store.set(key, {
+          body: typeof value === "string" ? value : "<binary>",
+          meta: options?.customMetadata,
+        });
         return {} as never;
       },
     } as unknown as R2Bucket,
@@ -218,5 +226,121 @@ describe("worker — 자산 통과", () => {
     const env = buildEnv();
     await worker.fetch(new Request("https://md.example/"), env);
     expect(env.assetRequests).toEqual(["/"]);
+  });
+});
+
+describe("worker — 이미지 (F-28)", () => {
+  function postImage(bytes: ArrayBuffer, type: string, headers: Record<string, string> = {}) {
+    return new Request("https://md.example/api/image", {
+      method: "POST",
+      headers: { "content-type": type, ...headers },
+      body: bytes,
+    });
+  }
+
+  const png = () => new TextEncoder().encode("가짜 PNG 바이트").buffer as ArrayBuffer;
+
+  it("이미지를 저장하고 URL 을 돌려준다", async () => {
+    const env = buildEnv();
+    const response = await worker.fetch(postImage(png(), "image/png"), env);
+
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as { key: string; url: string };
+    expect(body.key).toBe(await computeImageKey(png(), "png"));
+    expect(body.url).toBe(`/i/${body.key}`);
+  });
+
+  it("같은 이미지를 다시 올리면 저장하지 않는다", async () => {
+    const env = buildEnv();
+    await worker.fetch(postImage(png(), "image/png"), env);
+    const second = (await (await worker.fetch(postImage(png(), "image/png"), env)).json()) as {
+      reused: boolean;
+    };
+
+    expect(second.reused).toBe(true);
+    expect(env.store.size).toBe(1);
+  });
+
+  it("SVG 를 거절한다", async () => {
+    // 우리 오리진에서 스크립트가 실행될 수 있는 경로를 아예 만들지 않는다.
+    const env = buildEnv();
+    const response = await worker.fetch(postImage(png(), "image/svg+xml"), env);
+
+    expect(response.status).toBe(400);
+    expect(env.store.size).toBe(0);
+  });
+
+  it("이미지가 아닌 형식을 거절한다", async () => {
+    const env = buildEnv();
+    for (const type of ["text/html", "application/pdf", "text/plain"]) {
+      expect((await worker.fetch(postImage(png(), type), env)).status, type).toBe(400);
+    }
+    expect(env.store.size).toBe(0);
+  });
+
+  it("Content-Length 로 큰 파일을 먼저 거른다", async () => {
+    const env = buildEnv();
+    const response = await worker.fetch(
+      postImage(png(), "image/png", { "content-length": String(MAX_IMAGE_BYTES + 1) }),
+      env,
+    );
+    expect(response.status).toBe(413);
+  });
+
+  it("저장한 이미지를 올바른 content-type 으로 돌려준다", async () => {
+    const env = buildEnv();
+    const { key } = (await (await worker.fetch(postImage(png(), "image/webp"), env)).json()) as {
+      key: string;
+    };
+
+    const response = await worker.fetch(new Request(`https://md.example/i/${key}`), env);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/webp");
+    expect(response.headers.get("cache-control")).toContain("immutable");
+  });
+
+  it("이미지 응답에 방어 헤더를 붙인다", async () => {
+    // 이미지를 직접 열었을 때 그 문서가 우리 오리진에서 아무것도 못 하게 한다.
+    const env = buildEnv();
+    const { key } = (await (await worker.fetch(postImage(png(), "image/png"), env)).json()) as {
+      key: string;
+    };
+    const response = await worker.fetch(new Request(`https://md.example/i/${key}`), env);
+
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("content-security-policy")).toContain("sandbox");
+  });
+
+  it("형식이 틀린 키는 R2 를 건드리지도 않고 404", async () => {
+    const env = buildEnv();
+    let getCalls = 0;
+    (env.SHARES as unknown as { get: () => Promise<null> }).get = async () => {
+      getCalls++;
+      return null;
+    };
+
+    for (const bad of ["../secret", "0123456789abcdef.svg", "short.png", "0123456789abcdef"]) {
+      const response = await worker.fetch(
+        new Request(`https://md.example/i/${encodeURIComponent(bad)}`),
+        env,
+      );
+      expect(response.status, bad).toBe(404);
+    }
+    expect(getCalls).toBe(0);
+  });
+
+  it("메서드를 제한한다", async () => {
+    const env = buildEnv();
+    expect(
+      (await worker.fetch(new Request("https://md.example/api/image"), env)).status,
+    ).toBe(405);
+    expect(
+      (
+        await worker.fetch(
+          new Request("https://md.example/i/0123456789abcdef.png", { method: "POST" }),
+          env,
+        )
+      ).status,
+    ).toBe(405);
   });
 });

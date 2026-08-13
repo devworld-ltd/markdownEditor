@@ -163,6 +163,16 @@ const url = URL.createObjectURL(blob);
 
 **두 형식을 함께 넣어야 한다.** 붙여넣는 곳이 서식을 모르면 `text/html` 만 있을 때 **태그가 날것 그대로** 들어간다.
 
+## 3.10 DataTransferItem.getAsFileSystemHandle (F-56)
+
+드롭된 항목에서 파일 **핸들**을 얻는다. 이것이 있어야 드롭으로 연 문서를 그 파일에 바로 저장할 수 있다.
+
+| 항목 | 내용 |
+|------|------|
+| 지원 | Chrome·Edge. Safari·Firefox 에는 **없다** — 핸들 없이 열고 저장 시 위치를 묻는다 |
+| 호출 시점 | **드롭 이벤트 처리 중** — `DataTransferItem` 은 핸들러가 끝나면 비워진다 |
+| 반환 | `Promise<FileSystemHandle | null>` — 디렉터리일 수 있으므로 `kind === "file"` 확인 |
+
 ## 4. 세션 저장 (`localStorage`)
 
 | 항목 | 값 |

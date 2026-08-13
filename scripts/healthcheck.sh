@@ -164,7 +164,38 @@ attempt() {
     return 1
   fi
 
-  echo "통과 — / 200(html+CSP), 자산 $(echo "$assets" | wc -l | tr -d ' ')건 200, /sw.js VERSION=${sw_version}, 공유 API 왕복 OK(${share_id})"
+  # --- F-28 이미지 API ------------------------------------------------------
+  # 공유 API 와 같은 이유로 실제 배포에서만 라우팅이 검증된다.
+  local img_status
+  img_status=$(printf '\x89PNG\r\n\x1a\nhealthcheck' | curl -sS -o /tmp/hc-img.$$ -w '%{http_code}' \
+    -X POST "${URL}/api/image" -H 'content-type: image/png' --data-binary @-)
+  if [[ "$img_status" != "201" ]]; then
+    echo "POST /api/image 가 ${img_status} — 201 이어야 한다"
+    rm -f /tmp/hc-img.$$
+    return 1
+  fi
+  local img_key
+  img_key=$(sed -nE 's/.*"key":"([0-9a-f]+\.[a-z]+)".*/\1/p' /tmp/hc-img.$$)
+  rm -f /tmp/hc-img.$$
+
+  local img_type
+  img_type=$(curl -sS -o /dev/null -w '%{content_type}' -H 'cache-control: no-cache' \
+    "${URL}/i/${img_key}?cb=${RANDOM}${RANDOM}")
+  if [[ "$img_type" != image/png* ]]; then
+    echo "GET /i/${img_key} 의 content-type 이 ${img_type} — Worker 가 아니라 자산이 응답했다"
+    return 1
+  fi
+
+  # SVG 는 우리 오리진에서 스크립트를 실행시킬 수 있어 거절해야 한다.
+  local svg_status
+  svg_status=$(printf '<svg/>' | curl -sS -o /dev/null -w '%{http_code}' \
+    -X POST "${URL}/api/image" -H 'content-type: image/svg+xml' --data-binary @-)
+  if [[ "$svg_status" != "400" ]]; then
+    echo "SVG 업로드가 ${svg_status} — 400 이어야 한다"
+    return 1
+  fi
+
+  echo "통과 — / 200(html+CSP), 자산 $(echo "$assets" | wc -l | tr -d ' ')건 200, /sw.js VERSION=${sw_version}, 공유 API OK(${share_id}), 이미지 API OK(${img_key})"
   return 0
 }
 
