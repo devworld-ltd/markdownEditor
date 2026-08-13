@@ -682,3 +682,108 @@ body {
     --rule-subtle: #4a4a4e;
   }
 }
+
+/*
+ * F-39 인쇄 / PDF (이슈 #52).
+ *
+ * `Cmd/Ctrl+P` 를 **가로채지 않는다.** F-22 검색은 브라우저 기본 찾기가
+ * textarea 안을 못 봐서 가로챌 이유가 있었지만, 인쇄는 브라우저 기능이 곧
+ * 우리가 원하는 동작이다. 필요한 것은 스타일뿐이고, 가로채면 같은 일을
+ * 한 겹 더 감싸면서 대화상자 취소·인쇄 미리보기 동작만 잃는다.
+ *
+ * 화면 표시에는 영향을 주지 않는다 — 전부 이 미디어 쿼리 안에 있다.
+ */
+@media print {
+  /* 앱 껍데기는 종이에 없다. */
+  .toolbar,
+  .tab-bar,
+  .search-bar,
+  .split-resizer,
+  .notice-stack,
+  #editor {
+    display: none !important;
+  }
+
+  /*
+   * 보기 모드(F-33)와 무관하게 프리뷰를 인쇄한다. 편집 전용 모드에서는
+   * `[data-mode="editor"] #preview { display: none }` 이 걸려 있어, 되돌리지
+   * 않으면 **빈 종이가 나온다.**
+   *
+   * `!important` 하나면 충분하다 — 선택자 특이도와 무관하게 이긴다. 처음에는
+   * `.editor-container[data-mode] #preview` 를 함께 적었는데, 지워도 아무
+   * 테스트가 실패하지 않아(= 하는 일이 없어) 지웠다.
+   */
+  #preview {
+    display: block !important;
+    flex: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  html,
+  body,
+  #app,
+  .editor-container {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  /* 다크 모드로 보고 있어도 종이에는 검은 잉크를 쏟지 않는다. */
+  #preview code,
+  #preview pre {
+    background: #f4f4f4 !important;
+    color: #000000 !important;
+  }
+
+  #preview blockquote {
+    border-left-color: #999999 !important;
+    color: #333333 !important;
+  }
+
+  #preview th,
+  #preview td {
+    border-color: #999999 !important;
+  }
+
+  /* 덩어리가 페이지 경계에서 잘리면 읽을 수 없게 된다. */
+  #preview pre,
+  #preview table,
+  #preview blockquote,
+  #preview img {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* 제목만 남고 본문이 다음 장으로 넘어가는 것을 막는다. */
+  #preview h1,
+  #preview h2,
+  #preview h3,
+  #preview h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  #preview p,
+  #preview li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* 종이에서는 링크를 누를 수 없으므로 주소를 함께 적는다.
+     내부 앵커(#)와 상대 경로는 주소를 적어도 의미가 없어 제외한다. */
+  #preview a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555555;
+    word-break: break-all;
+  }
+}

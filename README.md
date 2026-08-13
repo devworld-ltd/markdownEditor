@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **349건** + E2E 189건 (전부 통과) |
+| 테스트 | 단위 **349건** + E2E 198건 (전부 통과) |
 | 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -38,6 +38,7 @@
 - **분할 비율 조절** (드래그 또는 화살표 키)
 - **보기 모드** — 분할 / 편집 전용 / 미리보기 전용 (`Alt+M`)
 - **HTML 내보내기** — 스타일이 포함된 독립 실행 파일
+- **인쇄 / PDF** — 인쇄 전용 스타일 (`Cmd/Ctrl+P`)
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
@@ -125,7 +126,8 @@ markdownEditor/
 │       ├── search.spec.ts    # 문서 내 검색
 │       ├── splitter.spec.ts  # 분할 비율 조절
 │       ├── viewmode.spec.ts  # 보기 모드
-│       └── htmlexport.spec.ts # HTML 내보내기
+│       ├── htmlexport.spec.ts # HTML 내보내기
+│       └── print.spec.ts     # 인쇄 / PDF
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
@@ -211,6 +213,7 @@ npm run healthcheck:prod
 | `Alt + N` | 새 문서 |
 | `Alt + W` | 탭 닫기 |
 | `Cmd/Ctrl + F` | 문서 내 검색 · 치환 |
+| `Cmd/Ctrl + P` | 인쇄 / PDF (브라우저 기본) |
 | `Alt + M` | 분할 / 편집 전용 / 미리보기 전용 전환 |
 | `Alt + /` | 단축키 목록 열기 / 닫기 |
 

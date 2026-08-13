@@ -74,6 +74,8 @@ export interface FileActions {
   cycleView?: () => void;
   /** F-38 HTML 내보내기. */
   exportHtml?: () => void;
+  /** F-39 인쇄 / PDF 저장. */
+  print?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -215,6 +217,14 @@ const actions: ToolbarAction[] = [
     label: "Export HTML",
     icon: `<svg ${SVG_ATTRS}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
     action: () => fileActions?.exportHtml?.(),
+  },
+  {
+    // F-39 인쇄/PDF. 브라우저 인쇄 대화상자를 그대로 연다 — "PDF 로 저장" 은
+    // 그 대화상자 안에 이미 있다. 별도 PDF 라이브러리를 넣을 이유가 없다.
+    label: "Print / PDF",
+    icon: `<svg ${SVG_ATTRS}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`,
+    action: () => fileActions?.print?.(),
+    separator: true,
   },
   {
     // F-33 보기 모드 순환. 툴바 버튼이 있어야 단축키를 모르는 사용자도 쓴다.

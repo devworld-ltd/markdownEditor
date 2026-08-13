@@ -178,6 +178,10 @@ if (editorEl && previewEl) {
 
     // F-38: 프리뷰에 이미 들어가 있는 **정화된** HTML 을 그대로 쓴다.
     // 원문을 다시 파싱하는 두 번째 경로를 만들면 정화 정책이 갈라진다(F-18).
+    // F-39: 브라우저 인쇄 대화상자를 연다. "PDF 로 저장" 은 그 안에 이미 있으므로
+    // PDF 라이브러리를 들일 이유가 없다. 출력 모양은 @media print 가 만든다.
+    print: () => window.print(),
+
     exportHtml: () => {
       const tab = getActiveTab();
       const fileName = tab?.fileName ?? UNTITLED;
