@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **280** | 0 | 0 | 280 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **145** | **0** | 15 ※ | 160 |
-| **합계 (dev 기준)** | | **425** | **0** | 15 | 440 |
+| 단위 | Vitest 4.1.10 (jsdom) | **316** | 0 | 0 | 316 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **155** | **0** | 15 ※ | 170 |
+| **합계 (dev 기준)** | | **471** | **0** | 15 | 486 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -59,6 +59,7 @@
 | `icons.spec.ts` | 7 | ✅ F-68 PWA 아이콘 — IHDR 을 읽어 선언과 실물을 대조 |
 | `shortcuthelp.spec.ts` | 11 | ✅ F-58 단축키 안내 — 모달 동작·포커스 복귀·macOS 표기 |
 | `search.spec.ts` | 23 | ✅ F-22 검색 + 치환 — 키 가로채기·선택·스크롤·**실행 취소** |
+| `splitter.spec.ts` | 10 | ✅ F-32 분할 비율 — 드래그·키보드·세션 복원·손상 저장값 |
 
 ### 2.1 URL 응답 (15)
 

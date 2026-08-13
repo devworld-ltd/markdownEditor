@@ -55,6 +55,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`splitLayout.ts`** — 분할 비율 계산만 담당하는 순수 리프(F-32).
+- **`splitter.ts`** — 분할 리사이저 배선(F-32). 주입형 리프. **경계선은 이 요소가 그린다** — `#editor` 에 테두리를 되살리면 1px 이 두 줄로 겹친다.
 - **`searchEngine.ts`** — 문서 내 검색의 **계산만** 담당하는 순수 리프(F-22). 일치 탐색·순환·서수 보존.
 - **`search.ts`** — 검색 바 배선(F-22). 주입형 리프. 스크롤 측정(`measureOffsetTop`)이 주입 경계다.
 - **`shortcutDefs.ts`** — 단축키 **단일 출처**(조합 판별 + 표시용 키 캡). DOM 비의존 순수 모듈. `shortcuts.ts`(디스패치)와 `shortcutHelp.ts`(안내)가 둘 다 여기서 읽는다.
@@ -92,7 +94,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 26. **검색 중에는 에디터로 포커스를 옮기지 말 것.** `reveal()` 이 `editorEl.focus()` 를 하면 **Enter 가 본문에 개행을 넣어 방금 찾은 일치를 지운다**(실제로 그랬고 E2E 가 `1/3 → 1/2` 로 잡았다). 선택만 걸고 포커스는 검색창에 남긴다 — Esc 로 닫는 순간 그 선택이 활성 선택이 된다.
 27. **치환은 `execCommand("insertText")` 를 반드시 유지하라.** `textarea.value` 대입으로 바꾸면 **Cmd+Z 실행 취소가 통째로 죽는다**. 특히 "모두 바꾸기" 는 문서 전체를 갈아치우므로 되돌릴 수 없으면 데이터 유실에 가깝다. 그리고 전체 치환은 **삽입 1회**여야 한다 — 부분 치환을 N번 반복하면 Cmd+Z 를 N번 눌러야 한다.
 28. **`Cmd/Ctrl+F` 는 `Cmd+W`·`Cmd+N` 과 달리 가로챌 수 있다.** 페이지에 도달하고 `preventDefault()` 가 먹는다(실측). 트랩 #4 를 이 조합까지 확대 적용하지 말 것.
-29. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+29. **F-32 리사이저에 F-25 억제 훅을 다시 붙이지 말 것.** 구현해 두고 실측했더니 있으나 없으나 드래그 후 두 패널의 비율 차이가 **0 으로 동일**했다 — F-25 의 메아리 판별이 이미 처리한다. 되살리려면 먼저 재현되는 실패를 만들 것.
+30. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

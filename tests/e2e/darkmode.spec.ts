@@ -53,11 +53,12 @@ test.describe("F-57 다크 모드", () => {
     const result = await page.evaluate(() => {
       const editor = getComputedStyle(document.querySelector("#editor")!);
       const preview = getComputedStyle(document.querySelector("#preview")!);
+      const divider = document.querySelector("#split-resizer") as HTMLElement;
       return {
         editorBg: editor.backgroundColor,
         previewBg: preview.backgroundColor,
-        borderWidth: editor.borderRightWidth,
-        borderStyle: editor.borderRightStyle,
+        dividerWidth: divider.getBoundingClientRect().width,
+        dividerColor: getComputedStyle(divider).backgroundColor,
       };
     });
     const ratio = contrast(result.editorBg, result.previewBg);
@@ -66,8 +67,9 @@ test.describe("F-57 다크 모드", () => {
     // 경계에서만 인지되는 강도 — 라이트(1.12:1)와 같은 급으로 유지한다.
     expect(ratio).toBeGreaterThan(1.05);
     expect(ratio).toBeLessThan(1.3);
-    expect(result.borderWidth).toBe("1px");
-    expect(result.borderStyle).toBe("solid");
+    expect(result.dividerWidth).toBeCloseTo(1, 0);
+    // 경계선도 다크 토큰을 따라간다.
+    expect(result.dividerColor).toBe("rgb(74, 74, 78)");
   });
 
   test("D3: 프리뷰가 에디터보다 밝다 — 명도 계단 방향이 라이트와 같다", async ({ page }) => {
@@ -145,18 +147,17 @@ test.describe("F-57 다크 모드", () => {
     const result = await page.evaluate(() => {
       const editor = getComputedStyle(document.querySelector("#editor")!);
       const preview = getComputedStyle(document.querySelector("#preview")!);
+      const divider = document.querySelector("#split-resizer") as HTMLElement;
       return {
-        borderRightStyle: editor.borderRightStyle,
-        borderBottomWidth: editor.borderBottomWidth,
-        borderBottomColor: editor.borderBottomColor,
+        dividerHeight: divider.getBoundingClientRect().height,
+        dividerColor: getComputedStyle(divider).backgroundColor,
         differs: editor.backgroundColor !== preview.backgroundColor,
       };
     });
 
     // 다크 전용 레이아웃 분기가 없다는 증거 — 규칙은 그대로고 값만 바뀐다.
-    expect(result.borderRightStyle).toBe("none");
-    expect(result.borderBottomWidth).toBe("2px");
-    expect(result.borderBottomColor).toBe("rgb(74, 74, 78)");
+    expect(result.dividerHeight).toBeCloseTo(2, 0);
+    expect(result.dividerColor).toBe("rgb(74, 74, 78)");
     expect(result.differs).toBe(true);
   });
 });

@@ -18,13 +18,14 @@ import {
   setScrollSyncHooks,
 } from "./tabs";
 import { initNotice, showNotice } from "./notice";
-import { isStorageAvailable } from "./storage";
+import { isStorageAvailable, loadSplitRatio, saveSplitRatio } from "./storage";
 import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
 import { initFsLimitNotice } from "./fsLimitNotice";
 import { initScrollSync } from "./scrollSync";
 import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 import { initSearch } from "./search";
+import { initSplitter } from "./splitter";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -49,6 +50,8 @@ const searchReplaceRowEl = document.querySelector<HTMLElement>("#search-replace-
 const searchReplaceInputEl = document.querySelector<HTMLInputElement>("#search-replace-input");
 const searchReplaceOneEl = document.querySelector<HTMLElement>("#search-replace-one");
 const searchReplaceAllEl = document.querySelector<HTMLElement>("#search-replace-all");
+const editorContainerEl = document.querySelector<HTMLElement>(".editor-container");
+const splitResizerEl = document.querySelector<HTMLElement>("#split-resizer");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -100,6 +103,18 @@ if (editorEl && previewEl) {
   setCloseConfirm((tab) =>
     window.confirm(`"${tab.fileName}" 의 변경 사항이 저장되지 않았습니다. 닫을까요?`),
   );
+
+  // F-32: F-25 억제 훅을 붙이지 않는다 — 실측 결과 있으나 없으나 드래그 후
+  // 두 패널의 비율 차이가 0 이었다(splitter.ts §2 참고).
+  if (editorContainerEl && splitResizerEl) {
+    initSplitter({
+      containerEl: editorContainerEl,
+      resizerEl: splitResizerEl,
+      firstPaneEl: editorEl,
+      loadRatio: () => loadSplitRatio() ?? 0.5,
+      saveRatio: saveSplitRatio,
+    });
+  }
 
   setScrollSyncHooks({
     suspend: () => scrollSync.suspend(),

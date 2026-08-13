@@ -76,6 +76,19 @@
           autocapitalize="off"
           aria-label="마크다운 편집기"
         ></textarea>
+        <!-- F-32 분할 비율 조절. role="separator" + tabindex 로 키보드에서도
+             도달한다 — 드래그 전용이면 키보드 사용자에게는 없는 기능이다. -->
+        <div
+          id="split-resizer"
+          class="split-resizer"
+          role="separator"
+          tabindex="0"
+          aria-orientation="vertical"
+          aria-label="편집 영역과 미리보기 영역의 비율 조절"
+          aria-valuemin="15"
+          aria-valuemax="85"
+          aria-valuenow="50"
+        ></div>
         <div id="preview" aria-label="미리보기"></div>
       </main>
       <!-- F-58: 단축키 안내. 네이티브 <dialog> 를 쓰면 포커스 트랩·Esc 닫기·

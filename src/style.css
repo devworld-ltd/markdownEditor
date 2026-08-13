@@ -172,7 +172,10 @@ body {
 }
 
 #editor {
-  flex: 1;
+  /* F-32: flex-basis 를 splitter.ts 가 인라인으로 지정한다. grow 를 0 으로 두어야
+     지정한 비율이 유지된다 — grow 가 남아 있으면 남는 공간을 나눠 가져 비율이
+     의미를 잃는다. */
+  flex: 0 0 50%;
   padding: 16px;
   border: none;
   resize: none;
@@ -195,7 +198,10 @@ body {
 }
 
 #preview {
-  flex: 1;
+  /* 남은 공간 전부. 이래야 리사이저를 움직여도 두 영역 합이 항상 100% 다. */
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   padding: 16px 16px 16px 32px;
   overflow-y: auto;
   font-size: 14px;
@@ -332,6 +338,35 @@ body {
 .sw-update-btn:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
+}
+
+/*
+ * F-32 분할 리사이저. 시각적으로는 얇지만 잡기 쉬워야 하므로 히트 영역을
+ * ::before 로 넓힌다 — 실제 폭을 키우면 경계선이 굵어 보인다.
+ */
+.split-resizer {
+  position: relative;
+  flex: 0 0 1px;
+  background: var(--border-split);
+  cursor: col-resize;
+  touch-action: none; /* 드래그가 페이지 스크롤로 가로채이지 않게 */
+  z-index: 5;
+}
+
+.split-resizer::before {
+  content: "";
+  position: absolute;
+  inset: 0 -4px; /* 좌우 4px 씩 — 보이는 1px 보다 9배 잡기 쉽다 */
+}
+
+.split-resizer:hover,
+.split-resizer[data-dragging="true"] {
+  background: #007acc;
+}
+
+.split-resizer:focus-visible {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
 }
 
 /*
@@ -570,11 +605,13 @@ body {
     flex-direction: column;
   }
 
-  #editor {
-    border-right: none;
-    /* 가로 경계는 세로 경계보다 눈에 덜 띈다 → 좌우 분할과 같거나 더 또렷하게 2px */
-    border-bottom: 2px solid var(--border-split);
-    min-height: 40%;
+  .split-resizer {
+    flex: 0 0 2px; /* 가로 경계는 세로보다 눈에 덜 띈다 → 2px */
+    cursor: row-resize;
+  }
+
+  .split-resizer::before {
+    inset: -4px 0;
   }
 
   #preview {

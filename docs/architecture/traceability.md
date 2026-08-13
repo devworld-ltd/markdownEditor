@@ -38,7 +38,8 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-57 | 다크 모드 | `prefers-color-scheme` | `src/style.css` 토큰 7종 | — | — | `darkmode.spec.ts` |
 | F-68 | PWA 아이콘 PNG | 홈 화면 추가 | `scripts/gen-icons.mjs` → `public/*.png` | — | — | `icons.spec.ts` |
 | F-58 | 단축키 안내 | 툴바 버튼 · `⌥/` | `shortcutDefs.ts` → `shortcutHelp.ts` | `<dialog>` open | — | `shortcuthelp.spec.ts` |
-| F-22 | 문서 내 검색 | `⌘/Ctrl+F` | `searchEngine.ts` → `search.ts` | `matches`·`current` | — | `search.spec.ts` |
+| F-22 | 문서 내 검색·치환 | `⌘/Ctrl+F` | `searchEngine.ts` → `search.ts` | `matches`·`current` | `execCommand` | `search.spec.ts` |
+| F-32 | 분할 비율 조절 | 드래그 · 화살표 | `splitLayout.ts` → `splitter.ts` | `ratio` (localStorage) | `setPointerCapture` | `splitter.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -133,7 +134,10 @@ graph LR
 | `tests/e2e/shortcuthelp.spec.ts` | 11 | F-58 |
 | `tests/searchEngine.test.ts` | 23 | F-22 |
 | `tests/search.test.ts` | 16 | F-22 |
-| `tests/e2e/search.spec.ts` | 14 | F-22 |
+| `tests/e2e/search.spec.ts` | 23 | F-22 |
+| `tests/splitLayout.test.ts` | 14 | F-32 |
+| `tests/splitter.test.ts` | 17 | F-32 |
+| `tests/e2e/splitter.spec.ts` | 10 | F-32 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
