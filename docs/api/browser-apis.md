@@ -153,6 +153,16 @@ const url = URL.createObjectURL(blob);
 
 끊긴 항목을 누르면 `showOpenFilePicker()` 를 열되 **이유를 함께 알린다.** 조용히 선택 창만 띄우면 사용자는 버그로 받아들인다.
 
+## 3.12 클립보드 (F-40)
+
+| API | 용도 | 실패 조건 |
+|-----|------|-----------|
+| `ClipboardItem` | `text/html` + `text/plain` 동시 제공 | 미지원 브라우저에는 아예 없다 |
+| `navigator.clipboard.write` | 서식 있는 복사 | 비보안 컨텍스트·권한 거부·사용자 제스처 없음 |
+| `navigator.clipboard.writeText` | 폴백 | 위와 같음 |
+
+**두 형식을 함께 넣어야 한다.** 붙여넣는 곳이 서식을 모르면 `text/html` 만 있을 때 **태그가 날것 그대로** 들어간다.
+
 ## 4. 세션 저장 (`localStorage`)
 
 | 항목 | 값 |
