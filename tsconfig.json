@@ -3,7 +3,10 @@
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    // ES2022.Intl 은 `Intl.Segmenter` 타입 때문이다 (F-30 표시 폭 계산).
+    // target 은 ES2020 그대로 — Segmenter 는 런타임 API 라 문법 수준과 무관하고,
+    // 없는 브라우저에서는 tableFormat.ts 가 코드 포인트 단위로 폴백한다.
+    "lib": ["ES2020", "ES2022.Intl", "DOM", "DOM.Iterable"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

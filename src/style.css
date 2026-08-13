@@ -337,6 +337,19 @@ body {
   text-align: left;
 }
 
+/* F-30: marked 는 열 정렬을 `align` **속성**으로 낸다. 속성은 표현 힌트라
+   위의 `text-align: left` 규칙보다 약해서, 이 두 줄이 없으면 구분선에 정렬을
+   지정해도 프리뷰가 늘 왼쪽 정렬로 보인다 — 기능이 통째로 안 보인다. */
+#preview th[align="center"],
+#preview td[align="center"] {
+  text-align: center;
+}
+
+#preview th[align="right"],
+#preview td[align="right"] {
+  text-align: right;
+}
+
 #preview img {
   max-width: 100%;
 }
@@ -365,6 +378,29 @@ body {
  * #sw-update 는 1px 도 움직이지 않는다.
  */
 /* F-29 문서 통계. 편집 영역 아래 한 줄 — 방해되지 않을 만큼 작고 흐리게. */
+.setting-number {
+  width: 5rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.table-align-name {
+  /* 열 제목이 길어도 정렬 버튼을 밀어내지 않는다. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-align-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .status-bar {
   flex-shrink: 0;
   padding: 4px 12px;

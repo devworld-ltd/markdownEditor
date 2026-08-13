@@ -48,6 +48,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-35 | 편집 글꼴·크기 | 툴바 버튼 | `editorPrefs.ts` → `editorSettings.ts` → CSS 변수 | `fontId`·`fontSize` (localStorage) | — | `settings.spec.ts` |
 | F-36 | 최근 파일 | 툴바 버튼 · 파일 열기/저장 | `fileOps` 훅 → `recentFilesUi.ts` | `recent` (localStorage) + 메모리 핸들 | `showOpenFilePicker` | `recent.spec.ts` |
 | F-40 | 클립보드 복사 | 툴바 버튼 | `preview.innerHTML` → `clipboardExport.ts` | — | `navigator.clipboard` · `ClipboardItem` | `clipboard.spec.ts` |
+| F-30 | 표 편집 보조 | 툴바 Table 버튼 | `tableFormat.ts` → `tableUi.ts` | — | `execCommand` | `table.spec.ts` |
 | F-29 | 문서 통계 | 렌더 · 선택 변경 | `docStats.ts` → `statusBar.ts` | `docStats` (localStorage) | `selectionchange` | `docstats.spec.ts` |
 | F-28 | 이미지 드롭·붙여넣기 | drop · paste | `editorDrop.ts` → `/api/image` → R2 | R2 객체 (내용 주소) | `fetch` · `DataTransfer` | `worker.test.ts`, healthcheck |
 | F-26 | 목록 이어쓰기 | Enter | `editorKeys.ts` → `editorBehavior.ts` | — | `execCommand` | `editorkeys.spec.ts` |
@@ -180,6 +181,9 @@ graph LR
 | `tests/docStats.test.ts` | 21 | F-29 |
 | `tests/statusBar.test.ts` | 10 | F-29 |
 | `tests/e2e/docstats.spec.ts` | 8 | F-29 |
+| `tests/tableFormat.test.ts` | 36 | F-30 |
+| `tests/tableUi.test.ts` | 16 | F-30 |
+| `tests/e2e/table.spec.ts` | 9 | F-30 |
 | `tests/editorDrop.test.ts` | 13 | F-28 |
 | `tests/editorBehavior.test.ts` | 13 | F-26, F-27 |
 | `tests/e2e/editorkeys.spec.ts` | 15 | F-26, F-27 |
