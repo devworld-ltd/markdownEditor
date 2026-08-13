@@ -55,6 +55,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`viewMode.ts`** — 보기 모드(F-33). 주입형 리프. **버튼 클릭은 듣지 않는다** — 툴바가 이미 다루므로 중복하면 한 번 눌러 두 단계 넘어간다.
 - **`splitLayout.ts`** — 분할 비율 계산만 담당하는 순수 리프(F-32).
 - **`splitter.ts`** — 분할 리사이저 배선(F-32). 주입형 리프. **경계선은 이 요소가 그린다** — `#editor` 에 테두리를 되살리면 1px 이 두 줄로 겹친다.
 - **`searchEngine.ts`** — 문서 내 검색의 **계산만** 담당하는 순수 리프(F-22). 일치 탐색·순환·서수 보존.
@@ -95,7 +96,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 27. **치환은 `execCommand("insertText")` 를 반드시 유지하라.** `textarea.value` 대입으로 바꾸면 **Cmd+Z 실행 취소가 통째로 죽는다**. 특히 "모두 바꾸기" 는 문서 전체를 갈아치우므로 되돌릴 수 없으면 데이터 유실에 가깝다. 그리고 전체 치환은 **삽입 1회**여야 한다 — 부분 치환을 N번 반복하면 Cmd+Z 를 N번 눌러야 한다.
 28. **`Cmd/Ctrl+F` 는 `Cmd+W`·`Cmd+N` 과 달리 가로챌 수 있다.** 페이지에 도달하고 `preventDefault()` 가 먹는다(실측). 트랩 #4 를 이 조합까지 확대 적용하지 말 것.
 29. **F-32 리사이저에 F-25 억제 훅을 다시 붙이지 말 것.** 구현해 두고 실측했더니 있으나 없으나 드래그 후 두 패널의 비율 차이가 **0 으로 동일**했다 — F-25 의 메아리 판별이 이미 처리한다. 되살리려면 먼저 재현되는 실패를 만들 것.
-30. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+30. **F-33 은 패널을 `display: none` 으로 숨겨야 한다.** 숨은 패널의 `clientHeight` 가 0 이 되어 F-25 의 `> 0` 가드에 걸리는 데 기대는 설계다. `visibility`/`opacity` 로 바꾸면 **크기가 남아 동기화가 계속 돌면서 보이지 않는 패널을 따라 움직인다.**
+31. **레이아웃 설정 쓰기는 항상 병합이다.** 통째로 덮어쓰면 모드를 저장할 때 비율이 지워지는데, 같은 세션에서는 메모리 값이 가려 **새로고침해야 드러난다.**
+32. **`initViewMode()` 는 `initToolbar()` 뒤에 호출한다.** 순서가 뒤집히면 클릭은 동작하지만 `aria-*` 가 비어 스크린리더에게는 상태 없는 버튼이 된다 — 눈으로는 안 보인다.
+33. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

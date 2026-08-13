@@ -11,6 +11,8 @@ interface ToolbarAction {
    * 변경됨(dirty)으로 표시된다.
    */
   editsText?: boolean;
+  /** 나중에 상태를 갱신해야 하는 버튼에 붙이는 DOM id (F-33 보기 모드). */
+  id?: string;
 }
 
 // 계산(무엇을 삽입할지)은 순수 함수인 ./textEdit 에 있다. 아래 세 함수는 DOM 삽입
@@ -68,6 +70,8 @@ export interface FileActions {
   saveAs: () => void;
   /** F-58 단축키 안내 열기. 안내 UI 초기화 실패 시 넘어오지 않는다. */
   showShortcuts?: () => void;
+  /** F-33 보기 모드 순환. */
+  cycleView?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -204,6 +208,13 @@ const actions: ToolbarAction[] = [
     separator: true,
   },
   {
+    // F-33 보기 모드 순환. 툴바 버튼이 있어야 단축키를 모르는 사용자도 쓴다.
+    label: "View Mode",
+    icon: `<svg ${SVG_ATTRS}><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`,
+    action: () => fileActions?.cycleView?.(),
+    id: "view-mode",
+  },
+  {
     // F-58: 단축키를 알려주는 기능을 단축키로만 열 수 있으면 순환이다.
     // 웹에는 메뉴바가 없으므로 눈에 보이는 진입점이 반드시 하나 있어야 한다.
     label: "Shortcuts",
@@ -216,10 +227,11 @@ export function initToolbar(
   container: HTMLElement,
   textarea: HTMLTextAreaElement,
 ): void {
-  actions.forEach(({ label, icon, action, separator, editsText }) => {
+  actions.forEach(({ label, icon, action, separator, editsText, id }) => {
     const btn = document.createElement("button");
     btn.className = "toolbar-btn";
     btn.title = label;
+    if (id) btn.id = id;
     btn.innerHTML = icon;
     btn.addEventListener("click", (e) => {
       e.preventDefault();

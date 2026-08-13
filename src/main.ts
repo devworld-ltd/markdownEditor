@@ -18,7 +18,13 @@ import {
   setScrollSyncHooks,
 } from "./tabs";
 import { initNotice, showNotice } from "./notice";
-import { isStorageAvailable, loadSplitRatio, saveSplitRatio } from "./storage";
+import {
+  isStorageAvailable,
+  loadSplitRatio,
+  loadViewMode,
+  saveSplitRatio,
+  saveViewMode,
+} from "./storage";
 import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
 import { initFsLimitNotice } from "./fsLimitNotice";
@@ -26,6 +32,7 @@ import { initScrollSync } from "./scrollSync";
 import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
+import { initViewMode, parseViewMode } from "./viewMode";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -141,21 +148,36 @@ if (editorEl && previewEl) {
         })
       : null;
 
+  // F-33: 툴바가 버튼을 만든 **뒤에** 초기화해야 #view-mode 를 찾을 수 있다.
+  // 순서가 뒤집히면 클릭은 동작하지만 aria-pressed/aria-label 이 비어 있어
+  // 스크린리더에게는 상태 없는 버튼이 된다 — 눈으로는 드러나지 않는다.
+  if (toolbarEl) {
+    initToolbar(toolbarEl, editorEl);
+  }
+
+  // 모드는 분할 비율과 독립이다 — 모드를 되돌리면 맞춰 둔 비율이 그대로 돌아온다.
+  const viewMode = editorContainerEl
+    ? initViewMode({
+        containerEl: editorContainerEl,
+        buttonEl: document.querySelector<HTMLElement>("#view-mode") ?? undefined,
+        loadMode: () => parseViewMode(loadViewMode()),
+        saveMode: saveViewMode,
+      })
+    : null;
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
     save: () => void saveFile(),
     saveAs: () => void saveFileAs(),
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
+    cycleView: viewMode ? () => viewMode.cycle() : undefined,
   });
-
-  if (toolbarEl) {
-    initToolbar(toolbarEl, editorEl);
-  }
 
   initShortcuts({
     toggleHelp: shortcutHelp ? () => shortcutHelp.toggle() : undefined,
     toggleFind: search ? () => search.toggle() : undefined,
+    cycleView: viewMode ? () => viewMode.cycle() : undefined,
   });
 
   // 새로고침·탭 닫기로 인한 유실 방지. 브라우저는 문구를 무시하고 기본 경고를 띄운다.
