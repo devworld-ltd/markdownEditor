@@ -75,6 +75,7 @@
 | F-36 | 최근 파일 목록 (핸들 수명 안내 포함) | `src/recentFiles.ts`, `src/recentFilesUi.ts` | 단위 31 + E2E 12 |
 | F-40 | 렌더된 HTML 클립보드 복사 | `src/clipboardExport.ts` | 단위 10 + E2E 7 |
 | F-60 | 공유 링크 (Cloudflare R2) | `worker/index.ts`, `src/shareId.ts`, `src/share.ts` | 단위 42 + E2E 10 |
+| F-67 | dev 환경 커스텀 도메인 | `wrangler.jsonc` | 배포 헬스체크 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -122,7 +123,6 @@
 
 | ID | 기능 | 비고 |
 |----|------|------|
-| F-67 | dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` |
 
 ### 4.6 엔지니어링
 
