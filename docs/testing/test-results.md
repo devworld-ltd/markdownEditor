@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **129** | 0 | 0 | 129 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **82** | **0** | 15 ※ | 97 |
-| **합계 (dev 기준)** | | **211** | **0** | 15 | 226 |
+| 단위 | Vitest 4.1.10 (jsdom) | **158** | 0 | 0 | 158 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **87** | **0** | 15 ※ | 102 |
+| **합계 (dev 기준)** | | **245** | **0** | 15 | 260 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
