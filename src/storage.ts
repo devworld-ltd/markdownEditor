@@ -8,6 +8,12 @@
  */
 
 const STORAGE_KEY = "markdown-editor:session:v1";
+/**
+ * 레이아웃 설정은 **세션과 별도 키**다(F-32). 문서 세션은 손상 시 통째로 버리는
+ * 정책인데, 그때 분할 비율까지 함께 날릴 이유가 없다. 반대로 비율이 깨져도
+ * 문서는 멀쩡해야 한다.
+ */
+const LAYOUT_KEY = "markdown-editor:layout:v1";
 const SCHEMA_VERSION = 1;
 
 export interface PersistedTab {
@@ -81,6 +87,31 @@ export function loadSession(): PersistedSession | null {
 
 export function clearSession(): void {
   storage()?.removeItem(STORAGE_KEY);
+}
+
+/** 분할 비율을 읽는다. 없거나 손상되면 null — 호출부가 기본값을 정한다. */
+export function loadSplitRatio(): number | null {
+  const s = storage();
+  if (!s) return null;
+  try {
+    const parsed = JSON.parse(s.getItem(LAYOUT_KEY) ?? "null") as { ratio?: unknown } | null;
+    // 타입 확인이 필요하다: JSON 은 파싱에 성공해도 값이 문자열·객체일 수 있고,
+    // 그대로 흘려보내면 레이아웃 계산이 NaN 으로 무너진다.
+    return typeof parsed?.ratio === "number" ? parsed.ratio : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 분할 비율을 저장한다. 실패해도 조용히 넘어간다 — 레이아웃 설정은 문서가 아니다. */
+export function saveSplitRatio(ratio: number): void {
+  const s = storage();
+  if (!s) return;
+  try {
+    s.setItem(LAYOUT_KEY, JSON.stringify({ ratio }));
+  } catch {
+    // 용량 초과 등. 문서 저장과 달리 사용자에게 알릴 가치가 없다.
+  }
 }
 
 export function createSession(

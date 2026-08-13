@@ -80,13 +80,14 @@ test.describe("F-72 편집/프리뷰 시각 구분", () => {
     expect(previewBg).toBe("rgb(255, 255, 255)");
     expect(editorBg).not.toBe(previewBg);
 
-    const editorBorder = await page.locator("#editor").evaluate((el) => {
+    // F-32 이후 경계선은 리사이저가 그린다 — #editor 에도 테두리를 두면
+    // 1px 이 두 줄로 겹쳐 보인다. 경계는 한 곳에서만 그린다.
+    const divider = await page.locator("#split-resizer").evaluate((el) => {
       const cs = getComputedStyle(el);
-      return { width: cs.borderRightWidth, style: cs.borderRightStyle, color: cs.borderRightColor };
+      return { width: el.getBoundingClientRect().width, color: cs.backgroundColor };
     });
-    expect(editorBorder.width).toBe("1px");
-    expect(editorBorder.style).toBe("solid");
-    expect(editorBorder.color).toBe("rgb(200, 200, 200)");
+    expect(divider.width).toBeCloseTo(1, 0);
+    expect(divider.color).toBe("rgb(200, 200, 200)");
 
     const tokens = await page.evaluate(() => {
       const cs = getComputedStyle(document.documentElement);
@@ -106,23 +107,21 @@ test.describe("F-72 편집/프리뷰 시각 구분", () => {
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
 
-    const editor = await page.locator("#editor").evaluate((el) => {
-      const cs = getComputedStyle(el);
-      return {
-        bg: cs.backgroundColor,
-        borderRightStyle: cs.borderRightStyle,
-        borderBottomWidth: cs.borderBottomWidth,
-        borderBottomColor: cs.borderBottomColor,
-      };
-    });
+    const editor = await page.locator("#editor").evaluate((el) => ({
+      bg: getComputedStyle(el).backgroundColor,
+    }));
     const previewBg = await page
       .locator("#preview")
       .evaluate((el) => getComputedStyle(el).backgroundColor);
 
-    // 오른쪽 테두리가 사라지고 아래쪽 테두리가 나타난다.
-    expect(editor.borderRightStyle).toBe("none");
-    expect(editor.borderBottomWidth).toBe("2px");
-    expect(editor.borderBottomColor).toBe("rgb(200, 200, 200)");
+    // 상하 분할에서는 리사이저가 가로 경계가 되고, 가로 경계는 세로보다 눈에
+    // 덜 띄므로 2px 로 굵어진다.
+    const divider = await page.locator("#split-resizer").evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return { height: rect.height, color: getComputedStyle(el).backgroundColor };
+    });
+    expect(divider.height).toBeCloseTo(2, 0);
+    expect(divider.color).toBe("rgb(200, 200, 200)");
     // 위(입력)가 회색, 아래(결과)가 흰색이라는 색 관계는 유지된다.
     expect(editor.bg).toBe("rgb(242, 242, 240)");
     expect(previewBg).toBe("rgb(255, 255, 255)");
