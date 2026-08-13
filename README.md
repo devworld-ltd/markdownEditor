@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **349건** + E2E 198건 (전부 통과) |
+| 테스트 | 단위 **349건** + E2E 216건 (전부 통과) |
 | 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -39,6 +39,7 @@
 - **보기 모드** — 분할 / 편집 전용 / 미리보기 전용 (`Alt+M`)
 - **HTML 내보내기** — 스타일이 포함된 독립 실행 파일
 - **인쇄 / PDF** — 인쇄 전용 스타일 (`Cmd/Ctrl+P`)
+- **키보드 접근성** — 전 기능 키보드 도달, 스크린리더 지원
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
@@ -127,7 +128,8 @@ markdownEditor/
 │       ├── splitter.spec.ts  # 분할 비율 조절
 │       ├── viewmode.spec.ts  # 보기 모드
 │       ├── htmlexport.spec.ts # HTML 내보내기
-│       └── print.spec.ts     # 인쇄 / PDF
+│       ├── print.spec.ts     # 인쇄 / PDF
+│       └── a11y.spec.ts      # 접근성 (axe + 키보드)
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트

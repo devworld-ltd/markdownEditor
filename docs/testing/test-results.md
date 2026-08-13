@@ -8,8 +8,8 @@
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
 | 단위 | Vitest 4.1.10 (jsdom) | **349** | 0 | 0 | 349 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **183** | **0** | 15 ※ | 198 |
-| **합계 (dev 기준)** | | **532** | **0** | 15 | 547 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **201** | **0** | 15 ※ | 216 |
+| **합계 (dev 기준)** | | **550** | **0** | 15 | 565 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -63,6 +63,7 @@
 | `viewmode.spec.ts` | 12 | ✅ F-33 보기 모드 — 순환·복원·F-25 무동작·설정 병합 |
 | `htmlexport.spec.ts` | 7 | ✅ F-38 HTML 내보내기 — 실제 기록되는 바이트·탭 무영향·폴백 |
 | `print.spec.ts` | 9 | ✅ F-39 인쇄 — `emulateMedia("print")` 로 실제 인쇄 스타일 검증 |
+| `a11y.spec.ts` | 18 | ✅ F-59 접근성 — axe 8상태 + 다크 + 수동 시나리오 9건 |
 
 ### 2.1 URL 응답 (15)
 
