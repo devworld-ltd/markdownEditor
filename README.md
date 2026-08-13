@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **499건** + E2E 277건 (전부 통과) |
+| 테스트 | 단위 **513건** + E2E 286건 (전부 통과) |
 | 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -44,6 +44,7 @@
 - **최근 파일 목록** (핸들 수명 안내 포함)
 - **렌더 결과 클립보드 복사** (서식 유지 + 원문 대체본)
 - **코드 구문 하이라이팅** (JS·TS·JSON·셸·CSS·HTML, 의존성 0)
+- **줄 번호 표시** (줄바꿈된 줄도 정확히 정렬)
 - **공유 링크** (Cloudflare R2 — 이 앱에서 **유일하게** 네트워크를 타는 기능)
 - **키보드 접근성** — 전 기능 키보드 도달, 스크린리더 지원
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
@@ -99,6 +100,7 @@ markdownEditor/
 │   ├── offline.ts            # 오프라인 상태 배지
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
 │   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
+│   ├── lineNumbers.ts        # 줄 번호
 │   ├── highlight.ts          # 코드 하이라이팅 토크나이저 (순수)
 │   ├── shareId.ts            # 공유 ID·검증 (순수, Worker 공유)
 │   ├── share.ts              # 공유 클라이언트
@@ -150,7 +152,8 @@ markdownEditor/
 │       ├── recent.spec.ts    # 최근 파일
 │       ├── clipboard.spec.ts # 클립보드 복사
 │       ├── share.spec.ts     # 공유 링크
-│       └── highlight.spec.ts # 코드 하이라이팅
+│       ├── highlight.spec.ts # 코드 하이라이팅
+│       └── linenumbers.spec.ts # 줄 번호
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트

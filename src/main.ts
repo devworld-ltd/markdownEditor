@@ -26,6 +26,8 @@ import {
 import { initNotice, showNotice } from "./notice";
 import {
   isStorageAvailable,
+  loadLineNumbers,
+  saveLineNumbers,
   loadRecentFilesRaw,
   saveRecentFiles,
   loadEditorPrefs,
@@ -44,6 +46,7 @@ import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
+import { initLineNumbers } from "./lineNumbers";
 import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
@@ -76,6 +79,7 @@ const searchReplaceOneEl = document.querySelector<HTMLElement>("#search-replace-
 const searchReplaceAllEl = document.querySelector<HTMLElement>("#search-replace-all");
 const editorContainerEl = document.querySelector<HTMLElement>(".editor-container");
 const splitResizerEl = document.querySelector<HTMLElement>("#split-resizer");
+const editorPaneEl = document.querySelector<HTMLElement>("#editor-pane");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -111,6 +115,30 @@ if (editorEl && previewEl) {
         })
       : null;
 
+  // F-24: **createEditor() 보다 먼저** 초기화해야 한다. onAfterRender 콜백이
+  // lineNumbers 를 참조하는데, createEditor 가 최초 렌더를 동기적으로 수행하므로
+  // 뒤에 두면 "Cannot access 'lineNumbers' before initialization" 이 난다
+  // (실제로 그랬다 — 화면은 뜨지만 콘솔에 오류가 남는다).
+  // F-24 줄 번호. 설정 다이얼로그(F-35) 안에 함께 둔다 — 편집 화면에 관한
+  // 설정이 두 곳으로 흩어지면 사용자가 어디를 봐야 할지 모른다.
+  const lineGutterEl = document.querySelector<HTMLElement>("#line-gutter");
+  const lineNumbers = lineGutterEl
+    ? initLineNumbers({
+        gutterEl: lineGutterEl,
+        editorEl,
+        loadEnabled: loadLineNumbers,
+        saveEnabled: saveLineNumbers,
+      })
+    : null;
+
+  const lineNumbersCheckEl = document.querySelector<HTMLInputElement>("#setting-line-numbers");
+  if (lineNumbersCheckEl && lineNumbers) {
+    lineNumbersCheckEl.checked = lineNumbers.isEnabled();
+    lineNumbersCheckEl.addEventListener("change", () => {
+      lineNumbers.setEnabled(lineNumbersCheckEl.checked);
+    });
+  }
+
   createEditor({
     editorEl,
     previewEl,
@@ -118,6 +146,8 @@ if (editorEl && previewEl) {
       scrollSync.reapplyAfterRender();
       // 본문이 바뀌면 일치 위치도 바뀐다. 열려 있을 때만 다시 계산한다.
       search?.refresh();
+      // F-24: 줄 수·줄바꿈이 바뀌면 번호 칸 높이를 다시 잰다.
+      lineNumbers?.refresh();
     },
   });
 
@@ -130,11 +160,13 @@ if (editorEl && previewEl) {
 
   // F-32: F-25 억제 훅을 붙이지 않는다 — 실측 결과 있으나 없으나 드래그 후
   // 두 패널의 비율 차이가 0 이었다(splitter.ts §2 참고).
-  if (editorContainerEl && splitResizerEl) {
+  if (editorContainerEl && splitResizerEl && editorPaneEl) {
     initSplitter({
       containerEl: editorContainerEl,
       resizerEl: splitResizerEl,
-      firstPaneEl: editorEl,
+      // F-24 이후 비율은 줄 번호를 포함한 .editor-pane 이 받는다 — #editor 를
+      // 직접 조절하면 번호 칸 폭만큼 비율이 어긋난다.
+      firstPaneEl: editorPaneEl,
       loadRatio: () => loadSplitRatio() ?? 0.5,
       saveRatio: saveSplitRatio,
     });
@@ -209,7 +241,11 @@ if (editorEl && previewEl) {
           resetEl: settingsResetEl,
           closeEl: settingsCloseEl,
           loadPrefs: loadEditorPrefs,
-          savePrefs: saveEditorPrefs,
+          savePrefs: (prefs) => {
+            saveEditorPrefs(prefs);
+            // F-24: 글자 크기·글꼴이 바뀌면 줄 높이가 달라진다 — 번호를 다시 잰다.
+            lineNumbers?.refresh();
+          },
           returnFocusTo: editorEl,
         })
       : null;

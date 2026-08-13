@@ -24,7 +24,9 @@ async function printVisibility(page: import("@playwright/test").Page, selectors:
     const out: Record<string, boolean> = {};
     for (const sel of list) {
       const el = document.querySelector(sel);
-      out[sel] = !!el && getComputedStyle(el).display !== "none";
+      // display 만 보면 **부모가 숨겨진 경우**를 놓친다. getClientRects() 는
+      // 조상까지 반영하므로 "실제로 그려지는가" 를 그대로 답한다.
+      out[sel] = !!el && el.getClientRects().length > 0;
     }
     return out;
   }, selectors);
