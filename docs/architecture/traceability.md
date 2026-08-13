@@ -42,6 +42,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-32 | 분할 비율 조절 | 드래그 · 화살표 | `splitLayout.ts` → `splitter.ts` | `ratio` (localStorage) | `setPointerCapture` | `splitter.spec.ts` |
 | F-33 | 보기 모드 | 툴바 버튼 · `⌥M` | `viewMode.ts` → `data-mode` | `mode` (localStorage) | — | `viewmode.spec.ts` |
 | F-38 | HTML 내보내기 | 툴바 버튼 | `preview.innerHTML` → `htmlExport.ts` → `fileOps.exportFile()` | — | `showSaveFilePicker` \| Blob | `htmlexport.spec.ts` |
+| F-39 | 인쇄 / PDF | 툴바 버튼 · `⌘/Ctrl+P`(브라우저) | `@media print` | — | `window.print()` | `print.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -144,6 +145,7 @@ graph LR
 | `tests/e2e/viewmode.spec.ts` | 12 | F-33 |
 | `tests/htmlExport.test.ts` | 18 | F-38 |
 | `tests/e2e/htmlexport.spec.ts` | 7 | F-38 |
+| `tests/e2e/print.spec.ts` | 9 | F-39 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
@@ -166,6 +168,7 @@ graph LR
 | `tsconfig.json` · `package.json` build | [인프라 §3.3](./infrastructure.md) |
 | `src/fileOps.ts` (파일 I/O 분기) | [API 명세 §2·§3](../api/browser-apis.md), [서비스 아키텍처 §5.3](./service-architecture.md) |
 | `public/icon.svg` · `scripts/gen-icons.mjs` | [인프라 §3.9](./infrastructure.md), `tests/e2e/icons.spec.ts` — SVG 를 바꾸면 `npm run icons` 재실행 필수 |
+| `src/style.css` `@media print` | [서비스 아키텍처 §7.4](./service-architecture.md), `tests/e2e/print.spec.ts` — 보기 모드·다크 모드와의 상호작용을 함께 확인 |
 | `src/style.css` (색 토큰) | [서비스 아키텍처 §7.4](./service-architecture.md) — 다크 대응 토큰을 함께 정의해야 한다 |
 | `src/toolbar.ts` (버튼 증감) | [기능 현황](../features/feature-status.md), `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
 | `src/textEdit.ts` (감싸기·줄머리·블록 삽입 계산) | `tests/textEdit.test.ts`, `tests/e2e/toolbar.spec.ts` (동작 회귀 게이트) |

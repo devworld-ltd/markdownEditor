@@ -8,8 +8,8 @@
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
 | 단위 | Vitest 4.1.10 (jsdom) | **349** | 0 | 0 | 349 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **174** | **0** | 15 ※ | 189 |
-| **합계 (dev 기준)** | | **523** | **0** | 15 | 538 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **183** | **0** | 15 ※ | 198 |
+| **합계 (dev 기준)** | | **532** | **0** | 15 | 547 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -62,6 +62,7 @@
 | `splitter.spec.ts` | 10 | ✅ F-32 분할 비율 — 드래그·키보드·세션 복원·손상 저장값 |
 | `viewmode.spec.ts` | 12 | ✅ F-33 보기 모드 — 순환·복원·F-25 무동작·설정 병합 |
 | `htmlexport.spec.ts` | 7 | ✅ F-38 HTML 내보내기 — 실제 기록되는 바이트·탭 무영향·폴백 |
+| `print.spec.ts` | 9 | ✅ F-39 인쇄 — `emulateMedia("print")` 로 실제 인쇄 스타일 검증 |
 
 ### 2.1 URL 응답 (15)
 
