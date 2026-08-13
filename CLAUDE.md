@@ -55,6 +55,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`tabOrder.ts`** — 탭 재정렬 인덱스 계산만 담당하는 순수 리프(F-34).
 - **`htmlExport.ts`** — HTML 내보내기 조립(F-38). 순수 모듈. **마크다운을 파싱하지 않는다** — 정화된 HTML 을 받아 감싸기만 한다.
 - **`viewMode.ts`** — 보기 모드(F-33). 주입형 리프. **버튼 클릭은 듣지 않는다** — 툴바가 이미 다루므로 중복하면 한 번 눌러 두 단계 넘어간다.
 - **`splitLayout.ts`** — 분할 비율 계산만 담당하는 순수 리프(F-32).
@@ -105,7 +106,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 35. **`Cmd/Ctrl+P` 는 가로채지 않는다.** 브라우저 인쇄가 곧 원하는 동작이라 가로채면 대화상자 취소·미리보기만 잃는다. PDF 라이브러리도 넣지 말 것 — "PDF 로 저장" 은 인쇄 대화상자 안에 이미 있다. **인쇄 스타일은 `#preview` 를 `!important` 로 되살려야 한다** — 편집 전용 모드(F-33)에서 인쇄하면 빈 종이가 나온다.
 36. **자동 접근성 점검(axe) 통과가 "쓸 수 있다" 를 뜻하지 않는다.** 이 저장소의 탭은 axe 를 통과하면서도 **키보드로 전환이 불가능**했다(`<div>` + 클릭 핸들러). 새 UI 를 추가하면 `a11y.spec.ts` 의 상태 목록에 넣고, **키보드 도달·포커스 가시성·상태 전달**은 별도 시나리오로 확인하라.
 37. **색을 토큰화할 때 링크를 빠뜨리지 말 것.** F-57 이 표면·본문은 토큰화했지만 링크를 놓쳐, 다크에서 UA 기본 `#0000ee` 가 대비 **1.37:1** 로 떨어졌다. `:visited` 도 함께 지정해야 한다 — UA 는 방문한 링크에 다른 색을 쓴다.
-38. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+38. **`dragover` 에서 `preventDefault()` 를 빼지 말 것.** 브라우저가 "놓을 수 없음" 으로 판정해 `drop` 이 **아예 발생하지 않는다**. 합성 `DragEvent` 로는 이 결과가 재현되지 않으므로, 테스트는 `dragover` 가 **취소됐는지 자체**를 단언한다.
+39. **탭 순서는 `Map` 의 삽입 순서다.** 재정렬은 비우고 다시 넣는 것이고, 세션 영속화가 그 순서를 그대로 쓴다. 재구성 중 하나라도 빠지면 **원본으로 되돌린다** — 탭이 사라지는 것보다 순서가 그대로인 편이 낫다.
+40. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
