@@ -8,6 +8,11 @@ import {
   type PersistedTab,
 } from "./storage";
 import { showNotice } from "./notice";
+import {
+  reclaimMessage,
+  restoredEmptyMessage,
+  saveWithReclaim,
+} from "./sessionReclaim";
 
 export const APP_NAME = "Markdown Editor";
 export const UNTITLED = "Untitled";
@@ -118,6 +123,14 @@ function restoreSession(): boolean {
   // ID 충돌을 피하려면 시퀀스를 복원된 최대값 뒤로 밀어야 한다.
   nextId = maxSeq + 1;
   switchTab(restoredActiveId || [...tabs.keys()][0]);
+
+  // F-54 잔여: 용량 때문에 사본을 비운 탭은 빈 채로 돌아온다. 말하지 않으면
+  // 사용자는 문서가 사라진 줄 안다.
+  const emptied = session.tabs.filter((t) => t.reclaimed).map((t) => t.fileName);
+  if (emptied.length > 0) {
+    showNotice(restoredEmptyMessage(emptied), "info", 10000);
+  }
+
   return true;
 }
 
@@ -442,7 +455,17 @@ export function persistNow(): boolean {
     isDirty: tab.isDirty,
   }));
 
-  const saved = saveSession(createSession(persisted, activeTabId));
+  // F-54 잔여: 그냥 실패로 두면 자동 저장이 멈춘 채 유지된다. 다시 열 수 있는
+  // 탭(깨끗하고·활성 아니고·파일 이름이 있는)의 **저장된 사본만** 비우고
+  // 재시도한다. 규칙과 근거는 `sessionReclaim.ts` 에 있다.
+  const { saved, reclaimed } = saveWithReclaim(
+    createSession(persisted, activeTabId),
+    saveSession,
+  );
+
+  if (reclaimed.length > 0) {
+    showNotice(reclaimMessage(reclaimed), "info", 10000);
+  }
 
   // 자동 저장이 조용히 실패하면 사용자는 보호받고 있다고 잘못 믿게 된다.
   // 저장소 자체를 못 쓰는 경우는 기동 시 main.ts 가 이미 안내하므로,

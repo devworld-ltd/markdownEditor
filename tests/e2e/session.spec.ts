@@ -94,3 +94,74 @@ test("손상된 세션 데이터는 무시하고 정상 기동한다", async ({ 
   await expect(page.locator("#editor")).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+/**
+ * F-54 잔여 — 용량 초과 시 회수 (이슈 #84).
+ *
+ * 실제 5MB 한도를 채우면 테스트가 느리고 브라우저마다 다르므로, 세션 키 저장에만
+ * 크기 상한을 씌워 QuotaExceededError 를 재현한다.
+ */
+async function capSessionStorage(
+  page: import("@playwright/test").Page,
+  limit: number,
+  seed?: unknown,
+) {
+  await page.addInitScript(
+    ({ limit, seed }) => {
+      const proto = Object.getPrototypeOf(window.localStorage) as Storage;
+      const original = proto.setItem;
+      // 세션 심기는 문서 시작 시점에 해야 한다. 나중에 심고 reload 하면 이전
+      // 페이지의 beforeunload 저장이 그 위를 덮어써 복원할 것이 사라진다.
+      if (seed) original.call(window.localStorage, "markdown-editor:session:v1", JSON.stringify(seed));
+      proto.setItem = function (key: string, value: string) {
+        if (key.startsWith("markdown-editor:session") && value.length > limit) {
+          throw new DOMException("quota", "QuotaExceededError");
+        }
+        return original.call(this, key, value);
+      };
+    },
+    { limit, seed },
+  );
+}
+
+test("SR1: 공간이 부족하면 다시 열 수 있는 탭을 회수하고 자동 저장을 이어간다", async ({
+  page,
+}) => {
+  await capSessionStorage(page, 600, {
+    version: 1,
+    activeTabId: "tab-2",
+    tabs: [
+      { id: "tab-1", fileName: "큰.md", content: "x".repeat(800), isDirty: false },
+      { id: "tab-2", fileName: "Untitled", content: "", isDirty: false },
+    ],
+  });
+  await page.goto("/");
+  await expect(page.locator("#tab-bar .tab")).toHaveCount(2);
+
+  // 편집하면 자동 저장이 돌고, 그 저장은 회수를 거쳐 성공해야 한다.
+  await page.locator("#editor").fill("새 글");
+  await expect(page.locator("#notice")).toContainText("큰.md");
+  await expect(page.locator("#notice")).toContainText("편집 중인 내용은 그대로");
+
+  const stored = await page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem("markdown-editor:session:v1")!) as {
+        tabs: Array<{ fileName: string; content: string }>;
+      },
+  );
+  expect(stored.tabs.find((t) => t.fileName === "큰.md")!.content).toBe("");
+  // 편집 중인 탭의 내용은 저장돼야 한다 — 그러려고 회수한 것이다.
+  expect(stored.tabs.find((t) => t.fileName === "Untitled")!.content).toBe("새 글");
+
+  // 탭은 닫히지 않는다 — 사용자가 열어 둔 것이다.
+  await expect(page.locator("#tab-bar .tab")).toHaveCount(2);
+});
+
+test("SR2: 회수해도 안 되면 기존 실패 알림이 뜬다", async ({ page }) => {
+  await capSessionStorage(page, 50);
+  await page.goto("/");
+  await expect(page.locator("#editor")).toBeVisible();
+
+  await page.locator("#editor").fill("x".repeat(200));
+  await expect(page.locator("#notice")).toContainText("저장 공간이 부족");
+});

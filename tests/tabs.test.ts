@@ -550,7 +550,11 @@ describe("hasDirtyTabs / getActiveContent", () => {
 });
 
 describe("용량 초과 알림", () => {
-  function stubQuotaExceeded() {
+  /**
+   * `limit` 을 주면 **세션 payload 가 그보다 클 때만** 실패한다 — 회수(F-54 잔여)로
+   * 공간을 벌면 성공하는, 실제 QuotaExceededError 와 같은 모양이 된다.
+   */
+  function stubQuotaExceeded(limit?: number) {
     const originalDescriptor = Object.getOwnPropertyDescriptor(window, "localStorage");
     const backing = new Map<string, string>();
     let fail = true;
@@ -566,7 +570,8 @@ describe("용량 초과 알림", () => {
         key: (i: number) => [...backing.keys()][i] ?? null,
         removeItem: (k: string) => backing.delete(k),
         setItem: (k: string, v: string) => {
-          if (fail && k.startsWith("markdown-editor:session")) {
+          const tooBig = limit === undefined || v.length > limit;
+          if (fail && tooBig && k.startsWith("markdown-editor:session")) {
             throw new DOMException("quota", "QuotaExceededError");
           }
           backing.set(k, v);
@@ -619,6 +624,87 @@ describe("용량 초과 알림", () => {
       dom.notice.hidden = true;
       expect(tabs.persistNow()).toBe(false);
       expect(dom.notice.hidden).toBe(false);
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it("공간이 부족하면 다시 열 수 있는 탭의 사본을 비우고 저장에 성공한다 (F-54 잔여)", async () => {
+    const stub = stubQuotaExceeded(400);
+    try {
+      const tabs = await loadTabs();
+      const { initNotice } = await import("../src/notice");
+      const dom = createDom();
+      initNotice(dom.notice);
+      tabs.initTabs(dom.tabBar, dom.editor, dom.preview, dom.title);
+
+      // 깨끗하고 이름이 있는 큰 탭 — 회수 대상
+      tabs.createTab("x".repeat(500), null, "큰.md");
+      // 활성 탭은 건드리면 안 된다
+      tabs.createTab("작업 중", null, "활성.md");
+
+      expect(tabs.persistNow()).toBe(true);
+      expect(dom.notice.textContent).toContain("큰.md");
+      expect(dom.notice.textContent).toContain("편집 중인 내용은 그대로");
+
+      const stored = JSON.parse(
+        window.localStorage.getItem("markdown-editor:session:v1")!,
+      ) as { tabs: Array<{ fileName: string; content: string; reclaimed?: boolean }> };
+
+      const big = stored.tabs.find((t) => t.fileName === "큰.md")!;
+      expect(big.content).toBe("");
+      expect(big.reclaimed).toBe(true);
+      // 활성 탭은 그대로다.
+      expect(stored.tabs.find((t) => t.fileName === "활성.md")!.content).toBe("작업 중");
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it("더티 탭의 내용은 절대 버리지 않는다 — 그럴 바에는 저장 실패로 남긴다", async () => {
+    const stub = stubQuotaExceeded(200);
+    try {
+      const tabs = await loadTabs();
+      const { initNotice } = await import("../src/notice");
+      const dom = createDom();
+      initNotice(dom.notice);
+      tabs.initTabs(dom.tabBar, dom.editor, dom.preview, dom.title);
+
+      tabs.createTab("x".repeat(500), null, "미저장.md");
+      tabs.markActiveTabDirty();
+      tabs.createTab("", null, "활성.md");
+
+      expect(tabs.persistNow()).toBe(false);
+      expect(dom.notice.textContent).toContain("저장 공간이 부족");
+      // 회수 안내가 아니라 기존 실패 안내가 떠야 한다.
+      expect(dom.notice.textContent).not.toContain("임시 사본을 비웠습니다");
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it("회수된 탭을 복원하면 왜 비었는지 알린다", async () => {
+    const stub = stubQuotaExceeded(400);
+    try {
+      const tabs = await loadTabs();
+      const { initNotice } = await import("../src/notice");
+      const dom = createDom();
+      initNotice(dom.notice);
+      tabs.initTabs(dom.tabBar, dom.editor, dom.preview, dom.title);
+
+      tabs.createTab("x".repeat(500), null, "큰.md");
+      tabs.createTab("작업 중", null, "활성.md");
+      expect(tabs.persistNow()).toBe(true);
+
+      // 새 모듈 인스턴스로 다시 띄우면 저장된 세션을 복원한다.
+      const reloaded = await loadTabs();
+      const { initNotice: initNotice2 } = await import("../src/notice");
+      const dom2 = createDom();
+      initNotice2(dom2.notice);
+      reloaded.initTabs(dom2.tabBar, dom2.editor, dom2.preview, dom2.title);
+
+      expect(dom2.notice.textContent).toContain("큰.md");
+      expect(dom2.notice.textContent).toContain("다시 열어주세요");
     } finally {
       stub.restore();
     }

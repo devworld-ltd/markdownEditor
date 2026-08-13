@@ -142,8 +142,11 @@ interface PersistedTab {
   fileName: string;
   content: string;
   isDirty: boolean;
+  reclaimed?: boolean;      // 용량 부족으로 사본을 비웠음 (F-54 잔여)
 }
 ```
+
+`reclaimed` 는 **선택 필드**다. 스키마 버전을 올리면 기존 세션이 통째로 폐기되므로(F-55), 편의 기능 하나를 위해 사용자 문서를 잃을 수는 없다. 예전 세션에는 이 필드가 없고 `undefined` 로 읽힌다.
 
 **의도적으로 저장하지 않는 것**
 
@@ -157,6 +160,7 @@ interface PersistedTab {
 | 상황 | 동작 |
 |------|------|
 | localStorage 접근 자체가 throw (시크릿 모드·정책 차단) | `isStorageAvailable()` false → 자동 저장 비활성 + 사용자 알림 |
+| 용량 초과 (F-54 잔여) | 다시 열 수 있는 탭의 **사본만** 비우고 재시도 → 성공하면 안내, 다 비워도 실패하면 원본 유지 + 기존 알림 (`sessionReclaim.ts`) |
 | JSON 파싱 실패 | `null` 반환 → 빈 Untitled 탭으로 기동 |
 | `version` 불일치 | `null` 반환 |
 | 개별 탭 항목의 형식 오류 | 해당 항목만 버리고 나머지 복원 |

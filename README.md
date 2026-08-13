@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **696건** + E2E 329건 (전부 통과) |
+| 테스트 | 단위 **718건** + E2E 331건 (전부 통과) |
 | 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -106,6 +106,7 @@ markdownEditor/
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
 │   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
 │   ├── dropFiles.ts          # 드롭 파일 분류 (순수)
+│   ├── sessionReclaim.ts     # 용량 초과 회수 규칙 (순수)
 │   ├── tableFormat.ts        # 표 폭·파싱·정렬 (순수)
 │   ├── tableUi.ts            # 표 대화상자
 │   ├── docStats.ts           # 문서 통계 계산 (순수)
