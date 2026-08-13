@@ -80,6 +80,7 @@
 | F-24 | 줄 번호 표시 (줄바꿈 정렬 포함) | `src/lineNumbers.ts` | 단위 14 + E2E 10 |
 | F-26 | 리스트 자동 이어쓰기 | `src/editorKeys.ts`, `src/editorBehavior.ts` | 단위 36 + E2E 15 |
 | F-27 | Tab 들여쓰기 / Shift+Tab 내어쓰기 | `src/editorKeys.ts`, `src/editorBehavior.ts` | 단위 36 + E2E 15 |
+| F-28 | 이미지 드래그앤드롭·붙여넣기 (R2) | `src/imageUpload.ts`, `src/editorDrop.ts`, `worker/index.ts` | 단위 38 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -105,7 +106,6 @@
 | ID | 기능 |
 |----|------|
 | F-23 잔여 | **편집 영역** 하이라이팅 (오버레이 필요 — F-22·F-25·F-35·F-59 재검증 동반) |
-| F-28 | 이미지 드래그앤드롭 · 붙여넣기 |
 | F-29 | 문서 통계 (단어·문자·읽기 시간) |
 | F-30 | 표 편집 보조 |
 | F-56 | 마크다운 파일 드래그앤드롭으로 열기 |

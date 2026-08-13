@@ -20,7 +20,7 @@
     // 다루지 않아 통과했기 때문에 절반만 동작했다).
     //
     // 이 두 경로만 Worker 를 먼저 태운다.
-    "run_worker_first": ["/api/*", "/s/*"]
+    "run_worker_first": ["/api/*", "/s/*", "/i/*"]
   },
 
   "env": {
@@ -30,7 +30,7 @@
         "directory": "./dist",
         "binding": "ASSETS",
         "not_found_handling": "single-page-application",
-        "run_worker_first": ["/api/*", "/s/*"]
+        "run_worker_first": ["/api/*", "/s/*", "/i/*"]
       },
       "r2_buckets": [
         { "binding": "SHARES", "bucket_name": "md-editor-shares-dev" }
@@ -59,7 +59,7 @@
         "directory": "./dist",
         "binding": "ASSETS",
         "not_found_handling": "single-page-application",
-        "run_worker_first": ["/api/*", "/s/*"]
+        "run_worker_first": ["/api/*", "/s/*", "/i/*"]
       },
       "r2_buckets": [
         { "binding": "SHARES", "bucket_name": "md-editor-shares" }

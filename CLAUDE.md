@@ -58,6 +58,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`imageUpload.ts`** — 이미지 형식·크기·키 검증(F-28). 순수. **Worker 와 브라우저가 함께 쓴다.**
+- **`editorDrop.ts`** — 드롭·붙여넣기(F-28). 주입형 리프. **드롭 처리는 여기 한 곳뿐이다.**
 - **`editorKeys.ts`** — 목록 이어쓰기·들여쓰기 **계산만** 담당하는 순수 리프(F-26·F-27).
 - **`editorBehavior.ts`** — 편집 키 배선(F-26·F-27). 주입형 리프.
 - **`lineNumbers.ts`** — 줄 번호(F-24). 주입형 리프. **줄별 표시 높이를 재서** 칸 높이를 잡는다 — 균등 간격은 줄바꿈에서 곧바로 어긋난다.
@@ -137,7 +139,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 51. **Tab 을 무조건 가로채지 말 것.** 키보드 사용자가 편집 영역에 **갇힌다**(F-59). `Esc` 뒤의 **첫 Tab 한 번**은 포커스 이동으로 돌려준다 — 영구히 끄면 다시 켜는 방법을 사용자가 알 수 없다.
 52. **목록 이어쓰기는 빈 항목에서 표식을 지워야 한다.** 계속 이어 쓰기만 하면 사용자가 목록을 빠져나갈 방법이 없다 — 편의 기능이 오히려 가둔다.
 53. **조합 입력(IME) 중에는 Enter 를 가로채지 말 것.** 한글·일본어 조합에서 Enter 는 글자를 확정하는 키다. `isComposing` 과 `keyCode === 229` 둘 다 확인한다.
-54. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+54. **SVG 업로드를 허용하지 말 것.** SVG 는 스크립트를 담을 수 있는 **문서**다. 우리 오리진 URL 을 갖게 되면 사용자가 직접 열었을 때 **우리 오리진에서 스크립트가 실행되고**, 공유 링크(F-60)와 합쳐지면 문서가 털린다. 헤더로 막을 수도 있지만 헤더 하나가 빠지면 조용히 뚫린다 — 래스터만 받으면 그 경로가 아예 없다.
+55. **드롭 처리는 `editorDrop.ts` 한 곳에서만.** 두 곳에서 `drop` 을 들으면 서로를 가려 어느 쪽이 이길지 예측할 수 없다. F-56 은 `handleOtherFiles` 로 연결된다. 그리고 `dragover` 에서 `preventDefault` 를 빼면 브라우저가 파일을 그냥 열어 **편집 중인 문서가 통째로 사라진다.**
+56. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
