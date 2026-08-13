@@ -43,6 +43,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-33 | 보기 모드 | 툴바 버튼 · `⌥M` | `viewMode.ts` → `data-mode` | `mode` (localStorage) | — | `viewmode.spec.ts` |
 | F-38 | HTML 내보내기 | 툴바 버튼 | `preview.innerHTML` → `htmlExport.ts` → `fileOps.exportFile()` | — | `showSaveFilePicker` \| Blob | `htmlexport.spec.ts` |
 | F-39 | 인쇄 / PDF | 툴바 버튼 · `⌘/Ctrl+P`(브라우저) | `@media print` | — | `window.print()` | `print.spec.ts` |
+| F-59 | 접근성 | 전 UI | `index.html` 랜드마크 · `tabs.ts` 버튼화 · `style.css` 포커스 | — | — | `a11y.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -146,6 +147,7 @@ graph LR
 | `tests/htmlExport.test.ts` | 18 | F-38 |
 | `tests/e2e/htmlexport.spec.ts` | 7 | F-38 |
 | `tests/e2e/print.spec.ts` | 9 | F-39 |
+| `tests/e2e/a11y.spec.ts` | 18 | F-59 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
@@ -176,6 +178,7 @@ graph LR
 | `src/shortcuts.ts` | [API 명세 §5](../api/browser-apis.md#5-키보드-단축키), [사용자 시나리오](../user-scenarios.md), README 단축키 표 |
 | `src/notice.ts` | [API 명세](../api/browser-apis.md), `fileaccess.spec.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | [인프라 아키텍처](./infrastructure.md), [CF Workers 구성](../operations/cloudflare-workers.md) |
+| 새 인터랙티브 UI 추가 | `tests/e2e/a11y.spec.ts` 의 상태 목록에 추가 — 상태 조합마다 axe 를 돌려야 의미가 있다 |
 | `index.html` (DOM id) | 전 E2E 셀렉터, [서비스 아키텍처 §4](./service-architecture.md) |
 | `package.json` scripts | [인프라 §5](./infrastructure.md), README, [테스트 계획](../testing/test-plan.md) |
 | 새 의존성 추가 | [인프라 §5](./infrastructure.md), README 기술 스택 표 |

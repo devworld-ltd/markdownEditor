@@ -270,14 +270,22 @@ function renderTabs(): void {
     el.className = `tab${tab.id === activeTabId ? " active" : ""}`;
     el.dataset.tabId = tab.id;
 
-    const nameSpan = document.createElement("span");
+    // F-59: 예전에는 <span> 이라 클릭으로만 전환할 수 있었다 — 키보드 사용자는
+    // 탭을 아예 바꿀 수 없었다. 실제 <button> 으로 만들면 포커스·Enter·Space 가
+    // 브라우저에서 그냥 따라온다(ARIA 로 흉내내지 않는다).
+    const nameSpan = document.createElement("button");
+    nameSpan.type = "button";
     nameSpan.className = "tab-name";
     nameSpan.textContent = tab.isDirty ? `${tab.fileName} *` : tab.fileName;
+    if (tab.id === activeTabId) nameSpan.setAttribute("aria-current", "true");
     el.appendChild(nameSpan);
 
     const closeBtn = document.createElement("button");
     closeBtn.className = "tab-close";
+    closeBtn.type = "button";
     closeBtn.title = "탭 닫기";
+    // 아이콘(×)만으로는 스크린리더가 어느 탭을 닫는지 알 수 없다.
+    closeBtn.setAttribute("aria-label", `${tab.fileName} 탭 닫기`);
     closeBtn.textContent = "×";
     closeBtn.addEventListener("click", (e) => {
       e.stopPropagation();

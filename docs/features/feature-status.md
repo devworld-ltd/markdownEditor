@@ -69,6 +69,7 @@
 | F-33 | 분할 / 편집 전용 / 미리보기 전용 모드 | `src/viewMode.ts` | 단위 13 + E2E 12 |
 | F-38 | HTML 내보내기 (독립 실행 파일) | `src/htmlExport.ts`, `fileOps.exportFile()` | 단위 18 + E2E 7 |
 | F-39 | 인쇄 / PDF (인쇄 전용 스타일) | `src/style.css` `@media print` | E2E 9 |
+| F-59 | 접근성 정밀 점검 (axe + 수동 시나리오) | `index.html`, `src/tabs.ts`, `src/style.css` | E2E 18 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -109,7 +110,6 @@
 | F-34 | 탭 드래그 재정렬 |
 | F-35 | 폰트·테마 설정 |
 | F-36 | 최근 파일 목록 |
-| F-59 | 접근성 정밀 점검 (키보드 내비게이션·스크린리더) |
 
 ### 4.4 내보내기 / 공유
 

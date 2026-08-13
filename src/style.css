@@ -20,6 +20,9 @@
   /* 프리뷰 내부 요소 — F-72 이전에는 하드코딩이라 다크에서 흰 덩어리로 남았을 값들 */
   --code-bg: #f4f4f4;
   --rule-subtle: #dddddd; /* 표 테두리·인용 막대 */
+  /* 링크 — 정하지 않으면 UA 기본 #0000ee 가 쓰이고, 다크 표면 위에서 대비가
+     1.37:1 로 떨어져 사실상 읽을 수 없다(F-59 자동 점검이 잡아냈다). */
+  --link: #0b62c4;
 }
 
 * {
@@ -140,8 +143,16 @@ body {
   border-bottom: 2px solid #007acc;
 }
 
+/* button 이 되었으므로(F-59 키보드 도달) UA 기본 모양을 지운다.
+   pointer-events: none 이던 것을 되살리면 클릭이 .tab 으로 위임되지 않고
+   버튼이 직접 받는다 — 동작은 같고 키보드 경로만 늘어난다. */
 .tab-name {
-  pointer-events: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 .tab-close {
@@ -258,6 +269,12 @@ body {
 
 #preview img {
   max-width: 100%;
+}
+
+/* :visited 까지 지정해야 한다 — UA 는 방문한 링크에 다른 색(보라)을 쓴다. */
+#preview a,
+#preview a:visited {
+  color: var(--link);
 }
 
 /*
@@ -645,6 +662,28 @@ body {
   }
 }
 
+/*
+ * F-59 포커스 표시.
+ *
+ * 툴바 버튼 20개와 탭에는 포커스 스타일이 없었다. UA 기본 링이 어두운 툴바
+ * 위에서는 거의 보이지 않아, 키보드로 이동할 때 지금 어디에 있는지 알 수 없다.
+ * `:focus-visible` 만 쓰므로 마우스 클릭에는 나타나지 않는다.
+ */
+.toolbar-btn:focus-visible,
+.tab-name:focus-visible,
+.tab-close:focus-visible {
+  outline: 2px solid #4daafc;
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* 편집·미리보기 영역은 밝은 배면이라 파란 링이 잘 보인다. */
+#editor:focus-visible,
+#preview:focus-visible {
+  outline: 2px solid #007acc;
+  outline-offset: -2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toolbar-btn {
     transition: none;
@@ -680,6 +719,8 @@ body {
        밝은 쪽으로 올리면 코드블록이 페이지에서 튀어나와 읽는 흐름을 끊는다. */
     --code-bg: #232326;
     --rule-subtle: #4a4a4e;
+    /* 프리뷰 표면(#313134) 위 6.3:1 — AA 통과 */
+    --link: #7fb8ff;
   }
 }
 
