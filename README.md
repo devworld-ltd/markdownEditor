@@ -8,8 +8,8 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **261건** + E2E 151건 (전부 통과) |
-| 기능 커버리지 | 35/38 자동 검증 · 라인 커버리지 **77.33%** |
+| 테스트 | 단위 **349건** + E2E 216건 (전부 통과) |
+| 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
 
@@ -34,7 +34,12 @@
 - **편집/프리뷰 영역 시각 구분 + 양방향 스크롤 동기화**
 - **다크 모드** (OS 설정 추종)
 - **단축키 안내** (툴바 버튼 또는 `Alt+/`)
-- **문서 내 검색** (`Cmd/Ctrl+F`)
+- **문서 내 검색 · 치환** (`Cmd/Ctrl+F`)
+- **분할 비율 조절** (드래그 또는 화살표 키)
+- **보기 모드** — 분할 / 편집 전용 / 미리보기 전용 (`Alt+M`)
+- **HTML 내보내기** — 스타일이 포함된 독립 실행 파일
+- **인쇄 / PDF** — 인쇄 전용 스타일 (`Cmd/Ctrl+P`)
+- **키보드 접근성** — 전 기능 키보드 도달, 스크린리더 지원
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
@@ -42,7 +47,7 @@
 - **세션 자동 저장·복원** (localStorage) + 미저장 이탈 경고 + 용량 초과 알림
 - **PWA** — 설치형 앱, 서비스 워커 기반 오프라인 지원, 새 버전 갱신 알림, **오프라인 상태 표시**
 - **CSP 및 보안 헤더** — `script-src 'self'`, `object-src 'none'` 등
-- 서식 툴바 12종 + 파일 4종, 키보드 단축키 (앱 내 안내 포함)
+- 서식 툴바 12종 + 파일 4종 + 보기·도움말 2종, 키보드 단축키 (앱 내 안내 포함)
 - 720px 이하 반응형 (상하 분할)
 
 ## 브라우저별 파일 기능
@@ -88,6 +93,10 @@ markdownEditor/
 │   ├── offline.ts            # 오프라인 상태 배지
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
 │   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
+│   ├── htmlExport.ts         # HTML 내보내기 조립 (순수)
+│   ├── viewMode.ts           # 보기 모드 (분할/편집/미리보기)
+│   ├── splitLayout.ts        # 분할 비율 계산 (순수)
+│   ├── splitter.ts           # 분할 리사이저
 │   ├── searchEngine.ts       # 검색 계산 (순수)
 │   ├── search.ts             # 문서 내 검색 UI
 │   ├── shortcutDefs.ts       # 단축키 단일 출처 (판별 + 표기)
@@ -115,7 +124,12 @@ markdownEditor/
 │       ├── darkmode.spec.ts  # 다크 모드
 │       ├── icons.spec.ts     # PWA 아이콘
 │       ├── shortcuthelp.spec.ts # 단축키 안내
-│       └── search.spec.ts    # 문서 내 검색
+│       ├── search.spec.ts    # 문서 내 검색
+│       ├── splitter.spec.ts  # 분할 비율 조절
+│       ├── viewmode.spec.ts  # 보기 모드
+│       ├── htmlexport.spec.ts # HTML 내보내기
+│       ├── print.spec.ts     # 인쇄 / PDF
+│       └── a11y.spec.ts      # 접근성 (axe + 키보드)
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
@@ -200,7 +214,9 @@ npm run healthcheck:prod
 | `Cmd/Ctrl + Shift + S` | 다른 이름으로 저장 |
 | `Alt + N` | 새 문서 |
 | `Alt + W` | 탭 닫기 |
-| `Cmd/Ctrl + F` | 문서 내 검색 |
+| `Cmd/Ctrl + F` | 문서 내 검색 · 치환 |
+| `Cmd/Ctrl + P` | 인쇄 / PDF (브라우저 기본) |
+| `Alt + M` | 분할 / 편집 전용 / 미리보기 전용 전환 |
 | `Alt + /` | 단축키 목록 열기 / 닫기 |
 
 `Cmd/Ctrl + N` 과 `Cmd/Ctrl + W` 는 브라우저가 선점해 사용할 수 없어 `Alt` 조합으로 대체했다.

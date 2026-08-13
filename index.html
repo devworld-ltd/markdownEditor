@@ -23,11 +23,11 @@
         <h1>Markdown Editor</h1>
         <div id="toolbar-actions" class="toolbar-actions"></div>
       </header>
-      <div id="tab-bar" class="tab-bar"></div>
+      <nav id="tab-bar" class="tab-bar" aria-label="열린 문서"></nav>
 
       <!-- F-22 문서 내 검색. 모달이 아니라 상단 바인 이유: 찾은 위치를 보면서
            이동해야 하므로 본문을 가리면 안 된다. -->
-      <div id="search-bar" class="search-bar" data-state="ok" hidden>
+      <div id="search-bar" class="search-bar" role="search" aria-label="문서에서 찾기" data-state="ok" hidden>
         <input
           type="text"
           id="search-input"
@@ -40,9 +40,34 @@
         <span id="search-count" class="search-count" role="status" aria-live="polite"></span>
         <button type="button" id="search-prev" class="search-btn" aria-label="이전 결과">&#8593;</button>
         <button type="button" id="search-next" class="search-btn" aria-label="다음 결과">&#8595;</button>
+        <button
+          type="button"
+          id="search-toggle-replace"
+          class="search-btn"
+          aria-label="치환 열기"
+          aria-expanded="false"
+          aria-controls="search-replace-row"
+        >
+          &#8644;
+        </button>
         <button type="button" id="search-close" class="search-btn" aria-label="검색 닫기">&times;</button>
       </div>
-      <main class="editor-container">
+
+      <!-- 치환은 찾기보다 훨씬 덜 쓰이므로 기본으로 접어 둔다(F-22 잔여). -->
+      <div id="search-replace-row" class="search-bar search-replace-row" role="search" aria-label="찾은 내용 바꾸기" hidden>
+        <input
+          type="text"
+          id="search-replace-input"
+          class="search-input"
+          placeholder="바꿀 내용"
+          aria-label="바꿀 내용"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="button" id="search-replace-one" class="search-text-btn">바꾸기</button>
+        <button type="button" id="search-replace-all" class="search-text-btn">모두 바꾸기</button>
+      </div>
+      <main class="editor-container" data-mode="split">
         <textarea
           id="editor"
           placeholder="마크다운을 입력하세요..."
@@ -51,7 +76,23 @@
           autocapitalize="off"
           aria-label="마크다운 편집기"
         ></textarea>
-        <div id="preview" aria-label="미리보기"></div>
+        <!-- F-32 분할 비율 조절. role="separator" + tabindex 로 키보드에서도
+             도달한다 — 드래그 전용이면 키보드 사용자에게는 없는 기능이다. -->
+        <div
+          id="split-resizer"
+          class="split-resizer"
+          role="separator"
+          tabindex="0"
+          aria-orientation="vertical"
+          aria-label="편집 영역과 미리보기 영역의 비율 조절"
+          aria-valuemin="15"
+          aria-valuemax="85"
+          aria-valuenow="50"
+        ></div>
+        <!-- role 없이 aria-label 은 금지된 조합(aria-prohibited-attr)이다.
+             tabindex="0" 은 별도 문제도 함께 고친다 — 그전에는 프리뷰를
+             키보드로 스크롤할 방법이 아예 없었다. -->
+        <div id="preview" role="region" aria-label="미리보기" tabindex="0"></div>
       </main>
       <!-- F-58: 단축키 안내. 네이티브 <dialog> 를 쓰면 포커스 트랩·Esc 닫기·
            백드롭·바깥 요소 inert 처리를 브라우저가 정확히 해 준다. -->

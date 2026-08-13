@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  caretAfterReplace,
   findMatches,
   formatCount,
   indexAtOrAfter,
   indexBefore,
   remapIndex,
+  replaceAll,
   stepIndex,
 } from "../src/searchEngine";
 
@@ -162,5 +164,54 @@ describe("formatCount", () => {
     // 0-기반 인덱스를 그대로 보여주면 "0/12" 가 되어 사람이 읽기 어렵다.
     expect(formatCount(12, 0, true)).toBe("1/12");
     expect(formatCount(12, 11, true)).toBe("12/12");
+  });
+});
+
+describe("replaceAll", () => {
+  it("모든 일치를 바꾼다", () => {
+    expect(replaceAll("바늘 A 바늘 B 바늘", "바늘", "실")).toBe("실 A 실 B 실");
+  });
+
+  it("대소문자를 구분하지 않고 찾되, 치환은 준 대로 넣는다", () => {
+    expect(replaceAll("Cat cat CAT", "cat", "dog")).toBe("dog dog dog");
+  });
+
+  it("치환 결과가 질의를 포함해도 무한 루프에 빠지지 않는다", () => {
+    // 부분 치환을 반복하는 구현은 여기서 끝나지 않는다 — 바꿀 때마다 새 일치가
+    // 생긴다. 일치 좌표를 먼저 전부 구해 두고 조립하면 원천적으로 안전하다.
+    expect(replaceAll("aaa", "a", "aa")).toBe("aaaaaa");
+    expect(replaceAll("x", "x", "xx")).toBe("xx");
+  });
+
+  it("빈 문자열로 바꾸면 지운다", () => {
+    expect(replaceAll("a-b-c", "-", "")).toBe("abc");
+  });
+
+  it("일치가 없으면 원문 그대로 (같은 참조여도 무방)", () => {
+    expect(replaceAll("건초", "바늘", "실")).toBe("건초");
+  });
+
+  it("빈 질의는 아무것도 바꾸지 않는다", () => {
+    expect(replaceAll("아무 텍스트", "", "X")).toBe("아무 텍스트");
+  });
+
+  it("정규식 메타문자를 리터럴로 바꾼다", () => {
+    expect(replaceAll("a.b.c", ".", "-")).toBe("a-b-c");
+    expect(replaceAll("**굵게**", "**", "__")).toBe("__굵게__");
+  });
+
+  it("겹침 없이 바꾼다", () => {
+    expect(replaceAll("aaaa", "aa", "b")).toBe("bb");
+  });
+});
+
+describe("caretAfterReplace", () => {
+  it("치환된 텍스트의 끝을 가리킨다", () => {
+    // 시작으로 두면 다음 "찾기" 가 방금 넣은 텍스트를 다시 잡아 제자리를 맴돈다.
+    expect(caretAfterReplace({ start: 10, end: 13 }, "abcde")).toBe(15);
+  });
+
+  it("빈 치환이면 시작 위치", () => {
+    expect(caretAfterReplace({ start: 10, end: 13 }, "")).toBe(10);
   });
 });

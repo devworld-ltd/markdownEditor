@@ -140,6 +140,10 @@ const url = URL.createObjectURL(blob);
 
 전역 리셋 `* { margin: 0 }` 이 UA 의 `dialog:modal { margin: auto }` 를 덮어쓰므로 `margin: auto` 를 되살려야 중앙에 온다.
 
+## 3.10 내보내기 저장 경로 (F-38)
+
+`exportFile()` 은 기존 저장과 같은 2경로 분기(FS Access API ↔ 다운로드 폴백)를 쓰되 **탭 상태를 갱신하지 않는다.** MIME 과 확장자만 인자로 받아 F-39 등 다른 형식에도 재사용된다.
+
 ## 4. 세션 저장 (`localStorage`)
 
 | 항목 | 값 |

@@ -5,6 +5,10 @@ import {
   isStorageAvailable,
   loadSession,
   saveSession,
+  loadSplitRatio,
+  saveSplitRatio,
+  loadViewMode,
+  saveViewMode,
 } from "../src/storage";
 
 const STORAGE_KEY = "markdown-editor:session:v1";
@@ -131,5 +135,58 @@ describe("storage", () => {
     saveSession(createSession([{ id: "tab-1", fileName: "a.md", content: "A", isDirty: false }], "tab-1"));
     clearSession();
     expect(loadSession()).toBeNull();
+  });
+});
+
+describe("분할 비율 영속화 (F-32)", () => {
+  it("저장한 값을 그대로 읽는다", () => {
+    saveSplitRatio(0.7);
+    expect(loadSplitRatio()).toBe(0.7);
+  });
+
+  it("저장된 적이 없으면 null — 호출부가 기본값을 정한다", () => {
+    localStorage.removeItem("markdown-editor:layout:v1");
+    expect(loadSplitRatio()).toBeNull();
+  });
+
+  it("JSON 이 깨져 있으면 null", () => {
+    localStorage.setItem("markdown-editor:layout:v1", "{not json");
+    expect(loadSplitRatio()).toBeNull();
+  });
+
+  it("파싱은 되지만 타입이 틀린 값도 null", () => {
+    // 이쪽이 더 위험하다 — 예외가 안 나므로 그대로 흘러가 레이아웃 계산이
+    // 조용히 NaN 이 된다. clampRatio 가 2차 방어를 하지만, 경계에서 막는 것이
+    // 이 함수의 계약이다.
+    for (const raw of ['{"ratio":"0.7"}', '{"ratio":null}', '{"ratio":{}}', '{"ratio":[]}', "[]", "null", "42"]) {
+      localStorage.setItem("markdown-editor:layout:v1", raw);
+      expect(loadSplitRatio(), raw).toBeNull();
+    }
+  });
+
+  it("모드를 저장해도 비율이 지워지지 않는다 — 항목별 병합 쓰기", () => {
+    // 통째로 덮어쓰면 나중에 저장한 항목이 앞선 항목을 지운다.
+    saveSplitRatio(0.4);
+    saveViewMode("editor");
+    expect(loadSplitRatio()).toBe(0.4);
+    expect(loadViewMode()).toBe("editor");
+
+    saveSplitRatio(0.6);
+    expect(loadViewMode()).toBe("editor");
+  });
+
+  it("레이아웃 값이 객체가 아니면 통째로 무시한다", () => {
+    // 배열도 typeof "object" 다 — 확인하지 않으면 인덱스가 키처럼 읽힌다.
+    for (const raw of ["[]", '"문자열"', "42", "true"]) {
+      localStorage.setItem("markdown-editor:layout:v1", raw);
+      expect(loadSplitRatio(), raw).toBeNull();
+      expect(loadViewMode(), raw).toBeNull();
+    }
+  });
+
+  it("문서 세션과 다른 키를 쓴다 — 한쪽이 깨져도 다른 쪽은 멀쩡하다", () => {
+    saveSplitRatio(0.4);
+    localStorage.setItem("markdown-editor:session:v1", "{손상됨");
+    expect(loadSplitRatio()).toBe(0.4);
   });
 });

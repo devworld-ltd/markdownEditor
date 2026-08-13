@@ -11,6 +11,8 @@ interface ToolbarAction {
    * 변경됨(dirty)으로 표시된다.
    */
   editsText?: boolean;
+  /** 나중에 상태를 갱신해야 하는 버튼에 붙이는 DOM id (F-33 보기 모드). */
+  id?: string;
 }
 
 // 계산(무엇을 삽입할지)은 순수 함수인 ./textEdit 에 있다. 아래 세 함수는 DOM 삽입
@@ -68,6 +70,12 @@ export interface FileActions {
   saveAs: () => void;
   /** F-58 단축키 안내 열기. 안내 UI 초기화 실패 시 넘어오지 않는다. */
   showShortcuts?: () => void;
+  /** F-33 보기 모드 순환. */
+  cycleView?: () => void;
+  /** F-38 HTML 내보내기. */
+  exportHtml?: () => void;
+  /** F-39 인쇄 / PDF 저장. */
+  print?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -204,6 +212,28 @@ const actions: ToolbarAction[] = [
     separator: true,
   },
   {
+    // F-38 HTML 내보내기. 파일 액션이지만 "저장" 과 성격이 달라(탭 상태를
+    // 건드리지 않는다) 서식 뒤 도구 묶음에 둔다.
+    label: "Export HTML",
+    icon: `<svg ${SVG_ATTRS}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    action: () => fileActions?.exportHtml?.(),
+  },
+  {
+    // F-39 인쇄/PDF. 브라우저 인쇄 대화상자를 그대로 연다 — "PDF 로 저장" 은
+    // 그 대화상자 안에 이미 있다. 별도 PDF 라이브러리를 넣을 이유가 없다.
+    label: "Print / PDF",
+    icon: `<svg ${SVG_ATTRS}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`,
+    action: () => fileActions?.print?.(),
+    separator: true,
+  },
+  {
+    // F-33 보기 모드 순환. 툴바 버튼이 있어야 단축키를 모르는 사용자도 쓴다.
+    label: "View Mode",
+    icon: `<svg ${SVG_ATTRS}><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`,
+    action: () => fileActions?.cycleView?.(),
+    id: "view-mode",
+  },
+  {
     // F-58: 단축키를 알려주는 기능을 단축키로만 열 수 있으면 순환이다.
     // 웹에는 메뉴바가 없으므로 눈에 보이는 진입점이 반드시 하나 있어야 한다.
     label: "Shortcuts",
@@ -216,10 +246,11 @@ export function initToolbar(
   container: HTMLElement,
   textarea: HTMLTextAreaElement,
 ): void {
-  actions.forEach(({ label, icon, action, separator, editsText }) => {
+  actions.forEach(({ label, icon, action, separator, editsText, id }) => {
     const btn = document.createElement("button");
     btn.className = "toolbar-btn";
     btn.title = label;
+    if (id) btn.id = id;
     btn.innerHTML = icon;
     btn.addEventListener("click", (e) => {
       e.preventDefault();

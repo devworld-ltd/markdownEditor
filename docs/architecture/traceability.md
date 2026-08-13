@@ -38,7 +38,12 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-57 | 다크 모드 | `prefers-color-scheme` | `src/style.css` 토큰 7종 | — | — | `darkmode.spec.ts` |
 | F-68 | PWA 아이콘 PNG | 홈 화면 추가 | `scripts/gen-icons.mjs` → `public/*.png` | — | — | `icons.spec.ts` |
 | F-58 | 단축키 안내 | 툴바 버튼 · `⌥/` | `shortcutDefs.ts` → `shortcutHelp.ts` | `<dialog>` open | — | `shortcuthelp.spec.ts` |
-| F-22 | 문서 내 검색 | `⌘/Ctrl+F` | `searchEngine.ts` → `search.ts` | `matches`·`current` | — | `search.spec.ts` |
+| F-22 | 문서 내 검색·치환 | `⌘/Ctrl+F` | `searchEngine.ts` → `search.ts` | `matches`·`current` | `execCommand` | `search.spec.ts` |
+| F-32 | 분할 비율 조절 | 드래그 · 화살표 | `splitLayout.ts` → `splitter.ts` | `ratio` (localStorage) | `setPointerCapture` | `splitter.spec.ts` |
+| F-33 | 보기 모드 | 툴바 버튼 · `⌥M` | `viewMode.ts` → `data-mode` | `mode` (localStorage) | — | `viewmode.spec.ts` |
+| F-38 | HTML 내보내기 | 툴바 버튼 | `preview.innerHTML` → `htmlExport.ts` → `fileOps.exportFile()` | — | `showSaveFilePicker` \| Blob | `htmlexport.spec.ts` |
+| F-39 | 인쇄 / PDF | 툴바 버튼 · `⌘/Ctrl+P`(브라우저) | `@media print` | — | `window.print()` | `print.spec.ts` |
+| F-59 | 접근성 | 전 UI | `index.html` 랜드마크 · `tabs.ts` 버튼화 · `style.css` 포커스 | — | — | `a11y.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -133,13 +138,23 @@ graph LR
 | `tests/e2e/shortcuthelp.spec.ts` | 11 | F-58 |
 | `tests/searchEngine.test.ts` | 23 | F-22 |
 | `tests/search.test.ts` | 16 | F-22 |
-| `tests/e2e/search.spec.ts` | 14 | F-22 |
+| `tests/e2e/search.spec.ts` | 23 | F-22 |
+| `tests/splitLayout.test.ts` | 14 | F-32 |
+| `tests/splitter.test.ts` | 17 | F-32 |
+| `tests/e2e/splitter.spec.ts` | 10 | F-32 |
+| `tests/viewMode.test.ts` | 13 | F-33 |
+| `tests/e2e/viewmode.spec.ts` | 12 | F-33 |
+| `tests/htmlExport.test.ts` | 18 | F-38 |
+| `tests/e2e/htmlexport.spec.ts` | 7 | F-38 |
+| `tests/e2e/print.spec.ts` | 9 | F-39 |
+| `tests/e2e/a11y.spec.ts` | 18 | F-59 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
 
 | 변경 대상 | 갱신해야 할 문서 |
 |-----------|------------------|
+| `src/htmlExport.ts` | [서비스 아키텍처 §7.4](./service-architecture.md) — **마크다운을 파싱하지 않는다**. 정화 경로를 늘리지 말 것 |
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | [서비스 아키텍처 §3](./service-architecture.md), [API 명세 §8](../api/browser-apis.md#8-보안-노트), `tests/parser.test.ts` |
 | `src/tabs.ts` (`TabState` 필드) | [데이터 모델 §2](./data-model.md), 본 문서 §1·§3 |
 | `src/storage.ts` (세션 스키마·버전) | [데이터 모델 §3](./data-model.md), [API 명세 §4](../api/browser-apis.md#4-세션-저장-localstorage) |
@@ -155,6 +170,7 @@ graph LR
 | `tsconfig.json` · `package.json` build | [인프라 §3.3](./infrastructure.md) |
 | `src/fileOps.ts` (파일 I/O 분기) | [API 명세 §2·§3](../api/browser-apis.md), [서비스 아키텍처 §5.3](./service-architecture.md) |
 | `public/icon.svg` · `scripts/gen-icons.mjs` | [인프라 §3.9](./infrastructure.md), `tests/e2e/icons.spec.ts` — SVG 를 바꾸면 `npm run icons` 재실행 필수 |
+| `src/style.css` `@media print` | [서비스 아키텍처 §7.4](./service-architecture.md), `tests/e2e/print.spec.ts` — 보기 모드·다크 모드와의 상호작용을 함께 확인 |
 | `src/style.css` (색 토큰) | [서비스 아키텍처 §7.4](./service-architecture.md) — 다크 대응 토큰을 함께 정의해야 한다 |
 | `src/toolbar.ts` (버튼 증감) | [기능 현황](../features/feature-status.md), `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
 | `src/textEdit.ts` (감싸기·줄머리·블록 삽입 계산) | `tests/textEdit.test.ts`, `tests/e2e/toolbar.spec.ts` (동작 회귀 게이트) |
@@ -162,6 +178,7 @@ graph LR
 | `src/shortcuts.ts` | [API 명세 §5](../api/browser-apis.md#5-키보드-단축키), [사용자 시나리오](../user-scenarios.md), README 단축키 표 |
 | `src/notice.ts` | [API 명세](../api/browser-apis.md), `fileaccess.spec.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | [인프라 아키텍처](./infrastructure.md), [CF Workers 구성](../operations/cloudflare-workers.md) |
+| 새 인터랙티브 UI 추가 | `tests/e2e/a11y.spec.ts` 의 상태 목록에 추가 — 상태 조합마다 axe 를 돌려야 의미가 있다 |
 | `index.html` (DOM id) | 전 E2E 셀렉터, [서비스 아키텍처 §4](./service-architecture.md) |
 | `package.json` scripts | [인프라 §5](./infrastructure.md), README, [테스트 계획](../testing/test-plan.md) |
 | 새 의존성 추가 | [인프라 §5](./infrastructure.md), README 기술 스택 표 |

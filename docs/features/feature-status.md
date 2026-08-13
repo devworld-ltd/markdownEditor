@@ -64,7 +64,12 @@
 | F-57 | 다크 모드 (`prefers-color-scheme`) | `src/style.css` 토큰 7종 | E2E 6 |
 | F-68 | PWA 아이콘 PNG (`apple-touch-icon` · maskable) | `scripts/gen-icons.mjs`, `public/*.png` | E2E 7 |
 | F-58 (완결) | 단축키 안내 UI | `src/shortcutDefs.ts`, `src/shortcutHelp.ts` | 단위 30 + E2E 11 |
-| F-22 | 문서 내 검색 (치환 제외) | `src/searchEngine.ts`, `src/search.ts` | 단위 39 + E2E 14 |
+| F-22 | 문서 내 검색 · 치환 | `src/searchEngine.ts`, `src/search.ts` | 단위 58 + E2E 23 |
+| F-32 | 분할 비율 조절 (드래그 · 키보드) | `src/splitLayout.ts`, `src/splitter.ts` | 단위 36 + E2E 10 |
+| F-33 | 분할 / 편집 전용 / 미리보기 전용 모드 | `src/viewMode.ts` | 단위 13 + E2E 12 |
+| F-38 | HTML 내보내기 (독립 실행 파일) | `src/htmlExport.ts`, `fileOps.exportFile()` | 단위 18 + E2E 7 |
+| F-39 | 인쇄 / PDF (인쇄 전용 스타일) | `src/style.css` `@media print` | E2E 9 |
+| F-59 | 접근성 정밀 점검 (axe + 수동 시나리오) | `index.html`, `src/tabs.ts`, `src/style.css` | E2E 18 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -89,7 +94,6 @@
 
 | ID | 기능 |
 |----|------|
-| F-22 잔여 | **치환** (찾기는 완료) |
 | F-23 | 구문 하이라이팅 (에디터·코드 블록 모두) |
 | F-24 | 줄 번호 표시 |
 | F-26 | 리스트 자동 이어쓰기 (Enter 시 `- ` 삽입) |
@@ -103,19 +107,14 @@
 
 | ID | 기능 |
 |----|------|
-| F-32 | 분할 비율 조절 (드래그 리사이저) |
-| F-33 | 프리뷰 전용 / 에디터 전용 모드 토글 |
 | F-34 | 탭 드래그 재정렬 |
 | F-35 | 폰트·테마 설정 |
 | F-36 | 최근 파일 목록 |
-| F-59 | 접근성 정밀 점검 (키보드 내비게이션·스크린리더) |
 
 ### 4.4 내보내기 / 공유
 
 | ID | 기능 |
 |----|------|
-| F-38 | HTML 내보내기 |
-| F-39 | PDF 내보내기 / 인쇄 스타일 |
 | F-40 | 렌더된 HTML 클립보드 복사 |
 | F-60 | 공유 링크 (문서 퍼블리시) — 서버 도입 필요 |
 

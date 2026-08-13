@@ -1,6 +1,7 @@
 import { createEditor } from "./editor";
 import { initToolbar, setFileActions } from "./toolbar";
 import {
+  exportFile,
   initFileOps,
   isFileSystemAccessSupported,
   openFile,
@@ -11,6 +12,7 @@ import { initShortcuts } from "./shortcuts";
 import {
   UNTITLED,
   createTab,
+  getActiveTab,
   hasDirtyTabs,
   initTabs,
   persistNow,
@@ -18,13 +20,22 @@ import {
   setScrollSyncHooks,
 } from "./tabs";
 import { initNotice, showNotice } from "./notice";
-import { isStorageAvailable } from "./storage";
+import {
+  isStorageAvailable,
+  loadSplitRatio,
+  loadViewMode,
+  saveSplitRatio,
+  saveViewMode,
+} from "./storage";
 import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
 import { initFsLimitNotice } from "./fsLimitNotice";
 import { initScrollSync } from "./scrollSync";
 import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 import { initSearch } from "./search";
+import { initSplitter } from "./splitter";
+import { initViewMode, parseViewMode } from "./viewMode";
+import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -44,6 +55,13 @@ const searchCountEl = document.querySelector<HTMLElement>("#search-count");
 const searchPrevEl = document.querySelector<HTMLElement>("#search-prev");
 const searchNextEl = document.querySelector<HTMLElement>("#search-next");
 const searchCloseEl = document.querySelector<HTMLElement>("#search-close");
+const searchToggleReplaceEl = document.querySelector<HTMLElement>("#search-toggle-replace");
+const searchReplaceRowEl = document.querySelector<HTMLElement>("#search-replace-row");
+const searchReplaceInputEl = document.querySelector<HTMLInputElement>("#search-replace-input");
+const searchReplaceOneEl = document.querySelector<HTMLElement>("#search-replace-one");
+const searchReplaceAllEl = document.querySelector<HTMLElement>("#search-replace-all");
+const editorContainerEl = document.querySelector<HTMLElement>(".editor-container");
+const splitResizerEl = document.querySelector<HTMLElement>("#split-resizer");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -70,6 +88,12 @@ if (editorEl && previewEl) {
           nextEl: searchNextEl,
           closeEl: searchCloseEl,
           editorEl,
+          // 치환 UI 는 선택 사항 — 없으면 찾기만 동작한다(F-22 잔여).
+          toggleReplaceEl: searchToggleReplaceEl ?? undefined,
+          replaceRowEl: searchReplaceRowEl ?? undefined,
+          replaceInputEl: searchReplaceInputEl ?? undefined,
+          replaceOneEl: searchReplaceOneEl ?? undefined,
+          replaceAllEl: searchReplaceAllEl ?? undefined,
         })
       : null;
 
@@ -89,6 +113,18 @@ if (editorEl && previewEl) {
   setCloseConfirm((tab) =>
     window.confirm(`"${tab.fileName}" 의 변경 사항이 저장되지 않았습니다. 닫을까요?`),
   );
+
+  // F-32: F-25 억제 훅을 붙이지 않는다 — 실측 결과 있으나 없으나 드래그 후
+  // 두 패널의 비율 차이가 0 이었다(splitter.ts §2 참고).
+  if (editorContainerEl && splitResizerEl) {
+    initSplitter({
+      containerEl: editorContainerEl,
+      resizerEl: splitResizerEl,
+      firstPaneEl: editorEl,
+      loadRatio: () => loadSplitRatio() ?? 0.5,
+      saveRatio: saveSplitRatio,
+    });
+  }
 
   setScrollSyncHooks({
     suspend: () => scrollSync.suspend(),
@@ -115,21 +151,53 @@ if (editorEl && previewEl) {
         })
       : null;
 
+  // F-33: 툴바가 버튼을 만든 **뒤에** 초기화해야 #view-mode 를 찾을 수 있다.
+  // 순서가 뒤집히면 클릭은 동작하지만 aria-pressed/aria-label 이 비어 있어
+  // 스크린리더에게는 상태 없는 버튼이 된다 — 눈으로는 드러나지 않는다.
+  if (toolbarEl) {
+    initToolbar(toolbarEl, editorEl);
+  }
+
+  // 모드는 분할 비율과 독립이다 — 모드를 되돌리면 맞춰 둔 비율이 그대로 돌아온다.
+  const viewMode = editorContainerEl
+    ? initViewMode({
+        containerEl: editorContainerEl,
+        buttonEl: document.querySelector<HTMLElement>("#view-mode") ?? undefined,
+        loadMode: () => parseViewMode(loadViewMode()),
+        saveMode: saveViewMode,
+      })
+    : null;
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
     save: () => void saveFile(),
     saveAs: () => void saveFileAs(),
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
-  });
+    cycleView: viewMode ? () => viewMode.cycle() : undefined,
 
-  if (toolbarEl) {
-    initToolbar(toolbarEl, editorEl);
-  }
+    // F-38: 프리뷰에 이미 들어가 있는 **정화된** HTML 을 그대로 쓴다.
+    // 원문을 다시 파싱하는 두 번째 경로를 만들면 정화 정책이 갈라진다(F-18).
+    // F-39: 브라우저 인쇄 대화상자를 연다. "PDF 로 저장" 은 그 안에 이미 있으므로
+    // PDF 라이브러리를 들일 이유가 없다. 출력 모양은 @media print 가 만든다.
+    print: () => window.print(),
+
+    exportHtml: () => {
+      const tab = getActiveTab();
+      const fileName = tab?.fileName ?? UNTITLED;
+      void exportFile(
+        buildHtmlDocument(titleFromFileName(fileName), previewEl.innerHTML),
+        suggestHtmlFileName(fileName),
+        "text/html;charset=utf-8",
+        { "text/html": [".html"] },
+      );
+    },
+  });
 
   initShortcuts({
     toggleHelp: shortcutHelp ? () => shortcutHelp.toggle() : undefined,
     toggleFind: search ? () => search.toggle() : undefined,
+    cycleView: viewMode ? () => viewMode.cycle() : undefined,
   });
 
   // 새로고침·탭 닫기로 인한 유실 방지. 브라우저는 문구를 무시하고 기본 경고를 띄운다.
