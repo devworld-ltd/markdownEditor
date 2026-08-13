@@ -61,6 +61,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("F-72 편집/프리뷰 시각 구분", () => {
+  // 이 절은 라이트 모드의 **구체적인 색값**을 단언한다. 기본값에 기대면 나중에
+  // playwright.config 의 colorScheme 이 바뀔 때 F-57 다크 값을 받아 조용히
+  // 깨진다. 여기서 명시해 두면 그 결합이 끊긴다.
+  test.use({ colorScheme: "light" });
+
   test("E1: 편집 영역과 프리뷰 영역이 배경색·경계선으로 구분되고 색 토큰이 선언되어 있다", async ({
     page,
   }) => {

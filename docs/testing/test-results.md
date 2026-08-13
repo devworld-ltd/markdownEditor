@@ -8,8 +8,8 @@
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
 | 단위 | Vitest 4.1.10 (jsdom) | **192** | 0 | 0 | 192 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **98** | **0** | 15 ※ | 113 |
-| **합계 (dev 기준)** | | **290** | **0** | 15 | 305 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **104** | **0** | 15 ※ | 119 |
+| **합계 (dev 기준)** | | **296** | **0** | 15 | 311 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -55,6 +55,7 @@
 | `swupdate.spec.ts` | 10 | ✅ 프리뷰 모드에서 전량 통과 (dev 서버에서는 skip) |
 | `offline.spec.ts` | 3 | ✅ Playwright `context.setOffline()` 으로 실제 오프라인 재현 |
 | `scrollsync.spec.ts` | 11 | ✅ F-72 시각 구분 + F-25 스크롤 동기화 |
+| `darkmode.spec.ts` | 6 | ✅ F-57 다크 모드 — 대비비를 Node 에서 실제 계산해 단언 |
 
 ### 2.1 URL 응답 (15)
 
