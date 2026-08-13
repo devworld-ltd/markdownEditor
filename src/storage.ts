@@ -101,6 +101,7 @@ interface StoredLayout {
   fontId?: unknown;
   fontSize?: unknown;
   lineNumbers?: unknown;
+  docStats?: unknown;
 }
 
 function readLayout(): StoredLayout {
@@ -172,6 +173,15 @@ export function loadLineNumbers(): boolean {
 
 export function saveLineNumbers(enabled: boolean): void {
   writeLayout({ lineNumbers: enabled });
+}
+
+/** 문서 통계 표시 여부 (F-29). 기본은 켜짐 — 방해되지 않는 한 줄이다. */
+export function loadDocStats(): boolean {
+  return readLayout().docStats !== false;
+}
+
+export function saveDocStats(enabled: boolean): void {
+  writeLayout({ docStats: enabled });
 }
 
 /** 최근 파일 목록 원본을 읽는다 (F-36). 검증은 호출부(recentFiles)가 한다. */

@@ -26,6 +26,8 @@ import {
 import { initNotice, showNotice } from "./notice";
 import {
   isStorageAvailable,
+  loadDocStats,
+  saveDocStats,
   loadLineNumbers,
   saveLineNumbers,
   loadRecentFilesRaw,
@@ -47,6 +49,7 @@ import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
 import { initLineNumbers } from "./lineNumbers";
+import { initStatusBar } from "./statusBar";
 import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
@@ -133,6 +136,23 @@ if (editorEl && previewEl) {
       })
     : null;
 
+  // F-29 문서 통계. 렌더 디바운스에 얹어 매 글자마다 전체를 훑지 않는다.
+  const statusBarEl = document.querySelector<HTMLElement>("#status-bar");
+  const statusBar = statusBarEl
+    ? initStatusBar({
+        barEl: statusBarEl,
+        editorEl,
+        loadEnabled: loadDocStats,
+        saveEnabled: saveDocStats,
+      })
+    : null;
+
+  const statsCheckEl = document.querySelector<HTMLInputElement>("#setting-doc-stats");
+  if (statsCheckEl && statusBar) {
+    statsCheckEl.checked = statusBar.isEnabled();
+    statsCheckEl.addEventListener("change", () => statusBar.setEnabled(statsCheckEl.checked));
+  }
+
   const lineNumbersCheckEl = document.querySelector<HTMLInputElement>("#setting-line-numbers");
   if (lineNumbersCheckEl && lineNumbers) {
     lineNumbersCheckEl.checked = lineNumbers.isEnabled();
@@ -179,6 +199,8 @@ if (editorEl && previewEl) {
       search?.refresh();
       // F-24: 줄 수·줄바꿈이 바뀌면 번호 칸 높이를 다시 잰다.
       lineNumbers?.refresh();
+      // F-29: 같은 디바운스에 얹는다 — 매 글자마다 전체를 세면 느려진다.
+      statusBar?.refresh();
     },
   });
 
