@@ -1,3 +1,11 @@
+:root {
+  /* F-72 편집/프리뷰 시각 구분 (이슈 #31).
+     F-57 다크 모드는 이 세 값만 교체하면 된다 — 규칙 쪽은 손대지 않는다. */
+  --surface-editor: #f2f2f0; /* 작업대: 미세하게 눌린 회색 */
+  --surface-preview: #ffffff; /* 결과물: 순백(종이) */
+  --border-split: #c8c8c8; /* 두 면의 접합부 */
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -152,7 +160,13 @@ body {
   font-size: 14px;
   line-height: 1.6;
   outline: none;
-  border-right: 1px solid #ddd;
+  background: var(--surface-editor);
+  border-right: 1px solid var(--border-split);
+  /* F-25: 스크롤 동기화는 #editor 가 스크롤 컨테이너라는 사실에 전면 의존한다.
+     textarea 는 UA 기본값이 overflow:auto 라 값 자체는 바뀌지 않지만, 이 선언이
+     없으면 그 의존성이 어느 파일에도 적혀 있지 않아 나중에 누가 조용히 깨뜨릴
+     수 있다(D-7). */
+  overflow-y: auto;
 }
 
 #preview {
@@ -161,6 +175,7 @@ body {
   overflow-y: auto;
   font-size: 14px;
   line-height: 1.6;
+  background: var(--surface-preview);
 }
 
 #preview h1,
@@ -307,7 +322,8 @@ body {
 
   #editor {
     border-right: none;
-    border-bottom: 1px solid #ddd;
+    /* 가로 경계는 세로 경계보다 눈에 덜 띈다 → 좌우 분할과 같거나 더 또렷하게 2px */
+    border-bottom: 2px solid var(--border-split);
     min-height: 40%;
   }
 

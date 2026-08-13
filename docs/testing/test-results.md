@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **158** | 0 | 0 | 158 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **87** | **0** | 15 ※ | 102 |
-| **합계 (dev 기준)** | | **245** | **0** | 15 | 260 |
+| 단위 | Vitest 4.1.10 (jsdom) | **185** | 0 | 0 | 185 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **98** | **0** | 15 ※ | 113 |
+| **합계 (dev 기준)** | | **283** | **0** | 15 | 298 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -54,6 +54,7 @@
 | `hardening.spec.ts` | 10 | ✅ 배포 환경 전용 제외 통과 |
 | `swupdate.spec.ts` | 10 | ✅ 프리뷰 모드에서 전량 통과 (dev 서버에서는 skip) |
 | `offline.spec.ts` | 3 | ✅ Playwright `context.setOffline()` 으로 실제 오프라인 재현 |
+| `scrollsync.spec.ts` | 11 | ✅ F-72 시각 구분 + F-25 스크롤 동기화 |
 
 ### 2.1 URL 응답 (15)
 

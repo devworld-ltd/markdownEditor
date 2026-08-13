@@ -33,6 +33,8 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-61 | PWA · 오프라인 | 페이지 로드 | `main.ts` 등록 → `public/sw.js` | — | Service Worker, Cache Storage, Manifest | `hardening.spec.ts` |
 | F-62 | CSP · 보안 헤더 | 모든 응답 | `public/_headers` (Cloudflare 적용) | — | — | `hardening.spec.ts` (원격 전용) |
 | F-64 | 배포 헬스체크 | `deploy` 잡 | `scripts/healthcheck.sh` | — | — | (CI 자체 검증) |
+| F-25 | 스크롤 동기화 | 두 패널 `scroll` | `main.ts` → `scrollSync.ts` (`tabs`·`editor` 훅) | `source`·`expectedTop`·`lastRatio` | `requestAnimationFrame` | `scrollsync.spec.ts` |
+| F-72 | 영역 시각 구분 | 페이지 로드 | `src/style.css` 토큰 3종 | — | — | `scrollsync.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -51,6 +53,9 @@ graph LR
   main --> swUpdate["swUpdate.ts"]
   main --> offline["offline.ts"]
   main --> fsLimit["fsLimitNotice.ts"]
+  main --> scrollSync["scrollSync.ts"]
+  tabs -. "setScrollSyncHooks() 주입" .-> scrollSync
+  editor -. "onAfterRender 콜백" .-> scrollSync
   fileOps --> fsLimit
   swUpdate -. "SKIP_WAITING / controllerchange" .-> sw(["public/sw.js"])
 
@@ -70,7 +75,7 @@ graph LR
   toolbar --> textEdit["textEdit.ts"]
 
   classDef leaf fill:#eef,stroke:#88a
-  class parser,storage,notice,swUpdate,textEdit,offline,fsLimit leaf
+  class parser,storage,notice,swUpdate,textEdit,offline,fsLimit,scrollSync leaf
 ```
 
 - **순환 의존 없음.** `toolbar.ts` 는 `fileOps` 를 import 하지 않고 `setFileActions()` 로 콜백을 주입받아 역방향 의존을 끊는다.
@@ -115,6 +120,8 @@ graph LR
 | `tests/offline.test.ts` | 7 | F-70 |
 | `tests/fsLimitNotice.test.ts` | — | F-58 |
 | `tests/fileOps.test.ts` | 27 | F-07, F-08, F-11, F-14 (9 → 27) |
+| `tests/scrollSync.test.ts` | 27 | F-25 |
+| `tests/e2e/scrollsync.spec.ts` | 11 | F-25, F-72 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
@@ -129,6 +136,8 @@ graph LR
 | `src/swUpdate.ts` (`SwUpdateHost` 계약) | [서비스 아키텍처 §7.2](./service-architecture.md), [API 명세 §4.1.3](../api/browser-apis.md), `tests/swUpdate.test.ts` |
 | `vite.config.ts` 빌드 ID 플러그인 | [인프라 §3.2](./infrastructure.md), [서비스 아키텍처 §7.2](./service-architecture.md) |
 | `src/offline.ts` (`OfflineHost` 계약) | [서비스 아키텍처 §7.3](./service-architecture.md), [API 명세 §4.3](../api/browser-apis.md), `tests/offline.test.ts` |
+| `src/scrollSync.ts` (소유권 모델·매핑) | [서비스 아키텍처 §7.4](./service-architecture.md), `tests/scrollSync.test.ts` |
+| `src/tabs.ts` `switchTab()` 순서 | [서비스 아키텍처 §7.4](./service-architecture.md) — 억제·복원·해제 순서를 바꾸면 F-06/F-51 이 회귀한다 |
 | `scripts/healthcheck.sh` · `.github/workflows/ci.yml` | [인프라 §4.2.1](./infrastructure.md), [CF Workers 구성](../operations/cloudflare-workers.md) |
 | `playwright.config.ts` 프리뷰 모드 | [테스트 계획 §2](../testing/test-plan.md) |
 | `tsconfig.json` · `package.json` build | [인프라 §3.3](./infrastructure.md) |

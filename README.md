@@ -8,8 +8,8 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **158건** + E2E 102건 (전부 통과) |
-| 기능 커버리지 | 29/32 자동 검증 · 라인 커버리지 **73.78%** |
+| 테스트 | 단위 **185건** + E2E 113건 (전부 통과) |
+| 기능 커버리지 | 31/34 자동 검증 · 라인 커버리지 **76.32%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
 
@@ -31,6 +31,7 @@
 ## 주요 기능
 
 - 실시간 마크다운 프리뷰 (좌우 분할, 150ms 디바운스)
+- **편집/프리뷰 영역 시각 구분 + 양방향 스크롤 동기화**
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
@@ -83,6 +84,7 @@ markdownEditor/
 │   ├── swUpdate.ts           # 서비스 워커 갱신 알림
 │   ├── offline.ts            # 오프라인 상태 배지
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
+│   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
 │   ├── textEdit.ts           # 텍스트 조작 계산 (순수)
 │   ├── toolbar.ts            # 툴바 16종
 │   ├── shortcuts.ts          # 키보드 단축키
@@ -101,7 +103,8 @@ markdownEditor/
 │       ├── session.spec.ts   # 세션 자동 저장 · 복원
 │       ├── hardening.spec.ts # CSP · PWA · 저장 실패
 │       ├── swupdate.spec.ts  # 서비스 워커 갱신 (프리뷰 모드)
-│       └── offline.spec.ts   # 오프라인 상태 표시
+│       ├── offline.spec.ts   # 오프라인 상태 표시
+│       └── scrollsync.spec.ts # 시각 구분 · 스크롤 동기화
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
