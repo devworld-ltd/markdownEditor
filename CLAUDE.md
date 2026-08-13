@@ -142,7 +142,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 
 | 브랜치 | 환경 | Worker | URL |
 |--------|------|--------|-----|
-| `dev` | dev | `markdown-editor-dev` | `*.workers.dev` |
+| `dev` | dev | `markdown-editor-dev` | `md-editor-dev.devworld.co.kr` |
 | `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
 
 **`main`·`dev` 모두 브랜치 보호 규칙이 걸려 있다.** 직접 push 가 거부되므로 문서 한 줄 수정이라도 `feature/*` → PR → 머지 경로를 거쳐야 한다.

@@ -178,7 +178,7 @@ Playwright `webServer` 가 원격 URL 이 살아 있음을 확인하고 로컬 �
 
 | 환경 | URL | 결과 |
 |------|-----|------|
-| dev | `markdown-editor-dev.devworld-ltd-ai.workers.dev` | ✅ **58/58** (7.6s) |
+| dev | `md-editor-dev.devworld.co.kr` (F-67) | ✅ **58/58** (7.6s) |
 | prod | `md-editor.devworld.co.kr` | ✅ **58/58** (7.8s) |
 
 ```bash

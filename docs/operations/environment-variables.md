@@ -38,7 +38,7 @@
 
 ```bash
 E2E_PORT=5200 npm run test:e2e
-E2E_BASE_URL=https://markdown-editor-dev.example.workers.dev npm run test:e2e
+E2E_BASE_URL=https://md-editor-dev.devworld.co.kr npm run test:e2e
 ```
 
 > ⚠️ **LAN IP 로 테스트할 때 주의**: File System Access API 는 보안 컨텍스트(HTTPS 또는 `localhost`/`127.0.0.1`)에서만 노출된다. `E2E_HOST=192.168.50.79` 로 띄우면 앱이 폴백 경로로 동작해 `fileaccess.spec.ts` 의 FS Access 그룹이 실패한다.

@@ -22,7 +22,7 @@
 | 환경 | 소스 브랜치 | 배포 방식 | Worker 이름 | `APP_ENV` | 접근 |
 |------|-------------|-----------|-------------|-----------|------|
 | **local** | 작업 브랜치 | `npm run dev` (Vite) 또는 `npm run cf:dev` (workerd) | — | — | `http://127.0.0.1:5173` |
-| **dev** | `dev` | `dev` push 시 GitHub Actions 자동 | `markdown-editor-dev` | `dev` | `*.workers.dev` |
+| **dev** | `dev` | `dev` push 시 GitHub Actions 자동 | `markdown-editor-dev` | `dev` | `md-editor-dev.devworld.co.kr` (+ `*.workers.dev`) |
 | **prod** | `main` | `main` push 시 GitHub Actions 자동 | `markdown-editor-prod` | `prod` | **`md-editor.devworld.co.kr`** |
 
 ```mermaid
@@ -235,7 +235,7 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 | XSS | `parser.ts` 에서 DOMPurify 로 정화. 웹 배포 시 필수 방어선 |
 | HTTPS | Cloudflare 가 기본 제공. File System Access API 요구 조건도 충족 |
 | CSP 헤더 | ✅ `public/_headers` — `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'` 등 |
-| 커스텀 도메인 | ✅ prod = `md-editor.devworld.co.kr` (dev 는 `*.workers.dev`) |
+| 커스텀 도메인 | ✅ prod = `md-editor.devworld.co.kr`, dev = `md-editor-dev.devworld.co.kr` (F-67) |
 | 관측 | `observability.enabled = true` (Workers Logs) |
 | 롤백 | Cloudflare 대시보드의 이전 버전 배포 또는 `main` revert 후 재배포 |
 
@@ -257,7 +257,7 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 | `style-src` | `'unsafe-inline'` 허용 | 마크다운 본문의 인라인 `style` 속성(DOMPurify 가 허용)이 렌더되려면 필요. 인라인 스크립트와 달리 실행 권한이 없어 위험도가 낮다 |
 | `img-src` | `https:` 허용 | 문서의 `![](https://…)` 외부 이미지 |
 | `img-src` | `data:` 허용 | 인라인 SVG·data URI 이미지 |
-| `script-src` | `https://static.cloudflareinsights.com` 허용 | Cloudflare Web Analytics 가 **커스텀 도메인에만** 비콘을 엣지 주입한다. `*.workers.dev`(dev)에는 주입되지 않아 dev 검증에서 드러나지 않았고, prod E2E 에서 처음 잡혔다. 차단하면 모든 사용자 콘솔에 CSP 위반 에러가 남는다 |
+| `script-src` | `https://static.cloudflareinsights.com` 허용 | Cloudflare Web Analytics 가 **커스텀 도메인에만** 비콘을 엣지 주입한다. 예전에는 dev 가 `*.workers.dev` 라 주입되지 않아 이 문제가 prod E2E 에서 처음 잡혔다. **F-67 로 dev 에도 커스텀 도메인이 붙어 이 비대칭이 사라졌다** — 같은 종류의 문제가 이제 dev 에서 먼저 드러난다 |
 | `connect-src` | `https://cloudflareinsights.com` 허용 | 위 비콘의 전송 대상 |
 
 `script-src` 는 `'self'` + Cloudflare Insights 비콘 호스트만 허용하며 `'unsafe-inline'`·`'unsafe-eval'` 은 절대 넣지 않는다. E2E 가 허용 호스트 목록을 **정확히 일치**로 단언하므로, 외부 스크립트를 추가하려면 테스트도 함께 고쳐야 한다.
@@ -272,7 +272,6 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 
 ## 7. 개선 권고
 
-1. **dev 환경 커스텀 도메인** — dev 는 아직 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 등을 추가한다.
 2. ~~**배포 후 헬스체크**~~ — §4.2.1(`scripts/healthcheck.sh`)로 완료 (F-64, 이슈 #15).
 3. **서비스 워커 업데이트 알림** — 새 배포가 있어도 사용자가 알 수 없다.
 4. ~~**버전 표기**~~ — `/sw.js` 의 `VERSION` 이 커밋 SHA 앞 7자리다(§3.1, §4.2.1). `APP_ENV` 외 화면 노출 버전 표기는 여전히 미구현.

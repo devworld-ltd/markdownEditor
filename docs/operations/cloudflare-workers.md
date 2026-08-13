@@ -23,7 +23,9 @@
 | **dev** | `dev` | `dev` push → GitHub Actions | `markdown-editor-dev` | `dev` | 없음 |
 | **prod** | `main` | `main` push → GitHub Actions | `markdown-editor-prod` | `prod` | 없음 |
 
-prod 접근 URL: **https://md-editor.devworld.co.kr** · dev 접근 URL: `markdown-editor-dev.*.workers.dev`
+prod 접근 URL: **https://md-editor.devworld.co.kr** · dev 접근 URL: **https://md-editor-dev.devworld.co.kr** (F-67)
+
+`markdown-editor-dev.*.workers.dev` 도 계속 동작한다 — 인증서 프로비저닝 중이거나 DNS 문제가 있을 때 기댈 곳이 필요해 `workers_dev: true` 로 명시해 두었다.
 
 ```mermaid
 flowchart LR
@@ -114,7 +116,6 @@ npx wrangler deploy --env dev --dry-run
 
 | 항목 | 상태 | 참조 |
 |------|------|------|
-| dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` | [F-67](../features/feature-status.md) |
 | 배포 후 헬스체크 / prod smoke E2E | `deploy.yml` 에 미포함 | [F-64](../features/feature-status.md) |
 
 ### 서버·DB 가 필요해지는 시나리오
@@ -154,7 +155,9 @@ npx wrangler deploy --env dev --dry-run
 
 > 배포 직후 약 1분간 500 응답이 관측됐다. 엣지 인증서 프로비저닝이 끝나기 전이며 자동으로 해소된다. **배포 후 헬스체크를 넣을 때는 이 구간을 감안해 재시도를 둬야 한다** ([F-64](../features/feature-status.md)).
 
-dev 환경은 여전히 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworld.co.kr` 을 같은 방식으로 추가한다 ([F-67](../features/feature-status.md)).
+dev 도 같은 방식으로 `md-editor-dev.devworld.co.kr` 을 붙였다(F-67).
+
+**커스텀 도메인을 추가하면 `*.workers.dev` 주소가 자동으로 꺼진다**(실측: 404). dev 에서는 폴백이 필요하므로 `workers_dev: true` 를 명시해 둘 다 살렸다. 전파에 30초 남짓 걸린다.
 
 ## 7. 롤백
 
@@ -172,6 +175,7 @@ dev 환경은 여전히 `*.workers.dev` 다. 필요하면 `md-editor-dev.devworl
 |------|------|------|
 | 2026-08-12 (오전) | Cloudflare Workers **미도입** | 당시 macOS 네이티브 앱이라 서버 사이드 요구가 전무 |
 | 2026-08-12 (오후) | Cloudflare Workers **도입** | 웹 전환으로 정적 자산 호스팅이 필수가 됨. 조직 표준(dev/prod 브랜치 매핑)에 맞춰 구성 |
+| 2026-08-14 | dev 커스텀 도메인 `md-editor-dev.devworld.co.kr` 연결 (F-67) | prod 와 설정이 비대칭이면 "dev 에서만 재현되지 않는" 문제가 생긴다. 실제로 Web Analytics 비콘이 커스텀 도메인에만 주입돼 CSP 문제가 prod 에서 처음 잡힌 적이 있다 |
 | 2026-08-12 (오후) | prod 커스텀 도메인 `md-editor.devworld.co.kr` 연결 | `*.workers.dev` 는 브랜딩·캐시 정책 제어가 어려움. 존이 이미 같은 계정에 있어 추가 비용 없음 |
 
 ## 9. 관련 문서

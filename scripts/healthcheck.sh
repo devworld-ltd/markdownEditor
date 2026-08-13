@@ -10,7 +10,7 @@
 #                 검사를 건너뛴다 (플레이스홀더 검사는 항상 수행).
 #
 # 로컬 수동 실행 예:
-#   scripts/healthcheck.sh https://markdown-editor-dev.devworld-ltd-ai.workers.dev
+#   scripts/healthcheck.sh https://md-editor-dev.devworld.co.kr
 #   scripts/healthcheck.sh https://md-editor.devworld.co.kr $(git rev-parse --short=7 HEAD)
 #
 # 환경변수:

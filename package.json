@@ -16,7 +16,7 @@
     "test:e2e": "playwright test",
     "test:e2e:preview": "E2E_PREVIEW=1 playwright test",
     "test:e2e:report": "playwright show-report",
-    "healthcheck:dev": "scripts/healthcheck.sh https://markdown-editor-dev.devworld-ltd-ai.workers.dev",
+    "healthcheck:dev": "scripts/healthcheck.sh https://md-editor-dev.devworld.co.kr",
     "healthcheck:prod": "scripts/healthcheck.sh https://md-editor.devworld.co.kr",
     "icons": "node scripts/gen-icons.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json"

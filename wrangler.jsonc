@@ -35,6 +35,22 @@
       "r2_buckets": [
         { "binding": "SHARES", "bucket_name": "md-editor-shares-dev" }
       ],
+
+      // F-67: dev 도 커스텀 도메인을 쓴다. prod 와 설정이 비대칭이면
+      // "dev 에서만 재현되지 않는" 문제가 생긴다 — 특히 보안 컨텍스트·쿠키·
+      // CSP 처럼 호스트에 딸린 동작이 그렇다.
+      //
+      // 커스텀 도메인은 첫 배포 때 생성되며 인증서 프로비저닝 동안 500 이 날 수
+      // 있다(헬스체크의 재시도가 이를 흡수한다).
+      "routes": [
+        { "pattern": "md-editor-dev.devworld.co.kr", "custom_domain": true }
+      ],
+
+      // 커스텀 도메인을 추가하면 *.workers.dev 주소가 **자동으로 꺼진다**(실측:
+      // 404). dev 에서는 인증서 프로비저닝 중이거나 DNS 문제가 있을 때 기댈
+      // 곳이 필요하므로 명시적으로 살려 둔다.
+      "workers_dev": true,
+
       "vars": { "APP_ENV": "dev" }
     },
     "prod": {
