@@ -22,12 +22,19 @@ export interface KeyEventLike {
   shiftKey: boolean;
 }
 
-export type ShortcutId = "open" | "save" | "saveAs" | "newTab" | "closeTab" | "help";
+export type ShortcutId =
+  | "open"
+  | "save"
+  | "saveAs"
+  | "newTab"
+  | "closeTab"
+  | "find"
+  | "help";
 
 export interface ShortcutDef {
   id: ShortcutId;
   /** 안내 UI 의 묶음 제목 */
-  group: "파일" | "탭" | "도움말";
+  group: "파일" | "편집" | "탭" | "도움말";
   /** 무엇을 하는지 (안내 UI 에 그대로 노출된다) */
   label: string;
   /** 표시용 키 캡. Apple 은 ⌘/⌥, 그 외는 Ctrl/Alt 로 읽힌다. */
@@ -87,6 +94,14 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     keys: { apple: ["⌥", "W"], other: ["Alt", "W"] },
     note: "브라우저가 ⌘W/Ctrl+W 를 선점해 막을 수 없어 Alt 조합을 씁니다.",
     match: (e) => isAltOnly(e) && e.code === "KeyW",
+  },
+  {
+    id: "find",
+    group: "편집",
+    label: "문서 내 검색",
+    keys: { apple: ["⌘", "F"], other: ["Ctrl", "F"] },
+    note: "브라우저 찾기는 편집 영역 안을 찾지 못해 이 조합을 가져옵니다. 검색창을 닫고 다시 누르면 브라우저 찾기가 열립니다.",
+    match: (e) => isModOnly(e) && e.key.toLowerCase() === "f",
   },
   {
     id: "help",

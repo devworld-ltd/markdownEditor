@@ -18,6 +18,8 @@ import { findShortcut, type ShortcutId } from "./shortcutDefs";
 export interface ShortcutHandlers {
   /** 단축키 목록 열기/닫기. 안내 UI 초기화에 실패하면 넘어오지 않는다. */
   toggleHelp?: () => void;
+  /** 문서 내 검색 열기/닫기 (F-22). */
+  toggleFind?: () => void;
 }
 
 export function initShortcuts(handlers: ShortcutHandlers = {}): void {
@@ -32,6 +34,7 @@ export function initShortcuts(handlers: ShortcutHandlers = {}): void {
       const tab = getActiveTab();
       if (tab) closeTab(tab.id);
     },
+    find: () => handlers.toggleFind?.(),
     help: () => handlers.toggleHelp?.(),
   };
 

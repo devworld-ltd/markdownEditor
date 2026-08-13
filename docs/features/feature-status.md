@@ -64,6 +64,7 @@
 | F-57 | 다크 모드 (`prefers-color-scheme`) | `src/style.css` 토큰 7종 | E2E 6 |
 | F-68 | PWA 아이콘 PNG (`apple-touch-icon` · maskable) | `scripts/gen-icons.mjs`, `public/*.png` | E2E 7 |
 | F-58 (완결) | 단축키 안내 UI | `src/shortcutDefs.ts`, `src/shortcutHelp.ts` | 단위 30 + E2E 11 |
+| F-22 | 문서 내 검색 (치환 제외) | `src/searchEngine.ts`, `src/search.ts` | 단위 39 + E2E 14 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -88,7 +89,7 @@
 
 | ID | 기능 |
 |----|------|
-| F-22 | 문서 내 검색 · 치환 |
+| F-22 잔여 | **치환** (찾기는 완료) |
 | F-23 | 구문 하이라이팅 (에디터·코드 블록 모두) |
 | F-24 | 줄 번호 표시 |
 | F-26 | 리스트 자동 이어쓰기 (Enter 시 `- ` 삽입) |
