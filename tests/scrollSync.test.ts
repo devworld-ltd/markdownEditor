@@ -33,6 +33,15 @@ class FakePanel implements ScrollPanel {
     this.listener = listener;
   }
 
+  removeEventListener(_type: "scroll", listener: () => void): void {
+    if (this.listener === listener) this.listener = null;
+  }
+
+  /** 리스너가 붙어 있는지 — 초기화 롤백 검증용(#33). */
+  hasListener(): boolean {
+    return this.listener !== null;
+  }
+
   /** 사용자 스크롤(또는 프로그램적 대입 후 지연 도착하는 이벤트)을 시뮬레이션한다. */
   fireScroll(): void {
     this.listener?.();
@@ -536,5 +545,171 @@ describe("scrollSync — 재진입 가드 및 예외 격리", () => {
     expect(warnSpy).toHaveBeenCalled();
     expect(controller).toBeDefined();
     expect(() => controller!.suspend()).not.toThrow();
+  });
+});
+
+describe("scrollSync — 초기화 실패와 재시도 (#33)", () => {
+  /** 지정한 순번의 addEventListener 호출에서 던지는 패널. */
+  class ThrowingPanel extends FakePanel {
+    constructor(private failOnAttach: boolean, scrollHeight = 2000, clientHeight = 500) {
+      super(scrollHeight, clientHeight);
+    }
+
+    addEventListener(type: "scroll", listener: () => void): void {
+      if (this.failOnAttach) throw new Error("attach 실패");
+      super.addEventListener(type, listener);
+    }
+  }
+
+  it("초기화가 실패하면 재시도가 가능하다 — 잠금이 걸리지 않는다", async () => {
+    const { initScrollSync } = await loadScrollSync();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear(); // 앞선 테스트의 누적 호출과 섞이지 않도록
+
+    // 1차: 프리뷰 부착에서 실패
+    const badPreview = new ThrowingPanel(true);
+    const editor1 = new FakePanel(2000, 500);
+    const failed = initScrollSync({ ...createManualHost(editor1, badPreview), preview: badPreview });
+    failed.syncFromEditorOnce(); // no-op 컨트롤러 — 던지지 않아야 한다
+
+    // 이 호출이 만든 경고만 본다(다른 테스트의 spy 누적과 섞이지 않도록 즉시 스냅샷).
+    const firstCallWarnings = warn.mock.calls.map((call) => String(call[0]));
+    expect(firstCallWarnings).toEqual(["[scrollSync] 초기화 실패:"]);
+
+    // 2차: 정상 패널로 재시도 → 실제로 동작해야 한다
+    const editor2 = new FakePanel(2000, 500);
+    const preview2 = new FakePanel(3000, 500);
+    const host2 = createManualHost(editor2, preview2);
+    initScrollSync(host2);
+
+    editor2.scrollTop = 750;
+    editor2.fireScroll();
+    host2.flush();
+    expect(preview2.scrollTop).toBe(1250); // 재시도가 막혔다면 0 에 머문다
+
+    warn.mockRestore();
+  });
+
+  it("부분 부착 상태로 실패하면 붙은 리스너를 떼어낸다 — 엔진 2개가 생기지 않는다", async () => {
+    const { initScrollSync } = await loadScrollSync();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear(); // 앞선 테스트의 누적 호출과 섞이지 않도록
+
+    const editor = new FakePanel(2000, 500);
+    const badPreview = new ThrowingPanel(true);
+    initScrollSync({ ...createManualHost(editor, badPreview), preview: badPreview });
+
+    // 에디터에는 부착이 성공했었다. 롤백되지 않으면 죽은 클로저가 남는다.
+    expect(editor.hasListener()).toBe(false);
+
+    warn.mockRestore();
+  });
+
+  it("리스너를 뗄 수단이 없으면 재시도를 막는다 — 엔진 중복보다 잠금이 낫다", async () => {
+    const { initScrollSync } = await loadScrollSync();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear();
+
+    // removeEventListener 를 제공하지 않는 패널. 부착은 되지만 되돌릴 수 없다.
+    class UnremovablePanel extends FakePanel {
+      declare removeEventListener: never;
+    }
+    const editor = new UnremovablePanel(2000, 500);
+    delete (editor as unknown as Record<string, unknown>).removeEventListener;
+    Object.defineProperty(editor, "removeEventListener", { value: undefined });
+    const badPreview = new ThrowingPanel(true);
+
+    initScrollSync({ ...createManualHost(editor, badPreview), preview: badPreview });
+    expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+      "[scrollSync] 초기화 실패:",
+    ]);
+
+    // 잠긴 상태여야 한다 — 재시도하면 죽은 클로저와 새 엔진이 공존하게 된다.
+    warn.mockClear();
+    const retry = initScrollSync(setup().host);
+    retry.syncFromEditorOnce();
+    expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+      "[scrollSync] 이미 초기화되어 재호출을 무시합니다.",
+    ]);
+
+    warn.mockRestore();
+  });
+
+  it("성공한 뒤의 재호출은 여전히 무시된다 — 잠금 자체는 살아 있다", async () => {
+    const { initScrollSync } = await loadScrollSync();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear(); // 앞선 테스트의 누적 호출과 섞이지 않도록
+    const { editor, preview, host } = setup();
+
+    initScrollSync(host);
+    const second = initScrollSync(createManualHost(editor, preview));
+    second.syncFromEditorOnce();
+
+    expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+      "[scrollSync] 이미 초기화되어 재호출을 무시합니다.",
+    ]);
+    warn.mockRestore();
+  });
+});
+
+describe("scrollSync — 렌더가 진행 중이던 동기화를 삼키지 않는다 (#34)", () => {
+  it("스크롤 직후 렌더가 끼어들어도 최신 비율이 적용된다", async () => {
+    const { initScrollSync } = await loadScrollSync();
+    const { editor, preview, host } = setup();
+    const controller = initScrollSync(host);
+
+    // 1) 먼저 한 번 동기화해 lastRatio 를 0.2 로 만든다.
+    editor.scrollTop = 300; // 300/1500 = 0.2
+    editor.fireScroll();
+    host.flush();
+    expect(preview.scrollTop).toBe(500); // 0.2 * 2500
+
+    // 2) 사용자가 더 스크롤한다 — 프레임이 예약되지만 아직 흐르지 않았다.
+    editor.scrollTop = 1200; // 0.8
+    editor.fireScroll();
+    expect(host.pendingCount()).toBe(1);
+
+    // 3) 그 사이 150ms 디바운스 렌더가 끝나 innerHTML 이 교체된다.
+    preview.scrollTop = 0; // 렌더가 프리뷰를 맨 위로 리셋
+    controller.reapplyAfterRender();
+
+    // 낡은 lastRatio(0.2)가 아니라 방금 만든 0.8 이 적용돼야 한다.
+    expect(preview.scrollTop).toBe(2000); // 0.8 * 2500
+  });
+
+  it("대기 중인 스크롤이 없으면 기존대로 직전 비율을 재적용한다", async () => {
+    const { initScrollSync } = await loadScrollSync();
+    const { editor, preview, host } = setup();
+    const controller = initScrollSync(host);
+
+    editor.scrollTop = 300;
+    editor.fireScroll();
+    host.flush();
+    expect(host.pendingCount()).toBe(0);
+
+    preview.scrollTop = 0;
+    controller.reapplyAfterRender();
+    expect(preview.scrollTop).toBe(500); // lastRatio 0.2 유지
+  });
+
+  it("되살린 비율이 lastRatio 로 승격돼 다음 렌더에도 이어진다", async () => {
+    const { initScrollSync } = await loadScrollSync();
+    const { editor, preview, host } = setup();
+    const controller = initScrollSync(host);
+
+    editor.scrollTop = 300;
+    editor.fireScroll();
+    host.flush();
+
+    editor.scrollTop = 1200;
+    editor.fireScroll();
+    preview.scrollTop = 0;
+    controller.reapplyAfterRender();
+    host.flush(); // 억제 해제
+
+    // 두 번째 렌더 — 대기 프레임 없이 lastRatio 만으로 복원된다.
+    preview.scrollTop = 0;
+    controller.reapplyAfterRender();
+    expect(preview.scrollTop).toBe(2000);
   });
 });
