@@ -7,10 +7,11 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **42** | 0 | 0 | 42 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **79** | **0** | 15 ※ | 94 |
-| E2E (프리뷰 번들) | 동일 | **76** | **0** | 18 ※ | 94 |
-| **합계 (dev 기준)** | | **121** | **0** | 15 | 136 |
+| 단위 | Vitest 4.1.10 (jsdom) | **129** | 0 | 0 | 129 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **82** | **0** | 15 ※ | 97 |
+| **합계 (dev 기준)** | | **211** | **0** | 15 | 226 |
+
+단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
 ※ 스킵은 **환경 조건**에 따른 것이다. 세 부류가 있다.
 
@@ -52,6 +53,7 @@
 | `session.spec.ts` | 6 | ✅ 전체 통과 |
 | `hardening.spec.ts` | 10 | ✅ 배포 환경 전용 제외 통과 |
 | `swupdate.spec.ts` | 10 | ✅ 프리뷰 모드에서 전량 통과 (dev 서버에서는 skip) |
+| `offline.spec.ts` | 3 | ✅ Playwright `context.setOffline()` 으로 실제 오프라인 재현 |
 
 ### 2.1 URL 응답 (15)
 
@@ -109,6 +111,10 @@
 | `parser.test.ts` | 13 | GFM 변환 7 + sanitize 6 (`<script>`·이벤트 핸들러·`javascript:`·`iframe` 제거, 안전 HTML·체크박스 유지) |
 | `storage.test.ts` | 9 | 저장·복원 왕복, 세션 없음, 손상 JSON, 버전 불일치, 형식 오류 항목 필터, 빈 탭, **용량 초과**, `clearSession` |
 | `swUpdate.test.ts` | 20 | 표시 판정(최초 설치 미표시 포함) · dismiss · 갱신 결정 · `controllerchange`/타임아웃 경합 · **포커스 복원 순서** |
+| `tabs.test.ts` | 34 | `closeTab` 3분기 · dirty 확인 콜백 · `restoreSession` ID 시퀀스 복구 · `persistNow` 반환값 · 용량 초과 알림 1회 제한 |
+| `textEdit.test.ts` | 13 | 감싸기·줄머리·블록 삽입의 경계 조건 |
+| `fileOps.test.ts` | 9 | `suggestFileName` 4분기 + 확장자 대소문자 |
+| `shortcuts.test.ts` 11 · `notice.test.ts` 7 · `editor.test.ts` 4 · `offline.test.ts` 7 | | |
 
 ## 4. 전환 작업 중 발견해 수정한 애플리케이션 버그
 

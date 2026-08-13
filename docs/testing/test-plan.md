@@ -133,13 +133,30 @@ npx wrangler deploy --env dev --dry-run   # 배포 설정 검증
 | E7 | 연타 방지 + 활성화 타임아웃 |
 | E8 | 오프라인 회귀 (`hardening.spec.ts`) |
 
-### 4.9 단위 테스트
+### 4.9 `tests/e2e/offline.spec.ts` — 오프라인 상태 표시 (3케이스) → F-70
+
+Playwright 의 `context.setOffline(true/false)` 로 **실제 오프라인을 재현**한다. 목이 아니라 브라우저 수준 차단이라 신뢰도가 높다.
+
+| 시나리오 | 검증 |
+|----------|------|
+| 오프라인 전환 | 배지 표시 |
+| 온라인 복귀 | 배지 해제 |
+| 오프라인 중 편집 | 편집·프리뷰가 계속 동작 (이 앱은 오프라인에서 완전 동작한다) |
+
+### 4.10 단위 테스트
 
 | 파일 | 케이스 | 대상 |
 |------|--------|------|
 | `tests/parser.test.ts` | 13 | GFM 변환 7 + sanitize 6 |
 | `tests/storage.test.ts` | 9 | 저장·복원·스키마 검증·손상 데이터 방어·용량 초과 |
 | `tests/swUpdate.test.ts` | 20 | 표시 판정 · dismiss · 갱신 결정 · 타임아웃 경합 · 포커스 순서 |
+| `tests/tabs.test.ts` | 34 | 탭 상태 전 함수 |
+| `tests/textEdit.test.ts` | 13 | 문자열 계산 경계 조건 |
+| `tests/fileOps.test.ts` | 9 | `suggestFileName` |
+| `tests/shortcuts.test.ts` | 11 | 키 매핑 |
+| `tests/notice.test.ts` | 7 | 알림 타이머 |
+| `tests/editor.test.ts` | 4 | 디바운스 |
+| `tests/offline.test.ts` | 7 | 연결 상태 판정 |
 
 > `swUpdate.ts` 는 `SwUpdateHost` 주입형 리프라 실제 `navigator.serviceWorker` 없이 가짜 registration 만으로 검증된다. 다만 표시 판정에 쓰는 `navigator.serviceWorker.controller` 만은 DI 계약 밖이라 전역을 패치한다(이슈 #11).
 
@@ -147,9 +164,9 @@ npx wrangler deploy --env dev --dry-run   # 배포 설정 검증
 
 | 지표 | 현재 | 목표 |
 |------|------|------|
-| E2E 기능 커버리지 | 24/27 자동 검증 | 유지 |
+| E2E 기능 커버리지 | 27/30 자동 검증 | 유지 |
 | URL 커버리지 | 13/13 | 100% 유지 |
-| 단위 라인 커버리지 | **25.09%** | 60%+ |
+| 단위 라인 커버리지 | **60.76%** | ✅ 달성 |
 
 상세: [테스트 커버리지 분석](./coverage.md)
 

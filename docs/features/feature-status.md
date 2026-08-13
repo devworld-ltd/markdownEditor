@@ -55,6 +55,9 @@
 | F-54 | 저장소 용량 초과 알림 | `tabs.ts persistNow()` | 단위 1 + E2E 2 |
 | F-61 | PWA (manifest · 서비스 워커 · 오프라인) | `public/manifest.webmanifest`, `public/sw.js` | E2E 4케이스 |
 | F-69 | 서비스 워커 업데이트 알림 | `src/swUpdate.ts`, `public/sw.js`, `vite.config.ts` | 단위 20 + E2E STUB 10 |
+| F-64 | 배포 후 자동 헬스체크 | `scripts/healthcheck.sh`, `ci.yml` | 성공·실패 양쪽 확인 |
+| F-70 | 오프라인 상태 표시 | `src/offline.ts` | 단위 7 + E2E 3 |
+| F-71 | 갱신 알림 P2 4건 정리 | `src/swUpdate.ts` | 단위 44 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -116,18 +119,15 @@
 
 | ID | 기능 | 비고 |
 |----|------|------|
-| F-64 | 배포 후 헬스체크 / prod smoke E2E | `ci.yml` deploy 잡에 미포함. 인증서 프로비저닝 구간 때문에 재시도 필요 |
 | F-67 | dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` |
 | F-68 | PWA 아이콘 PNG (`apple-touch-icon`) | 현재 SVG 단일 아이콘. iOS 홈 화면 추가 시 품질 저하 가능 |
-| F-70 | 오프라인 상태 표시 | 네트워크 끊김을 화면에 알리지 않음 |
-| F-71 | 갱신 알림 잔여 개선 4건 | 이슈 #10~#13 (Esc 가드 · `hasController()` 주입 · `setInterval` 정리 · `innerHTML` 대체). 전부 P2, 현재 배선에서 증상 없음 |
 
 ### 4.6 엔지니어링
 
 | ID | 항목 | 현황 |
 |----|------|------|
 | F-45 | 린터 / 포매터 (ESLint·Prettier) | 설정 없음 |
-| F-47 | 단위 테스트 커버리지 | 8.11% — [커버리지 분석](../testing/coverage.md) |
+| F-47 | 단위 테스트 커버리지 60% | ✅ **60.76% 달성** — 자세히는 [커버리지 분석](../testing/coverage.md). 잔여: `fileOps.ts` 5.26%, `toolbar.ts`·`main.ts` 0%(E2E 담당) |
 | F-65 | 크로스 브라우저 E2E (Firefox·WebKit 프로젝트) | Chromium 만 실행 |
 
 ## 5. 제거됨 (🗑)
@@ -156,9 +156,9 @@ graph TD
 
 ### 즉시 조치 권장
 
-1. **F-47** — 단위 커버리지 24%. `swUpdate.ts` 도입으로 8%대에서 올랐지만 DOM 결합 모듈(`tabs.ts` 333줄, `toolbar.ts` 219줄, `fileOps.ts` 216줄)은 여전히 0% 라 리팩터링 안전망이 없다.
-2. **F-64** — 배포 후 자동 헬스체크가 없어 배포 실패를 수동으로 확인해야 한다.
-3. **F-71** — 갱신 알림 P2 4건(#10~#13). 현재 증상은 없으나 `hasController()` 주입(#11)은 DI 계약을 완결시켜 향후 테스트 비용을 줄인다.
+1. **F-58** — 폴백 브라우저(Safari·Firefox)에서 덮어쓰기·중복 탭 방지가 안 된다는 사실을 사용자에게 알리는 UI 가 없다. 기능 한계를 모르면 버그로 오해한다.
+2. **F-47 잔여** — `fileOps.ts` 5.26%. 파일 I/O 분기(핸들 유무, `AbortError` 판별)는 데이터 유실과 직결되는데 단위 안전망이 없다.
+3. **F-68** — PWA 아이콘이 SVG 단일이라 iOS 홈 화면 추가 시 품질이 떨어진다.
 
 ## 7. 관련 문서
 

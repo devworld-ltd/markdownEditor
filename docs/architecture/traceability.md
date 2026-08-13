@@ -32,6 +32,8 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-54 | 저장소 용량 초과 알림 | 세션 저장 실패 | `tabs.persistNow()` → `notice.ts` | — | `localStorage` | `hardening.spec.ts` |
 | F-61 | PWA · 오프라인 | 페이지 로드 | `main.ts` 등록 → `public/sw.js` | — | Service Worker, Cache Storage, Manifest | `hardening.spec.ts` |
 | F-62 | CSP · 보안 헤더 | 모든 응답 | `public/_headers` (Cloudflare 적용) | — | — | `hardening.spec.ts` (원격 전용) |
+| F-64 | 배포 헬스체크 | `deploy` 잡 | `scripts/healthcheck.sh` | — | — | (CI 자체 검증) |
+| F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
 
 ## 2. 모듈 의존 그래프
@@ -46,6 +48,7 @@ graph LR
   main --> notice["notice.ts"]
   main --> storage["storage.ts"]
   main --> swUpdate["swUpdate.ts"]
+  main --> offline["offline.ts"]
   swUpdate -. "SKIP_WAITING / controllerchange" .-> sw(["public/sw.js"])
 
   editor --> preview["preview.ts"]
@@ -64,11 +67,13 @@ graph LR
   toolbar --> textEdit["textEdit.ts"]
 
   classDef leaf fill:#eef,stroke:#88a
-  class parser,storage,notice,swUpdate,textEdit leaf
+  class parser,storage,notice,swUpdate,textEdit,offline leaf
 ```
 
 - **순환 의존 없음.** `toolbar.ts` 는 `fileOps` 를 import 하지 않고 `setFileActions()` 로 콜백을 주입받아 역방향 의존을 끊는다.
-- `parser.ts` · `storage.ts` · `notice.ts` · `swUpdate.ts` · `textEdit.ts` 는 다른 앱 모듈에 의존하지 않는 리프다. 이 중 단위 테스트가 붙은 것은 `parser.ts`(100%) · `storage.ts`(91.4%) · `swUpdate.ts`(78.9%) · `textEdit.ts`(신규) — **테스트 용이성과 의존 방향이 정확히 일치한다.** `swUpdate.ts` 는 `SwUpdateHost` 주입, `textEdit.ts` 는 DOM 삽입과 문자열 계산을 분리해 이 성질을 의도적으로 확보했다.
+- 리프 모듈: `parser.ts`(100%) · `textEdit.ts`(100%) · `notice.ts`(100%) · `storage.ts`(91.4%) · `swUpdate.ts`(79.9%) · `offline.ts`(79.2%). 전부 단위 테스트가 붙어 있다.
+- **테스트 용이성과 의존 방향이 정확히 일치한다.** 이 세션에서 같은 처방이 네 번 통했다: `swUpdate.ts` 를 `SwUpdateHost` 주입형으로 설계(79%) → `hasController()` 를 host 로 옮겨 테스트의 전역 `navigator` 패치 제거(#11) → `textEdit.ts` 로 문자열 계산을 DOM 삽입에서 분리(100%) → `tabs.ts` 에 가짜 DOM 주입(6.97% → 97.67%).
+- 커버리지는 테스트를 더 써서가 아니라 **의존 방향을 정리해서** 올랐다. 남은 0% 인 `toolbar.ts`·`main.ts` 는 각각 DOM 부수효과 껍데기와 부트스트랩이라 E2E 가 담당한다.
 
 ## 3. 상태 필드 ↔ 소비처 역방향 인덱스
 
@@ -98,6 +103,14 @@ graph LR
 | `tests/e2e/hardening.spec.ts` | 10 | F-54, F-61, F-62 (배포 환경 전용 포함) |
 | `tests/e2e/swupdate.spec.ts` | 10 | F-69 (프리뷰 모드 전용 — STUB) |
 | `tests/swUpdate.test.ts` | 20 | F-69 |
+| `tests/tabs.test.ts` | 34 | F-05, F-06, F-09, F-15, F-19, F-20, F-54 |
+| `tests/textEdit.test.ts` | 13 | F-04, F-16 |
+| `tests/fileOps.test.ts` | 9 | F-08 (`suggestFileName`) |
+| `tests/shortcuts.test.ts` | 11 | F-12 |
+| `tests/notice.test.ts` | 7 | F-14 |
+| `tests/editor.test.ts` | 4 | F-01 |
+| `tests/offline.test.ts` | 7 | F-70 |
+| `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
 
@@ -110,6 +123,8 @@ graph LR
 | `public/sw.js` (캐시 전략 · 생명주기) | [서비스 아키텍처 §7.1·§7.2](./service-architecture.md), [API 명세 §4.1](../api/browser-apis.md) |
 | `src/swUpdate.ts` (`SwUpdateHost` 계약) | [서비스 아키텍처 §7.2](./service-architecture.md), [API 명세 §4.1.3](../api/browser-apis.md), `tests/swUpdate.test.ts` |
 | `vite.config.ts` 빌드 ID 플러그인 | [인프라 §3.2](./infrastructure.md), [서비스 아키텍처 §7.2](./service-architecture.md) |
+| `src/offline.ts` (`OfflineHost` 계약) | [서비스 아키텍처 §7.3](./service-architecture.md), [API 명세 §4.3](../api/browser-apis.md), `tests/offline.test.ts` |
+| `scripts/healthcheck.sh` · `.github/workflows/ci.yml` | [인프라 §4.2.1](./infrastructure.md), [CF Workers 구성](../operations/cloudflare-workers.md) |
 | `playwright.config.ts` 프리뷰 모드 | [테스트 계획 §2](../testing/test-plan.md) |
 | `tsconfig.json` · `package.json` build | [인프라 §3.3](./infrastructure.md) |
 | `src/fileOps.ts` (파일 I/O 분기) | [API 명세 §2·§3](../api/browser-apis.md), [서비스 아키텍처 §5.3](./service-architecture.md) |
