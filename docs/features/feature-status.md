@@ -62,6 +62,7 @@
 | F-25 | 에디터 ↔ 프리뷰 스크롤 동기화 (양방향) | `src/scrollSync.ts` | 단위 27 + E2E 11 |
 | F-72 | 편집/프리뷰 영역 시각 구분 | `src/style.css` 토큰 3종 | E2E |
 | F-57 | 다크 모드 (`prefers-color-scheme`) | `src/style.css` 토큰 7종 | E2E 6 |
+| F-68 | PWA 아이콘 PNG (`apple-touch-icon` · maskable) | `scripts/gen-icons.mjs`, `public/*.png` | E2E 7 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -122,7 +123,6 @@
 | ID | 기능 | 비고 |
 |----|------|------|
 | F-67 | dev 환경 커스텀 도메인 | dev 는 `*.workers.dev` |
-| F-68 | PWA 아이콘 PNG (`apple-touch-icon`) | 현재 SVG 단일 아이콘. iOS 홈 화면 추가 시 품질 저하 가능 |
 
 ### 4.6 엔지니어링
 
