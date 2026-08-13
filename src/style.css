@@ -218,8 +218,10 @@ body {
   padding: 16px;
   border: none;
   resize: none;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 14px;
+  /* F-35: 변수로 두면 설정이 한 곳에서만 적용된다. 값이 없을 때의 기본은
+     여기 적힌 폴백이라, 설정 모듈이 실패해도 편집기는 그대로 뜬다. */
+  font-family: var(--editor-font-family, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace);
+  font-size: var(--editor-font-size, 14px);
   line-height: 1.6;
   outline: none;
   background: var(--surface-editor);
@@ -541,6 +543,48 @@ body {
 .search-text-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* F-35 편집 설정 */
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.setting-select {
+  padding: 5px 8px;
+  border: 1px solid var(--rule-subtle);
+  border-radius: 4px;
+  background: var(--surface-preview);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.setting-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-value {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.setting-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /*

@@ -45,6 +45,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-39 | 인쇄 / PDF | 툴바 버튼 · `⌘/Ctrl+P`(브라우저) | `@media print` | — | `window.print()` | `print.spec.ts` |
 | F-59 | 접근성 | 전 UI | `index.html` 랜드마크 · `tabs.ts` 버튼화 · `style.css` 포커스 | — | — | `a11y.spec.ts` |
 | F-34 | 탭 재정렬 | 드래그 · `⌥⇧←→` | `tabOrder.ts` → `tabs.ts` `applyOrder()` | `Map` 삽입 순서 | HTML5 DnD | `taborder.spec.ts` |
+| F-35 | 편집 글꼴·크기 | 툴바 버튼 | `editorPrefs.ts` → `editorSettings.ts` → CSS 변수 | `fontId`·`fontSize` (localStorage) | — | `settings.spec.ts` |
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
@@ -151,6 +152,9 @@ graph LR
 | `tests/e2e/a11y.spec.ts` | 18 | F-59 |
 | `tests/tabOrder.test.ts` | 18 | F-34 |
 | `tests/e2e/taborder.spec.ts` | 11 | F-34 |
+| `tests/editorPrefs.test.ts` | 11 | F-35 |
+| `tests/editorSettings.test.ts` | 12 | F-35 |
+| `tests/e2e/settings.spec.ts` | 12 | F-35 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
 ## 5. 변경 영향도 — "이 파일을 고치면 어떤 문서를 갱신하나"
