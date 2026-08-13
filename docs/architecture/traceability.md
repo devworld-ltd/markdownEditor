@@ -120,7 +120,7 @@ graph LR
 | `tests/offline.test.ts` | 7 | F-70 |
 | `tests/fsLimitNotice.test.ts` | — | F-58 |
 | `tests/fileOps.test.ts` | 27 | F-07, F-08, F-11, F-14 (9 → 27) |
-| `tests/scrollSync.test.ts` | 27 | F-25 |
+| `tests/scrollSync.test.ts` | 34 | F-25 (초기화 롤백 #33 · 렌더 중 동기화 보존 #34 포함) |
 | `tests/e2e/scrollsync.spec.ts` | 11 | F-25, F-72 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |
 
