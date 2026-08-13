@@ -55,6 +55,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`htmlExport.ts`** — HTML 내보내기 조립(F-38). 순수 모듈. **마크다운을 파싱하지 않는다** — 정화된 HTML 을 받아 감싸기만 한다.
 - **`viewMode.ts`** — 보기 모드(F-33). 주입형 리프. **버튼 클릭은 듣지 않는다** — 툴바가 이미 다루므로 중복하면 한 번 눌러 두 단계 넘어간다.
 - **`splitLayout.ts`** — 분할 비율 계산만 담당하는 순수 리프(F-32).
 - **`splitter.ts`** — 분할 리사이저 배선(F-32). 주입형 리프. **경계선은 이 요소가 그린다** — `#editor` 에 테두리를 되살리면 1px 이 두 줄로 겹친다.
@@ -99,7 +100,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 30. **F-33 은 패널을 `display: none` 으로 숨겨야 한다.** 숨은 패널의 `clientHeight` 가 0 이 되어 F-25 의 `> 0` 가드에 걸리는 데 기대는 설계다. `visibility`/`opacity` 로 바꾸면 **크기가 남아 동기화가 계속 돌면서 보이지 않는 패널을 따라 움직인다.**
 31. **레이아웃 설정 쓰기는 항상 병합이다.** 통째로 덮어쓰면 모드를 저장할 때 비율이 지워지는데, 같은 세션에서는 메모리 값이 가려 **새로고침해야 드러난다.**
 32. **`initViewMode()` 는 `initToolbar()` 뒤에 호출한다.** 순서가 뒤집히면 클릭은 동작하지만 `aria-*` 가 비어 스크린리더에게는 상태 없는 버튼이 된다 — 눈으로는 안 보인다.
-33. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+33. **내보내기에서 원문을 다시 파싱하지 말 것.** `htmlExport.ts` 는 프리뷰에 이미 들어간 **정화된** HTML 만 받는다. 두 번째 파싱 경로를 만들면 정화 정책이 갈라지고 한쪽만 갱신되는 순간 F-18 이 뚫린다 — 내보낸 파일은 남이 열기 때문에 앱 안보다 위험하다. 단, **제목은 파일명에서 오므로 DOMPurify 를 거치지 않는다** → `escapeHtmlText()` 로 직접 막는다.
+34. **`exportFile()` 은 탭 상태를 건드리지 않는다.** 내보내기는 저장이 아니다. 탭이 `note.html` 을 가리키게 되면 다음 `Cmd+S` 가 마크다운 원문을 `.html` 에 덮어쓴다.
+35. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
