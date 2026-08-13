@@ -126,9 +126,15 @@ test("A5: 모든 인터랙티브 요소에 접근 가능한 이름이 있다", a
       .filter((el) => {
         const style = getComputedStyle(el);
         if (style.display === "none" || style.visibility === "hidden") return false;
+        // `<label for="...">` 연결도 **유효한 접근 가능한 이름**이다. 이걸 빼먹으면
+        // 제대로 이름이 붙은 체크박스를 결함으로 잘못 보고한다(실제로 그랬다).
+        const labelled = el.id
+          ? document.querySelector(`label[for="${el.id}"]`)?.textContent?.trim()
+          : null;
         const name =
           el.getAttribute("aria-label") ??
           el.getAttribute("title") ??
+          labelled ??
           (el.textContent ?? "").trim();
         return !name;
       })

@@ -16,7 +16,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function widths(page: import("@playwright/test").Page) {
-  const editor = await page.locator("#editor").boundingBox();
+  // F-24 이후 비율은 줄 번호를 포함한 .editor-pane 이 받는다.
+  const editor = await page.locator("#editor-pane").boundingBox();
   const preview = await page.locator("#preview").boundingBox();
   return { editor: editor!.width, preview: preview!.width };
 }
@@ -140,13 +141,13 @@ test("P8: 비율을 바꿔도 편집 위치가 움직이지 않는다 (F-25 경�
 test("P9: 720px 이하에서는 세로 방향으로 동작한다", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
 
-  const before = await page.locator("#editor").boundingBox();
+  const before = await page.locator("#editor-pane").boundingBox();
   const box = (await page.locator(RESIZER).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2, box.y - 150, { steps: 8 });
   await page.mouse.up();
-  const after = await page.locator("#editor").boundingBox();
+  const after = await page.locator("#editor-pane").boundingBox();
 
   expect(after!.height).toBeLessThan(before!.height);
 });

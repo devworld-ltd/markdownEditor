@@ -68,14 +68,19 @@
         <button type="button" id="search-replace-all" class="search-text-btn">모두 바꾸기</button>
       </div>
       <main class="editor-container" data-mode="split">
-        <textarea
+        <!-- F-24 줄 번호. textarea 바깥이라 선택·복사에 섞이지 않는다.
+             스크린리더에는 숨긴다 — 번호를 한 줄씩 읽는 건 소음이다. -->
+        <div id="editor-pane" class="editor-pane">
+          <div id="line-gutter" class="line-gutter" aria-hidden="true" hidden></div>
+          <textarea
           id="editor"
           placeholder="마크다운을 입력하세요..."
           spellcheck="false"
           autocomplete="off"
           autocapitalize="off"
           aria-label="마크다운 편집기"
-        ></textarea>
+          ></textarea>
+        </div>
         <!-- F-32 분할 비율 조절. role="separator" + tabindex 로 키보드에서도
              도달한다 — 드래그 전용이면 키보드 사용자에게는 없는 기능이다. -->
         <div
@@ -136,6 +141,10 @@
                 &plus;
               </button>
             </div>
+          </div>
+          <div class="setting-row">
+            <label for="setting-line-numbers">줄 번호</label>
+            <input type="checkbox" id="setting-line-numbers" class="setting-check" />
           </div>
           <p class="setting-note">
             편집 영역에만 적용됩니다. 미리보기와 내보내기·인쇄 결과는 바뀌지 않습니다.

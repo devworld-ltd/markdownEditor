@@ -100,6 +100,7 @@ interface StoredLayout {
   mode?: unknown;
   fontId?: unknown;
   fontSize?: unknown;
+  lineNumbers?: unknown;
 }
 
 function readLayout(): StoredLayout {
@@ -162,6 +163,15 @@ export function loadEditorPrefs(): { fontId?: unknown; fontSize?: unknown } {
 /** 편집 글꼴·크기를 저장한다. */
 export function saveEditorPrefs(prefs: { fontId: string; fontSize: number }): void {
   writeLayout(prefs);
+}
+
+/** 줄 번호 표시 여부 (F-24). */
+export function loadLineNumbers(): boolean {
+  return readLayout().lineNumbers === true;
+}
+
+export function saveLineNumbers(enabled: boolean): void {
+  writeLayout({ lineNumbers: enabled });
 }
 
 /** 최근 파일 목록 원본을 읽는다 (F-36). 검증은 호출부(recentFiles)가 한다. */
