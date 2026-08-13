@@ -11,7 +11,19 @@
  * 그 사실을 알린다.
  */
 
+import { classifyDropped, rejectionMessage } from "./dropFiles";
 import { altFromFileName, imageErrorMessage, imageMarkdown, validateImage } from "./imageUpload";
+
+/**
+ * 떨어진 문서 하나. **핸들이 붙어 있으면 그 파일에 바로 저장할 수 있다** —
+ * 드롭으로 연 문서가 "다른 이름으로 저장" 만 되면, 파일을 끌어다 놓고 고친 뒤
+ * 저장하는 가장 자연스러운 흐름이 끊긴다 (F-56).
+ */
+export interface DroppedDocument {
+  file: File;
+  /** FS Access API 가 있을 때만. 없으면 null. */
+  handle: FileSystemFileHandle | null;
+}
 
 export interface EditorDropHost {
   editorEl: HTMLTextAreaElement;
@@ -21,10 +33,10 @@ export interface EditorDropHost {
   insertText: (textarea: HTMLTextAreaElement, text: string) => void;
   notify?: (message: string, kind?: "info" | "error") => void;
   /**
-   * 이미지가 아닌 파일이 떨어졌을 때. F-56 이 여기에 연결된다.
-   * 처리했으면 true 를 돌려준다.
+   * 이미지가 아닌 문서가 떨어졌을 때 (F-56). 처리했으면 true.
+   * 핸들은 드롭 이벤트가 살아 있는 동안에만 얻을 수 있어 여기서 같이 넘긴다.
    */
-  handleOtherFiles?: (files: File[]) => boolean;
+  handleOtherFiles?: (documents: DroppedDocument[]) => boolean;
 }
 
 export interface EditorDropController {
@@ -77,18 +89,55 @@ export function initEditorDrop(host: EditorDropHost): EditorDropController {
       }
     }
 
-    /** 떨어진 파일을 이미지와 나머지로 가른다. */
-    function routeFiles(files: File[]): void {
-      const images = files.filter((f) => f.type.startsWith("image/"));
-      const others = files.filter((f) => !f.type.startsWith("image/"));
+    /** 떨어진 파일을 이미지·문서·나머지로 가른다 (분류 규칙은 `dropFiles.ts`). */
+    function routeFiles(documents: DroppedDocument[]): void {
+      const { images, documents: docs, rejected } = classifyDropped(
+        documents.map((d) => ({ ...d, name: d.file.name, type: d.file.type })),
+      );
 
-      if (others.length > 0 && host.handleOtherFiles?.(others)) {
-        // F-56 이 가져갔다.
-      } else if (others.length > 0) {
-        host.notify?.("이미지 파일만 넣을 수 있습니다.", "error");
+      if (docs.length > 0 && !host.handleOtherFiles?.(docs)) {
+        host.notify?.("파일을 열지 못했습니다.", "error");
       }
+      if (rejected.length > 0) {
+        host.notify?.(rejectionMessage(rejected.map((d) => d.file)), "error");
+      }
+      if (images.length > 0) void insertImages(images.map((d) => d.file));
+    }
 
-      if (images.length > 0) void insertImages(images);
+    /**
+     * 드롭 이벤트에서 파일과 (가능하면) 핸들을 꺼낸다.
+     *
+     * `getAsFileSystemHandle()` 은 **이벤트 처리 중에 호출해야 한다.**
+     * `DataTransferItem` 은 핸들러가 끝나면 비워지므로, 나중에 부르면 빈손이
+     * 된다. 반환값은 Promise 라 await 는 뒤에서 해도 된다.
+     */
+    async function collectDocuments(event: DragEvent): Promise<DroppedDocument[]> {
+      const files = [...(event.dataTransfer?.files ?? [])];
+      const items = [...(event.dataTransfer?.items ?? [])];
+
+      const handlePromises = items.map((item) => {
+        const get = (
+          item as DataTransferItem & {
+            getAsFileSystemHandle?: () => Promise<FileSystemHandle | null>;
+          }
+        ).getAsFileSystemHandle;
+        if (item.kind !== "file" || typeof get !== "function") return null;
+        // 폴백 브라우저(Safari·Firefox)에는 이 메서드가 없다 — 핸들 없이 연다.
+        return get.call(item).catch(() => null);
+      });
+
+      const handles = await Promise.all(
+        handlePromises.map((p) => p ?? Promise.resolve(null)),
+      );
+
+      return files.map((file, index) => {
+        const handle = handles[index];
+        return {
+          file,
+          handle:
+            handle && handle.kind === "file" ? (handle as FileSystemFileHandle) : null,
+        };
+      });
     }
 
     editorEl.addEventListener("dragover", (event) => {
@@ -110,7 +159,8 @@ export function initEditorDrop(host: EditorDropHost): EditorDropController {
 
       event.preventDefault();
       delete editorEl.dataset.dropping;
-      routeFiles(files);
+      // 핸들 수집만 비동기다. `collectDocuments` 안에서 동기적으로 요청한다.
+      void collectDocuments(event).then(routeFiles);
     });
 
     editorEl.addEventListener("paste", (event) => {

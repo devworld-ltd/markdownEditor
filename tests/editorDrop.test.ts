@@ -21,7 +21,7 @@ function buildHost() {
   const uploaded: string[] = [];
   const inserted: string[] = [];
   const notices: Array<{ message: string; kind?: string }> = [];
-  const others: File[][] = [];
+  const others: Array<Array<{ file: File; handle: FileSystemFileHandle | null }>> = [];
 
   return {
     editorEl,
@@ -35,17 +35,31 @@ function buildHost() {
     },
     insertText: (_ta: HTMLTextAreaElement, text: string) => inserted.push(text),
     notify: (message: string, kind?: "info" | "error") => notices.push({ message, kind }),
-    handleOtherFiles: (files: File[]) => {
-      others.push(files);
+    handleOtherFiles: (documents: Array<{ file: File; handle: FileSystemFileHandle | null }>) => {
+      others.push(documents);
       return true;
     },
   };
 }
 
-function dropFiles(el: HTMLElement, files: File[]): DragEvent {
+/**
+ * `items` 를 함께 실어야 F-56 의 핸들 수집 경로가 돈다. `handles` 를 주면
+ * `getAsFileSystemHandle` 이 있는 브라우저를, 주지 않으면 폴백을 흉내 낸다.
+ */
+function dropFiles(
+  el: HTMLElement,
+  files: File[],
+  handles?: Array<FileSystemFileHandle | null>,
+): DragEvent {
   const event = new Event("drop", { bubbles: true, cancelable: true }) as DragEvent;
+  const items = handles
+    ? handles.map((handle) => ({
+        kind: "file",
+        getAsFileSystemHandle: async () => handle,
+      }))
+    : files.map(() => ({ kind: "file" }));
   Object.defineProperty(event, "dataTransfer", {
-    value: { files, types: ["Files"] },
+    value: { files, items, types: ["Files"] },
   });
   el.dispatchEvent(event);
   return event;
@@ -165,8 +179,56 @@ describe("editorDrop — 분기", () => {
     const md = fakeFile("문서.md", "text/markdown");
     dropFiles(host.editorEl, [md]);
 
-    expect(host.others).toEqual([[md]]);
+    await vi.waitFor(() => expect(host.others).toHaveLength(1));
+    expect(host.others[0].map((d) => d.file)).toEqual([md]);
     expect(host.uploaded).toEqual([]);
+  });
+
+  it("FS Access 가 있으면 핸들을 함께 넘긴다 — 그래야 그 파일에 저장된다", async () => {
+    const { initEditorDrop } = await load();
+    const host = buildHost();
+    initEditorDrop(host);
+
+    const handle = { kind: "file", name: "문서.md" } as unknown as FileSystemFileHandle;
+    dropFiles(host.editorEl, [fakeFile("문서.md", "text/markdown")], [handle]);
+
+    await vi.waitFor(() => expect(host.others).toHaveLength(1));
+    expect(host.others[0][0].handle).toBe(handle);
+  });
+
+  it("폴백 브라우저에서는 핸들 없이 넘긴다", async () => {
+    // Safari·Firefox 에는 getAsFileSystemHandle 이 없다 — 열리기는 해야 한다.
+    const { initEditorDrop } = await load();
+    const host = buildHost();
+    initEditorDrop(host);
+
+    dropFiles(host.editorEl, [fakeFile("문서.md", "text/markdown")]);
+
+    await vi.waitFor(() => expect(host.others).toHaveLength(1));
+    expect(host.others[0][0].handle).toBeNull();
+  });
+
+  it("확장자로 문서를 가른다 — .md 의 MIME 타입은 환경마다 다르다", async () => {
+    const { initEditorDrop } = await load();
+    const host = buildHost();
+    initEditorDrop(host);
+
+    dropFiles(host.editorEl, [fakeFile("문서.md", "")]);
+
+    await vi.waitFor(() => expect(host.others).toHaveLength(1));
+  });
+
+  it("문서도 이미지도 아니면 이름을 밝혀 거절한다", async () => {
+    const { initEditorDrop } = await load();
+    const host = buildHost();
+    initEditorDrop(host);
+
+    dropFiles(host.editorEl, [fakeFile("보고서.pdf", "application/pdf")]);
+
+    await vi.waitFor(() => expect(host.notices).toHaveLength(1));
+    expect(host.notices[0].kind).toBe("error");
+    expect(host.notices[0].message).toContain("보고서.pdf");
+    expect(host.others).toEqual([]);
   });
 
   it("처리기가 없으면 알린다", async () => {
@@ -175,6 +237,7 @@ describe("editorDrop — 분기", () => {
     initEditorDrop({ ...host, handleOtherFiles: undefined });
 
     dropFiles(host.editorEl, [fakeFile("문서.md", "text/markdown")]);
+    await vi.waitFor(() => expect(host.notices).toHaveLength(1));
     expect(host.notices[0].kind).toBe("error");
   });
 
@@ -188,7 +251,7 @@ describe("editorDrop — 분기", () => {
       fakeFile("문서.md", "text/markdown"),
     ]);
     await vi.waitFor(() => expect(host.inserted).toHaveLength(1));
-    expect(host.others).toHaveLength(1);
+    await vi.waitFor(() => expect(host.others).toHaveLength(1));
   });
 
   it("파일이 없는 드롭은 기본 동작에 맡긴다", async () => {
