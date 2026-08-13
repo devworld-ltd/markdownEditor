@@ -13,3 +13,4 @@ test-results/
 
 # devflow 실행 중 lock (커밋 대상 아님)
 .claude/.devflow.lock
+.claude/.chainflow.lock

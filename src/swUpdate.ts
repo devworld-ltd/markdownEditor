@@ -16,6 +16,9 @@ export interface SwUpdateHost {
   register(): Promise<ServiceWorkerRegistration | null>;
   /** controllerchange 구독. 해제 함수를 반환 */
   onControllerChange(fn: () => void): () => void;
+  /** 이 페이지를 제어 중인 서비스 워커 존재 여부(표시 판정용). 기본 구현은
+   * navigator.serviceWorker?.controller 존재 여부. */
+  hasController(): boolean;
   /** 세션 확정 저장. 성공 여부를 반환 (= tabs.persistNow) */
   persist(): boolean;
   /** 미저장 탭 존재 여부 (= tabs.hasDirtyTabs) */
@@ -47,6 +50,15 @@ type PanelState = "idle" | "updating";
 /** main.ts 의 beforeunload 가 이탈 경고 억제 여부를 판단할 때 읽는다 (U5). */
 let reloadPending = false;
 
+/**
+ * 재진입 가드(U5 와 동일한 모듈 스코프 상태). main.ts 는 initSwUpdate 를 앱 생애주기당
+ * 정확히 한 번만 호출하므로 실질적 위험은 없지만, 두 번째 호출이 setInterval 을
+ * 중복 등록해 첫 등록을 정리할 방법이 없는 상태로 남기는 것을 막는다. 이 모듈에는
+ * 별도의 dispose 훅을 거는 호출자가 없으므로 정리 함수를 반환하는 방식은 아무도
+ * 쓰지 않는 코드가 되어 가드 쪽이 이 코드베이스에 맞다.
+ */
+let initialized = false;
+
 export function isUpdateReloadPending(): boolean {
   return reloadPending;
 }
@@ -63,6 +75,7 @@ function resolveHost(
       navigator.serviceWorker.addEventListener("controllerchange", fn);
       return () => navigator.serviceWorker.removeEventListener("controllerchange", fn);
     },
+    hasController: () => Boolean(navigator.serviceWorker?.controller),
     persist: () => false,
     hasDirty: () => false,
     confirmUnsafeReload: (message) => window.confirm(message),
@@ -81,11 +94,17 @@ function resolveHost(
 export function initSwUpdate(
   partialHost: Partial<SwUpdateHost> & Pick<SwUpdateHost, "panelEl">,
 ): void {
+  if (initialized) {
+    console.warn("[sw-update] 이미 초기화되어 재호출을 무시합니다.");
+    return;
+  }
+  initialized = true;
   try {
     const host = resolveHost(partialHost);
     const panelEl = host.panelEl;
 
-    const textEl = panelEl.querySelector<HTMLElement>("#sw-update-text");
+    const textIdleEl = panelEl.querySelector<HTMLElement>("#sw-update-text-idle");
+    const textUpdatingEl = panelEl.querySelector<HTMLElement>("#sw-update-text-updating");
     const laterBtn = panelEl.querySelector<HTMLButtonElement>("#sw-update-later");
     const reloadBtn = panelEl.querySelector<HTMLButtonElement>("#sw-update-reload");
 
@@ -104,17 +123,16 @@ export function initSwUpdate(
       const updating = state === "updating";
       if (laterBtn) laterBtn.disabled = updating;
       if (reloadBtn) reloadBtn.disabled = updating;
-      if (textEl) {
-        textEl.innerHTML = updating
-          ? "새 버전으로 전환하는 중입니다..."
-          : "새 버전이 준비됐습니다.<br />새로고침하면 최신 버전으로 전환됩니다.";
-      }
+      // 정적 문구는 index.html 에 두 요소로 미리 존재하며 여기서는 hidden 만 토글한다
+      // (parseMarkdown() 을 우회하는 innerHTML 대입을 피한다).
+      if (textIdleEl) textIdleEl.hidden = updating;
+      if (textUpdatingEl) textUpdatingEl.hidden = !updating;
     }
 
     function show(): void {
       // 최초 설치(제어 워커 없음)에는 절대 표시하지 않는다(FR-M2) — 호출부에서
       // 이미 판정하지만, 여기서도 방어적으로 다시 확인한다.
-      if (navigator.serviceWorker.controller === null) return;
+      if (!host.hasController()) return;
       panelEl.hidden = false;
     }
 
@@ -126,7 +144,7 @@ export function initSwUpdate(
       const waiting = registration?.waiting ?? null;
       if (!waiting) return;
       // 최초 설치에서는 controller 가 없으므로 절대 표시하지 않는다(D1-C, FR-M2).
-      if (navigator.serviceWorker.controller === null) return;
+      if (!host.hasController()) return;
       if (dismissedWorker === waiting) return;
       show();
     }
@@ -195,6 +213,8 @@ export function initSwUpdate(
     // 리스너를 쓰면 shortcuts.ts 와 충돌하므로 반드시 panelEl 에 부착한다.
     panelEl.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
+        // FR-S4 와 동일한 가드(§handleReload): 갱신 진행 중에는 Esc 로도 닫지 않는다.
+        if (panelState === "updating") return;
         e.stopPropagation();
         handleLater();
       }

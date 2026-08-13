@@ -1,3 +1,5 @@
+import { computeBlockInsertion, computeLineStart, computeWrap } from "./textEdit";
+
 interface ToolbarAction {
   label: string;
   icon: string;
@@ -11,31 +13,37 @@ interface ToolbarAction {
   editsText?: boolean;
 }
 
+// 계산(무엇을 삽입할지)은 순수 함수인 ./textEdit 에 있다. 아래 세 함수는 DOM 삽입
+// (어떻게 삽입할지)만 담당하는 얇은 껍데기다 — execCommand("insertText") 를 유지해야
+// Cmd+Z undo 스택이 보존된다 (docs/user-scenarios.md US-05).
+
 function wrapSelection(
   textarea: HTMLTextAreaElement,
   before: string,
   after: string,
 ) {
   const { selectionStart, selectionEnd, value } = textarea;
-  const selected = value.slice(selectionStart, selectionEnd);
-  const replacement = `${before}${selected || "텍스트"}${after}`;
+  const { replacement, placeholderSelection } = computeWrap(
+    value,
+    selectionStart,
+    selectionEnd,
+    before,
+    after,
+  );
 
   textarea.focus();
   textarea.setSelectionRange(selectionStart, selectionEnd);
   document.execCommand("insertText", false, replacement);
 
   // 선택 텍스트가 없었으면 placeholder를 선택 상태로
-  if (!selected) {
-    textarea.setSelectionRange(
-      selectionStart + before.length,
-      selectionStart + before.length + "텍스트".length,
-    );
+  if (placeholderSelection) {
+    textarea.setSelectionRange(placeholderSelection.start, placeholderSelection.end);
   }
 }
 
 function insertAtLineStart(textarea: HTMLTextAreaElement, prefix: string) {
   const { selectionStart, value } = textarea;
-  const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+  const lineStart = computeLineStart(value, selectionStart);
 
   textarea.focus();
   textarea.setSelectionRange(lineStart, lineStart);
@@ -44,8 +52,7 @@ function insertAtLineStart(textarea: HTMLTextAreaElement, prefix: string) {
 
 function insertBlock(textarea: HTMLTextAreaElement, text: string) {
   const { selectionStart, value } = textarea;
-  const needsNewline = selectionStart > 0 && value[selectionStart - 1] !== "\n";
-  const insertion = needsNewline ? `\n${text}\n` : `${text}\n`;
+  const insertion = computeBlockInsertion(value, selectionStart, text);
 
   textarea.focus();
   textarea.setSelectionRange(selectionStart, selectionStart);
