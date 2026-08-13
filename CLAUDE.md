@@ -58,6 +58,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`sessionReclaim.ts`** — 용량 초과 회수 규칙(F-54). 순수. **더티 탭의 내용은 절대 버리지 않는다.**
 - **`dropFiles.ts`** — 드롭 파일 분류(F-56). 순수. **확장자가 1순위** — `.md` 의 MIME 타입은 환경마다 다르다.
 - **`tableFormat.ts`** — 표 계산(F-30). 순수. **표시 폭**(한글·이모지 2칸)으로 파이프를 맞춘다.
 - **`tableUi.ts`** — 표 대화상자(F-30). 커서가 표 안이면 편집, 밖이면 삽입.
@@ -152,7 +153,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 59. **표시 폭은 `length` 가 아니다.** 한글은 `length` 1 에 2칸, 이모지는 `length` 2 에 2칸 — 두 방향으로 틀린다. `tableFormat.displayWidth()` 를 써라.
 60. **`getAsFileSystemHandle()` 은 드롭 이벤트 처리 중에 불러야 한다.** `DataTransferItem` 은 핸들러가 끝나면 비워져, 나중에 부르면 빈손이 된다(오류 없이). 반환값은 Promise 라 `await` 는 뒤에서 해도 된다. 그리고 **E2E 에서 항목에 메서드를 붙이지 말 것** — `transfer.items[i]` 는 접근할 때마다 새 래퍼를 준다. `DataTransferItem.prototype` 을 갈아끼워야 한다.
 61. **`.md` 의 MIME 타입을 믿지 말 것.** `text/markdown`·`text/plain`·**빈 문자열** 전부 나온다(맥에서 흔하다). 확장자를 1순위로 본다. 반대로 이미지는 타입을 믿는다 — 업로드 검증이 타입 기준이라 확장자만 고친 파일을 통과시키면 안 된다.
-62. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+62. **세션 회수는 "저장된 사본" 만 비운다.** 편집기의 내용은 건드리지 않는다 — 그래서 이번 세션에서는 아무것도 잃지 않는다. 대상은 **깨끗하고·활성이 아니고·파일 이름이 있고·내용이 있는** 탭뿐이고, **탭 자체는 닫지 않는다.** 다 비워도 저장이 안 되면 **회수하지 않은 것으로 보고**한다(공간도 못 벌면서 사본만 잃는 최악을 피한다).
+63. **세션 스키마에 필드를 더할 때는 선택 필드로.** `SCHEMA_VERSION` 을 올리면 기존 세션이 통째로 폐기된다(F-55) — 편의 기능을 넣으려다 사용자 문서를 잃는다.
+64. **용량 초과 E2E 는 초기 세션을 `addInitScript` 에서 심어야 한다.** 나중에 심고 `reload()` 하면 **이전 페이지의 `beforeunload` 저장이 그 위를 덮어써** 복원할 것이 사라진다.
+65. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

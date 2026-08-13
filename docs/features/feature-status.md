@@ -52,7 +52,7 @@
 | F-53 | 저장소 사용 불가 환경 안내 | `main.ts`, `storage.ts` | 단위 |
 | F-66 | `main`·`dev` 브랜치 보호 규칙 | GitHub branch protection | 직접 push 거부 확인 |
 | F-62 | CSP 및 보안 헤더 | `public/_headers` | E2E 3케이스 (배포 환경) |
-| F-54 | 저장소 용량 초과 알림 | `tabs.ts persistNow()` | 단위 1 + E2E 2 |
+| F-54 | 저장소 용량 초과 알림 **+ 자동 회수** | `tabs.ts persistNow()`, `src/sessionReclaim.ts` | 단위 22 + E2E 4 |
 | F-61 | PWA (manifest · 서비스 워커 · 오프라인) | `public/manifest.webmanifest`, `public/sw.js` | E2E 4케이스 |
 | F-69 | 서비스 워커 업데이트 알림 | `src/swUpdate.ts`, `public/sw.js`, `vite.config.ts` | 단위 20 + E2E STUB 10 |
 | F-64 | 배포 후 자동 헬스체크 | `scripts/healthcheck.sh`, `ci.yml` | 성공·실패 양쪽 확인 |
@@ -91,7 +91,7 @@
 |----|------|-------------|------|------|
 | F-11 | 중복 파일 열기 방지 | FS Access 경로에서 `isSameEntry()` 로 판별 | **폴백 브라우저(Safari·Firefox)에서는 불가** — 핸들이 없어 같은 파일이 여러 탭으로 열린다 | 중 |
 | F-08 | 덮어쓰기 저장 | Chrome·Edge 에서 대화상자 없이 덮어쓰기 | **폴백 브라우저에서는 매번 새 파일 다운로드** | 중 |
-| F-19 | 자동 저장 | 500ms 디바운스 저장 + **용량 초과 시 사용자 알림**(F-54) | 초과 이후에는 자동 저장이 멈춘 상태로 유지된다. 오래된 탭을 자동 정리하는 회수 로직은 없다 | 낮 |
+| F-19 | 자동 저장 | 500ms 디바운스 저장 + 용량 초과 시 알림·**자동 회수**(F-54) | 회수 대상은 깨끗하고·활성이 아니고·파일 이름이 있는 탭의 **저장된 사본**뿐이다. 더티 탭만 남으면 여전히 저장이 멈춘다 | 낮 |
 | F-20 | 세션 복원 | 탭·본문·dirty·활성 탭 복원 | 파일 핸들·커서·스크롤은 복원 불가 (구조적 한계) | 낮 |
 | F-06 | 커서·스크롤 보존 | 탭 전환 시 복원, E2E 로 커서 검증 | `scrollTop` 복원은 미검증 (textarea 높이 의존) | 낮 |
 
