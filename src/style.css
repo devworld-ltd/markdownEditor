@@ -137,6 +137,34 @@ body {
   color: #ccc;
 }
 
+/* F-34 드래그 재정렬 */
+.tab {
+  position: relative;
+}
+
+.tab.dragging {
+  opacity: 0.45;
+}
+
+/* 놓을 위치 표시. 테두리가 아니라 ::before 라야 탭 폭이 흔들리지 않는다. */
+.tab.drop-before::before,
+.tab.drop-after::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #007acc;
+}
+
+.tab.drop-before::before {
+  left: 0;
+}
+
+.tab.drop-after::before {
+  right: 0;
+}
+
 .tab.active {
   background: #1e1e1e;
   color: #fff;

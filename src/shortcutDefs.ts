@@ -30,6 +30,8 @@ export type ShortcutId =
   | "closeTab"
   | "find"
   | "cycleView"
+  | "moveTabLeft"
+  | "moveTabRight"
   | "help";
 
 export interface ShortcutDef {
@@ -95,6 +97,22 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     keys: { apple: ["⌥", "N"], other: ["Alt", "N"] },
     note: "브라우저가 ⌘N/Ctrl+N 을 선점해 막을 수 없어 Alt 조합을 씁니다.",
     match: (e) => isAltOnly(e) && e.code === "KeyN",
+  },
+  {
+    id: "moveTabLeft",
+    group: "탭",
+    label: "탭을 왼쪽으로 옮기기",
+    keys: { apple: ["⌥", "⇧", "←"], other: ["Alt", "Shift", "←"] },
+    note: "탭 조작은 ⌥ 조합으로 묶었습니다. 드래그로도 순서를 바꿀 수 있습니다.",
+    match: (e) => isAltOnly(e) && e.shiftKey && e.code === "ArrowLeft",
+  },
+  {
+    id: "moveTabRight",
+    group: "탭",
+    label: "탭을 오른쪽으로 옮기기",
+    keys: { apple: ["⌥", "⇧", "→"], other: ["Alt", "Shift", "→"] },
+    note: "탭 조작은 ⌥ 조합으로 묶었습니다. 드래그로도 순서를 바꿀 수 있습니다.",
+    match: (e) => isAltOnly(e) && e.shiftKey && e.code === "ArrowRight",
   },
   {
     id: "closeTab",
