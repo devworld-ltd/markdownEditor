@@ -48,6 +48,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-35 | 편집 글꼴·크기 | 툴바 버튼 | `editorPrefs.ts` → `editorSettings.ts` → CSS 변수 | `fontId`·`fontSize` (localStorage) | — | `settings.spec.ts` |
 | F-36 | 최근 파일 | 툴바 버튼 · 파일 열기/저장 | `fileOps` 훅 → `recentFilesUi.ts` | `recent` (localStorage) + 메모리 핸들 | `showOpenFilePicker` | `recent.spec.ts` |
 | F-40 | 클립보드 복사 | 툴바 버튼 | `preview.innerHTML` → `clipboardExport.ts` | — | `navigator.clipboard` · `ClipboardItem` | `clipboard.spec.ts` |
+| F-28 | 이미지 드롭·붙여넣기 | drop · paste | `editorDrop.ts` → `/api/image` → R2 | R2 객체 (내용 주소) | `fetch` · `DataTransfer` | `worker.test.ts`, healthcheck |
 | F-26 | 목록 이어쓰기 | Enter | `editorKeys.ts` → `editorBehavior.ts` | — | `execCommand` | `editorkeys.spec.ts` |
 | F-27 | Tab 들여쓰기 | Tab · Shift+Tab | `editorKeys.ts` → `editorBehavior.ts` | Esc 탈출 예약 | `execCommand` | `editorkeys.spec.ts` |
 | F-24 | 줄 번호 | 설정 토글 | `lineNumbers.ts` → `#line-gutter` | `lineNumbers` (localStorage) | — | `linenumbers.spec.ts` |
@@ -174,6 +175,8 @@ graph LR
 | `tests/highlight.test.ts` | 23 | F-23 |
 | `tests/lineNumbers.test.ts` | 14 | F-24 |
 | `tests/editorKeys.test.ts` | 23 | F-26, F-27 |
+| `tests/imageUpload.test.ts` | 16 | F-28 |
+| `tests/editorDrop.test.ts` | 13 | F-28 |
 | `tests/editorBehavior.test.ts` | 13 | F-26, F-27 |
 | `tests/e2e/editorkeys.spec.ts` | 15 | F-26, F-27 |
 | `tests/e2e/linenumbers.spec.ts` | 10 | F-24 |

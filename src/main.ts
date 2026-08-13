@@ -48,6 +48,7 @@ import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
 import { initLineNumbers } from "./lineNumbers";
 import { initEditorBehavior } from "./editorBehavior";
+import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
@@ -145,6 +146,28 @@ if (editorEl && previewEl) {
   initEditorBehavior({
     editorEl,
     notify: (message) => showNotice(message, "info", 3000),
+  });
+
+  // F-28: 드롭 처리는 여기 한 곳뿐이다 — 두 곳에서 들으면 서로를 가린다.
+  initEditorDrop({
+    editorEl,
+    uploadImage: async (file) => {
+      const response = await fetch("/api/image", {
+        method: "POST",
+        headers: { "content-type": file.type },
+        body: file,
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${response.status}`);
+      }
+      return (await response.json()) as { url: string };
+    },
+    insertText: (textarea, text) => {
+      textarea.focus({ preventScroll: true });
+      document.execCommand("insertText", false, text);
+    },
+    notify: (message, kind) => showNotice(message, kind ?? "info", 7000),
   });
 
   createEditor({
