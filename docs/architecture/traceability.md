@@ -48,6 +48,8 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-35 | 편집 글꼴·크기 | 툴바 버튼 | `editorPrefs.ts` → `editorSettings.ts` → CSS 변수 | `fontId`·`fontSize` (localStorage) | — | `settings.spec.ts` |
 | F-36 | 최근 파일 | 툴바 버튼 · 파일 열기/저장 | `fileOps` 훅 → `recentFilesUi.ts` | `recent` (localStorage) + 메모리 핸들 | `showOpenFilePicker` | `recent.spec.ts` |
 | F-40 | 클립보드 복사 | 툴바 버튼 | `preview.innerHTML` → `clipboardExport.ts` | — | `navigator.clipboard` · `ClipboardItem` | `clipboard.spec.ts` |
+| F-26 | 목록 이어쓰기 | Enter | `editorKeys.ts` → `editorBehavior.ts` | — | `execCommand` | `editorkeys.spec.ts` |
+| F-27 | Tab 들여쓰기 | Tab · Shift+Tab | `editorKeys.ts` → `editorBehavior.ts` | Esc 탈출 예약 | `execCommand` | `editorkeys.spec.ts` |
 | F-24 | 줄 번호 | 설정 토글 | `lineNumbers.ts` → `#line-gutter` | `lineNumbers` (localStorage) | — | `linenumbers.spec.ts` |
 | F-23 | 코드 하이라이팅 | 프리뷰 렌더 | `highlight.ts` → `parser.ts` marked renderer | — | — | `highlight.spec.ts` |
 | F-60 | 공유 링크 | 툴바 버튼 · `/s/:id` 방문 | `share.ts` ↔ `worker/index.ts` → R2 | R2 객체 (내용 주소) | `fetch` · `crypto.subtle` | `share.spec.ts`, `worker.test.ts`, healthcheck |
@@ -171,6 +173,9 @@ graph LR
 | `tests/e2e/share.spec.ts` | 10 | F-60 |
 | `tests/highlight.test.ts` | 23 | F-23 |
 | `tests/lineNumbers.test.ts` | 14 | F-24 |
+| `tests/editorKeys.test.ts` | 23 | F-26, F-27 |
+| `tests/editorBehavior.test.ts` | 13 | F-26, F-27 |
+| `tests/e2e/editorkeys.spec.ts` | 15 | F-26, F-27 |
 | `tests/e2e/linenumbers.spec.ts` | 10 | F-24 |
 | `tests/e2e/highlight.spec.ts` | 9 | F-23 |
 | `tests/e2e/offline.spec.ts` | 3 | F-70 (`context.setOffline`) |

@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **513** | 0 | 0 | 513 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **271** | **0** | 15 ※ | 286 |
-| **합계 (dev 기준)** | | **784** | **0** | 15 | 799 |
+| 단위 | Vitest 4.1.10 (jsdom) | **549** | 0 | 0 | 549 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **287** | **0** | 15 ※ | 302 |
+| **합계 (dev 기준)** | | **836** | **0** | 15 | 851 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -71,6 +71,7 @@
 | `share.spec.ts` | 10 | ✅ F-60 공유 — 배선·정화·요청 없음 확인 |
 | `highlight.spec.ts` | 9 | ✅ F-23 하이라이팅 — 정화 통과·라이트/다크/인쇄 AA·성능 |
 | `linenumbers.spec.ts` | 10 | ✅ F-24 줄 번호 — 줄바꿈 정렬·복사 격리·글꼴 변경 추종 |
+| `editorkeys.spec.ts` | 15 | ✅ F-26·F-27 — 실행 취소·Tab 탈출·조합 입력 |
 
 ### 2.1 URL 응답 (15)
 

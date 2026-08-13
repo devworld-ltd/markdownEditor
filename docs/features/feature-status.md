@@ -78,6 +78,8 @@
 | F-67 | dev 환경 커스텀 도메인 | `wrangler.jsonc` | 배포 헬스체크 |
 | F-23 | 프리뷰 코드블록 구문 하이라이팅 (의존성 0) | `src/highlight.ts`, `src/parser.ts` | 단위 26 + E2E 9 |
 | F-24 | 줄 번호 표시 (줄바꿈 정렬 포함) | `src/lineNumbers.ts` | 단위 14 + E2E 10 |
+| F-26 | 리스트 자동 이어쓰기 | `src/editorKeys.ts`, `src/editorBehavior.ts` | 단위 36 + E2E 15 |
+| F-27 | Tab 들여쓰기 / Shift+Tab 내어쓰기 | `src/editorKeys.ts`, `src/editorBehavior.ts` | 단위 36 + E2E 15 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -103,8 +105,6 @@
 | ID | 기능 |
 |----|------|
 | F-23 잔여 | **편집 영역** 하이라이팅 (오버레이 필요 — F-22·F-25·F-35·F-59 재검증 동반) |
-| F-26 | 리스트 자동 이어쓰기 (Enter 시 `- ` 삽입) |
-| F-27 | Tab 키 들여쓰기 (현재 포커스 이동) |
 | F-28 | 이미지 드래그앤드롭 · 붙여넣기 |
 | F-29 | 문서 통계 (단어·문자·읽기 시간) |
 | F-30 | 표 편집 보조 |

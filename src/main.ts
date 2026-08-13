@@ -47,6 +47,7 @@ import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
 import { initLineNumbers } from "./lineNumbers";
+import { initEditorBehavior } from "./editorBehavior";
 import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
@@ -138,6 +139,13 @@ if (editorEl && previewEl) {
       lineNumbers.setEnabled(lineNumbersCheckEl.checked);
     });
   }
+
+  // F-26·F-27: 목록 이어쓰기와 Tab 들여쓰기. execCommand 로 넣으므로 실행
+  // 취소가 보존되고, Esc 를 먼저 누르면 다음 Tab 은 포커스 이동으로 돌아간다.
+  initEditorBehavior({
+    editorEl,
+    notify: (message) => showNotice(message, "info", 3000),
+  });
 
   createEditor({
     editorEl,
