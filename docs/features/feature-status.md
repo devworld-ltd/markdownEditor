@@ -72,6 +72,7 @@
 | F-59 | 접근성 정밀 점검 (axe + 수동 시나리오) | `index.html`, `src/tabs.ts`, `src/style.css` | E2E 18 |
 | F-34 | 탭 드래그·키보드 재정렬 | `src/tabOrder.ts`, `src/tabs.ts` | 단위 18 + E2E 11 |
 | F-35 | 편집 글꼴·글자 크기 설정 | `src/editorPrefs.ts`, `src/editorSettings.ts` | 단위 23 + E2E 12 |
+| F-36 | 최근 파일 목록 (핸들 수명 안내 포함) | `src/recentFiles.ts`, `src/recentFilesUi.ts` | 단위 31 + E2E 12 |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -109,7 +110,6 @@
 
 | ID | 기능 |
 |----|------|
-| F-36 | 최근 파일 목록 |
 
 ### 4.4 내보내기 / 공유
 

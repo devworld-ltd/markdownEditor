@@ -3,6 +3,8 @@ import { initToolbar, setFileActions } from "./toolbar";
 import {
   exportFile,
   initFileOps,
+  openFileFromHandle,
+  setFileTouchListener,
   isFileSystemAccessSupported,
   openFile,
   saveFile,
@@ -22,6 +24,8 @@ import {
 import { initNotice, showNotice } from "./notice";
 import {
   isStorageAvailable,
+  loadRecentFilesRaw,
+  saveRecentFiles,
   loadEditorPrefs,
   saveEditorPrefs,
   loadSplitRatio,
@@ -38,6 +42,8 @@ import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
 import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
+import { initRecentFiles } from "./recentFilesUi";
+import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
@@ -203,6 +209,39 @@ if (editorEl && previewEl) {
         })
       : null;
 
+  // F-36 최근 파일. 핸들은 직렬화되지 않으므로(트랩 #6) **이번 세션 동안만**
+  // 메모리에 들고 있다가, 살아 있으면 바로 열고 아니면 파일 선택 창을 연다.
+  const liveHandles = new Map<string, FileSystemFileHandle>();
+  const recentDialogEl = document.querySelector<HTMLDialogElement>("#recent-files");
+  const recentListEl = document.querySelector<HTMLElement>("#recent-files-list");
+  const recentEmptyEl = document.querySelector<HTMLElement>("#recent-files-empty");
+  const recentCloseEl = document.querySelector<HTMLElement>("#recent-files-close");
+
+  const recentFiles =
+    recentDialogEl && recentListEl && recentEmptyEl && recentCloseEl
+      ? initRecentFiles({
+          dialogEl: recentDialogEl,
+          listEl: recentListEl,
+          emptyEl: recentEmptyEl,
+          closeEl: recentCloseEl,
+          load: () => parseRecent(loadRecentFilesRaw()),
+          save: saveRecentFiles,
+          isLive: (name) => liveHandles.has(name),
+          openLive: (name) => {
+            const handle = liveHandles.get(name);
+            if (handle) void openFileFromHandle(handle);
+          },
+          openPicker: () => void openFile(),
+          notify: (message) => showNotice(message, "info", 6000),
+          returnFocusTo: editorEl,
+        })
+      : null;
+
+  setFileTouchListener((name, handle) => {
+    if (handle) liveHandles.set(name, handle);
+    recentFiles?.record(name);
+  });
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
@@ -211,6 +250,7 @@ if (editorEl && previewEl) {
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
     showSettings: editorSettings ? () => editorSettings.open() : undefined,
+    showRecent: recentFiles ? () => recentFiles.open() : undefined,
 
     // F-38: 프리뷰에 이미 들어가 있는 **정화된** HTML 을 그대로 쓴다.
     // 원문을 다시 파싱하는 두 번째 경로를 만들면 정화 정책이 갈라진다(F-18).

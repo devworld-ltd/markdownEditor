@@ -14,6 +14,11 @@ const STORAGE_KEY = "markdown-editor:session:v1";
  * 문서는 멀쩡해야 한다.
  */
 const LAYOUT_KEY = "markdown-editor:layout:v1";
+/**
+ * 최근 파일 목록(F-36)도 **별도 키**다. 문서 세션·레이아웃과 수명이 다르고,
+ * 셋 중 하나가 깨져도 나머지는 살아야 한다.
+ */
+const RECENT_KEY = "markdown-editor:recent:v1";
 const SCHEMA_VERSION = 1;
 
 export interface PersistedTab {
@@ -157,6 +162,28 @@ export function loadEditorPrefs(): { fontId?: unknown; fontSize?: unknown } {
 /** 편집 글꼴·크기를 저장한다. */
 export function saveEditorPrefs(prefs: { fontId: string; fontSize: number }): void {
   writeLayout(prefs);
+}
+
+/** 최근 파일 목록 원본을 읽는다 (F-36). 검증은 호출부(recentFiles)가 한다. */
+export function loadRecentFilesRaw(): unknown {
+  const s = storage();
+  if (!s) return null;
+  try {
+    return JSON.parse(s.getItem(RECENT_KEY) ?? "null");
+  } catch {
+    return null;
+  }
+}
+
+/** 최근 파일 목록을 저장한다. **파일 내용은 절대 넣지 않는다** — 이름과 시각뿐이다. */
+export function saveRecentFiles(list: Array<{ name: string; at: number }>): void {
+  const s = storage();
+  if (!s) return;
+  try {
+    s.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    // 용량 초과 등. 문서 저장과 달리 사용자에게 알릴 가치가 없다.
+  }
 }
 
 export function createSession(
