@@ -8,8 +8,8 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **222건** + E2E 137건 (전부 통과) |
-| 기능 커버리지 | 34/37 자동 검증 · 라인 커버리지 **78.08%** |
+| 테스트 | 단위 **261건** + E2E 151건 (전부 통과) |
+| 기능 커버리지 | 35/38 자동 검증 · 라인 커버리지 **77.33%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
 
@@ -34,6 +34,7 @@
 - **편집/프리뷰 영역 시각 구분 + 양방향 스크롤 동기화**
 - **다크 모드** (OS 설정 추종)
 - **단축키 안내** (툴바 버튼 또는 `Alt+/`)
+- **문서 내 검색** (`Cmd/Ctrl+F`)
 - GFM(GitHub Flavored Markdown) 지원 — 테이블·취소선·체크리스트
 - **DOMPurify 로 HTML 정화** — 신뢰할 수 없는 문서를 안전하게 렌더
 - 멀티 탭 (생성·전환·닫기, 탭별 커서·스크롤 보존)
@@ -87,6 +88,8 @@ markdownEditor/
 │   ├── offline.ts            # 오프라인 상태 배지
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
 │   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
+│   ├── searchEngine.ts       # 검색 계산 (순수)
+│   ├── search.ts             # 문서 내 검색 UI
 │   ├── shortcutDefs.ts       # 단축키 단일 출처 (판별 + 표기)
 │   ├── shortcutHelp.ts       # 단축키 안내 <dialog>
 │   ├── textEdit.ts           # 텍스트 조작 계산 (순수)
@@ -111,7 +114,8 @@ markdownEditor/
 │       ├── scrollsync.spec.ts # 시각 구분 · 스크롤 동기화
 │       ├── darkmode.spec.ts  # 다크 모드
 │       ├── icons.spec.ts     # PWA 아이콘
-│       └── shortcuthelp.spec.ts # 단축키 안내
+│       ├── shortcuthelp.spec.ts # 단축키 안내
+│       └── search.spec.ts    # 문서 내 검색
 ├── public/                   # 정적 자산 (vite 가 dist/ 루트로 복사)
 │   ├── _headers              # CSP · 보안 헤더 · 캐시 정책
 │   ├── manifest.webmanifest  # PWA 매니페스트
@@ -196,6 +200,7 @@ npm run healthcheck:prod
 | `Cmd/Ctrl + Shift + S` | 다른 이름으로 저장 |
 | `Alt + N` | 새 문서 |
 | `Alt + W` | 탭 닫기 |
+| `Cmd/Ctrl + F` | 문서 내 검색 |
 | `Alt + /` | 단축키 목록 열기 / 닫기 |
 
 `Cmd/Ctrl + N` 과 `Cmd/Ctrl + W` 는 브라우저가 선점해 사용할 수 없어 `Alt` 조합으로 대체했다.

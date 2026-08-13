@@ -89,11 +89,12 @@ test("S6: 목록이 실제 단축키 전부를 보여준다", async ({ page }) =
   const labels = await page.locator("#shortcut-help-list .shortcut-label").allTextContents();
   const joined = labels.join(" ");
 
-  // 정의(shortcutDefs.ts)에 있는 6개가 모두 노출돼야 한다.
+  // 정의(shortcutDefs.ts)에 있는 것이 모두 노출돼야 한다.
   for (const expected of [
     "파일 열기",
     "저장",
     "다른 이름으로 저장",
+    "문서 내 검색",
     "새 문서",
     "탭 닫기",
     "단축키 목록 열기 / 닫기",
@@ -101,7 +102,9 @@ test("S6: 목록이 실제 단축키 전부를 보여준다", async ({ page }) =
     expect(joined, `"${expected}" 가 목록에 없다`).toContain(expected);
   }
 
-  await expect(page.locator("#shortcut-help-list .shortcut-keys")).toHaveCount(6);
+  // 개수를 하드코딩하지 않는다 — 라벨 행과 키 캡 행이 1:1 이면 충분하고,
+  // 단축키가 늘 때마다 이 테스트를 손대야 하는 결합을 만들지 않는다.
+  await expect(page.locator("#shortcut-help-list .shortcut-keys")).toHaveCount(labels.length);
 });
 
 test("S7: 비표준 Alt 조합에 이유가 함께 표시된다", async ({ page }) => {
@@ -118,9 +121,11 @@ test("S8: 안내에 적힌 조합이 실제로 동작한다 (⌥N → 새 탭)",
   // 읽어 그대로 눌러 본다 — 안내를 신뢰할 수 있는지 실물로 확인한다.
   await page.locator('.toolbar-btn[title="Shortcuts"]').click();
 
+  // 순번이 아니라 **라벨로** 찾는다. 단축키가 추가되면 순번은 밀리지만
+  // "새 문서" 라는 사실은 변하지 않는다.
   const newDocKeys = await page
-    .locator("#shortcut-help-list .shortcut-keys")
-    .nth(3) // 파일 3개 다음이 "새 문서"
+    .locator("#shortcut-help-list dt")
+    .filter({ has: page.locator("xpath=following-sibling::dd[1][contains(., '새 문서')]") })
     .locator("kbd")
     .allTextContents();
 
