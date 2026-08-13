@@ -13,7 +13,9 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary", "html"],
       reportsDirectory: "coverage",
-      include: ["src/**/*.ts"],
+      // F-60 으로 worker/ 가 생겼다. 커버리지에서 빠지면 서버 코드가
+      // 검증되지 않는 채로 남는다.
+      include: ["src/**/*.ts", "worker/**/*.ts"],
     },
   },
 });

@@ -16,6 +16,7 @@ import {
   createTab,
   getActiveContent,
   getActiveTab,
+  syncActiveTab,
   hasDirtyTabs,
   initTabs,
   persistNow,
@@ -47,6 +48,8 @@ import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
 import { copyRenderedHtml } from "./clipboardExport";
+import { createShareLink, loadSharedDocument, type ShareHost } from "./share";
+import { shareIdFromPath } from "./shareId";
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -244,6 +247,31 @@ if (editorEl && previewEl) {
     recentFiles?.record(name);
   });
 
+  // F-60 공유. 서버는 마크다운 원문만 주고받는다 — 렌더를 서버에서 하면
+  // 정화 정책이 두 곳으로 갈라진다(F-38·F-40 과 같은 이유).
+  const shareHost: ShareHost = {
+    origin: window.location.origin,
+    upload: async (content) => {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${response.status}`);
+      }
+      return (await response.json()) as { id: string };
+    },
+    download: async (id) => {
+      const response = await fetch(`/api/share/${id}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.text();
+    },
+    notify: (message, kind) => showNotice(message, kind ?? "info", 8000),
+    copyLink: (url) => navigator.clipboard.writeText(url),
+  };
+
   setFileActions({
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
@@ -253,6 +281,12 @@ if (editorEl && previewEl) {
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
     showSettings: editorSettings ? () => editorSettings.open() : undefined,
     showRecent: recentFiles ? () => recentFiles.open() : undefined,
+
+    // F-60: 이 앱에서 유일하게 네트워크를 타는 동작이다. 버튼을 눌러야만 fetch 한다.
+    share: () => {
+      syncActiveTab();
+      void createShareLink(shareHost, getActiveContent());
+    },
 
     // F-40: F-38 과 같은 원칙 — 프리뷰의 정화된 HTML 만 쓴다. 붙여넣는 곳이
     // 우리 앱이 아니므로 위험도는 오히려 높다.
@@ -342,6 +376,18 @@ if (editorEl && previewEl) {
           returnFocusTo: editorEl,
         });
       }
+    });
+  }
+
+  // F-60: /s/<id> 로 들어왔으면 문서를 가져와 새 탭으로 연다.
+  // 실패해도 앱은 정상적으로 떠야 한다 — 흰 화면이 되면 안 된다.
+  const sharedId = shareIdFromPath(window.location.pathname);
+  if (sharedId) {
+    void loadSharedDocument(shareHost, sharedId).then((content) => {
+      if (content === null) return;
+      createTab(content, null, `공유-${sharedId}.md`);
+      // 주소를 정리한다 — 새로고침 때마다 다시 받아 탭이 쌓이는 것을 막는다.
+      window.history.replaceState(null, "", "/");
     });
   }
 

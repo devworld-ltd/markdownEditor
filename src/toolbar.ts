@@ -76,6 +76,8 @@ export interface FileActions {
   exportHtml?: () => void;
   /** F-40 렌더된 HTML 클립보드 복사. */
   copyHtml?: () => void;
+  /** F-60 공유 링크 만들기. */
+  share?: () => void;
   /** F-39 인쇄 / PDF 저장. */
   print?: () => void;
   /** F-35 편집 설정 열기. */
@@ -235,6 +237,13 @@ const actions: ToolbarAction[] = [
     label: "Copy HTML",
     icon: `<svg ${SVG_ATTRS}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
     action: () => fileActions?.copyHtml?.(),
+  },
+  {
+    // F-60 공유 링크. **이 앱에서 유일하게 네트워크를 타는 동작**이라
+    // 다른 내보내기와 나란히 두되 아이콘으로 성격을 구분한다.
+    label: "Share Link",
+    icon: `<svg ${SVG_ATTRS}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+    action: () => fileActions?.share?.(),
   },
   {
     // F-39 인쇄/PDF. 브라우저 인쇄 대화상자를 그대로 연다 — "PDF 로 저장" 은
