@@ -23,6 +23,14 @@
   /* 링크 — 정하지 않으면 UA 기본 #0000ee 가 쓰이고, 다크 표면 위에서 대비가
      1.37:1 로 떨어져 사실상 읽을 수 없다(F-59 자동 점검이 잡아냈다). */
   --link: #0b62c4;
+
+  /* F-23 코드 하이라이팅. 코드블록 배경(--code-bg) 위에서 전부 AA 이상이어야
+     한다 — 색이 읽기를 돕지 못하면 단색보다 나쁘다. */
+  --tok-keyword: #a11b8c;
+  --tok-string: #0a6640;
+  --tok-comment: #5a6169;
+  --tok-number: #b3541e;
+  --tok-punct: #57606a;
 }
 
 * {
@@ -300,6 +308,17 @@ body {
 #preview img {
   max-width: 100%;
 }
+
+/* F-23 토큰 색. class 만으로 칠한다 — DOMPurify 허용 목록을 class 하나만
+   여는 대가로, style 속성이나 인라인 색을 쓰지 않는다(F-18). */
+.tok-keyword {
+  color: var(--tok-keyword);
+  font-weight: 600;
+}
+.tok-string { color: var(--tok-string); }
+.tok-comment { color: var(--tok-comment); font-style: italic; }
+.tok-number { color: var(--tok-number); }
+.tok-punct { color: var(--tok-punct); }
 
 /* :visited 까지 지정해야 한다 — UA 는 방문한 링크에 다른 색(보라)을 쓴다. */
 #preview a,
@@ -874,6 +893,14 @@ body {
     --rule-subtle: #4a4a4e;
     /* 프리뷰 표면(#313134) 위 6.3:1 — AA 통과 */
     --link: #7fb8ff;
+
+    /* 다크의 코드 배경(#232326) 위 기준. 라이트 값을 그대로 쓰면 전부 어두워
+       읽을 수 없다 — 색도 표면을 따라간다. */
+    --tok-keyword: #e08bd4;
+    --tok-string: #7fd6a8;
+    --tok-comment: #9aa4ad;
+    --tok-number: #f0a878;
+    --tok-punct: #b6bfc9;
   }
 }
 
@@ -937,6 +964,14 @@ body {
     background: #f4f4f4 !important;
     color: #000000 !important;
   }
+
+  /* F-23: 종이에서도 토큰 구분은 남기되, 다크 팔레트가 그대로 인쇄되지 않게
+     라이트 값으로 고정한다. */
+  #preview .tok-keyword { color: #a11b8c !important; }
+  #preview .tok-string { color: #0a6640 !important; }
+  #preview .tok-comment { color: #555555 !important; }
+  #preview .tok-number { color: #b3541e !important; }
+  #preview .tok-punct { color: #444444 !important; }
 
   #preview blockquote {
     border-left-color: #999999 !important;

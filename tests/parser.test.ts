@@ -66,3 +66,26 @@ describe("parseMarkdown — sanitize", () => {
     expect(result).toContain('type="checkbox"');
   });
 });
+
+describe("parseMarkdown — 코드 하이라이팅 (F-23)", () => {
+  it("토큰 class 가 정화 후에도 살아남는다", () => {
+    // DOMPurify 기본 허용 목록에 class 가 있다는 성질에 기대고 있다.
+    // 이게 깨지면 색이 통째로 사라지는데, 예외도 오류도 나지 않는다.
+    const html = parseMarkdown("```js\nconst a = 1;\n```");
+    expect(html).toContain('class="tok-keyword"');
+    expect(html).toContain("const");
+  });
+
+  it("모르는 언어는 marked 기본 출력 그대로다", () => {
+    // 우리 렌더러가 넘겨받으면 미묘한 차이(줄바꿈 처리 등)가 생긴다.
+    expect(parseMarkdown("```rust\nfn a() {}\n```")).toBe(
+      '<pre><code class="language-rust">fn a() {}\n</code></pre>\n',
+    );
+  });
+
+  it("코드 안의 위험한 문자열이 태그가 되지 않는다", () => {
+    const html = parseMarkdown('```js\nconst a = "<img src=x onerror=alert(1)>";\n```');
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img");
+  });
+});
