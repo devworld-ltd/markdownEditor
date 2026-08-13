@@ -58,6 +58,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`editorKeys.ts`** — 목록 이어쓰기·들여쓰기 **계산만** 담당하는 순수 리프(F-26·F-27).
+- **`editorBehavior.ts`** — 편집 키 배선(F-26·F-27). 주입형 리프.
 - **`lineNumbers.ts`** — 줄 번호(F-24). 주입형 리프. **줄별 표시 높이를 재서** 칸 높이를 잡는다 — 균등 간격은 줄바꿈에서 곧바로 어긋난다.
 - **`highlight.ts`** — 코드 하이라이팅 토크나이저(F-23). 순수 모듈. **의존성 0** — 라이브러리를 들이지 말 것. 출력은 `<span class>` 뿐이다.
 - **`shareId.ts`** — 공유 ID·검증(F-60). **Worker 와 브라우저 양쪽에서 쓰인다** — DOM 도 Node API 도 만지지 않고 `crypto.subtle` 만 쓴다.
@@ -132,7 +134,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 48. **토큰 색을 바꾸면 네 곳을 모두 고쳐야 한다**: `:root`(라이트) · `prefers-color-scheme: dark` · `@media print` · `htmlExport.ts`. 한 곳만 고치면 그 환경에서만 대비가 깨지고, 다크·인쇄는 눈으로 잘 안 본다.
 49. **F-32 분할 비율의 대상은 `#editor` 가 아니라 `.editor-pane` 이다** (F-24 이후). 줄 번호 칸을 포함한 상자를 조절해야 비율이 맞는다. F-33 보기 모드·F-39 인쇄의 숨김 대상도 이 상자다.
 50. **`initLineNumbers()` 는 `createEditor()` 보다 먼저 호출한다.** `onAfterRender` 가 이를 참조하는데 `createEditor` 가 최초 렌더를 동기 수행하므로, 뒤에 두면 TDZ 오류가 난다 — **화면은 뜨지만 콘솔에만 남아** 눈으로는 안 보인다.
-51. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+51. **Tab 을 무조건 가로채지 말 것.** 키보드 사용자가 편집 영역에 **갇힌다**(F-59). `Esc` 뒤의 **첫 Tab 한 번**은 포커스 이동으로 돌려준다 — 영구히 끄면 다시 켜는 방법을 사용자가 알 수 없다.
+52. **목록 이어쓰기는 빈 항목에서 표식을 지워야 한다.** 계속 이어 쓰기만 하면 사용자가 목록을 빠져나갈 방법이 없다 — 편의 기능이 오히려 가둔다.
+53. **조합 입력(IME) 중에는 Enter 를 가로채지 말 것.** 한글·일본어 조합에서 Enter 는 글자를 확정하는 키다. `isComposing` 과 `keyCode === 229` 둘 다 확인한다.
+54. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
