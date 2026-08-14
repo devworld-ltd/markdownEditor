@@ -461,6 +461,16 @@ body {
   color: var(--md-lang);
 }
 
+/* F-30 잔여: 표. 파이프는 구조라 흐리게, 정렬 표식(`:---:`)은 **정보**라
+   눈에 띄게 — 편집 중에도 어느 열이 어느 쪽으로 정렬되는지 보여야 한다. */
+.md-table-pipe {
+  color: var(--md-marker);
+}
+
+.md-table-align {
+  color: var(--md-list);
+}
+
 /* F-23 토큰 색. class 만으로 칠한다 — DOMPurify 허용 목록을 class 하나만
    여는 대가로, style 속성이나 인라인 색을 쓰지 않는다(F-18). */
 .tok-keyword {

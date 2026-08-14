@@ -26,6 +26,7 @@
  */
 
 import { highlightToHtml, isSupportedLanguage } from "./highlight";
+import { parseDelimiterRow } from "./tableFormat";
 
 export function escapeHtml(text: string): string {
   return text
@@ -187,6 +188,44 @@ const LIST = /^(\s*)([-*+]|\d+[.)])(\s)(.*)$/;
 const HR = /^(\s*)((?:-{3,}|\*{3,}|_{3,}))(\s*)$/;
 const FENCE = /^(\s*)(```|~~~)(.*)$/;
 
+/**
+ * 표 한 줄. 파이프를 표식으로 칠하고 칸 안은 인라인 서식으로 넘긴다.
+ *
+ * **칸을 trim 하지 않는다.** `tableFormat.splitRow()` 는 계산용이라 공백을
+ * 걷어내는데, 여기서 그러면 글자가 사라져 오버레이가 밀린다(F-23 잔여의 전제).
+ * 그래서 파이프만 갈라 내고 나머지는 원문 그대로 넘긴다.
+ */
+function highlightTableRow(line: string, isDelimiter: boolean): string {
+  let out = "";
+  let cell = "";
+
+  const flushCell = (): void => {
+    if (!cell) return;
+    // 구분선의 칸(`:---:`)은 통째로 표식이다 — 그 안에 인라인 서식은 없다.
+    out += isDelimiter ? span("md-table-align", cell) : highlightInline(cell);
+    cell = "";
+  };
+
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === "\\" && line[i + 1] === "|") {
+      // 이스케이프된 파이프는 칸 구분자가 아니라 내용이다 (F-30 과 같은 판정).
+      cell += line.slice(i, i + 2);
+      i += 1;
+      continue;
+    }
+    if (ch === "|") {
+      flushCell();
+      out += span("md-table-pipe", "|");
+      continue;
+    }
+    cell += ch;
+  }
+
+  flushCell();
+  return out;
+}
+
 /** 한 줄의 블록 서식. 코드블록 밖에서만 쓴다. */
 function highlightBlockLine(line: string): string {
   const hr = HR.exec(line);
@@ -249,7 +288,14 @@ export function highlightMarkdown(text: string): string {
     buffer = [];
   };
 
-  for (const line of lines) {
+  /**
+   * 표 안인가. **구분선이 있어야 표다** — 파이프만 있는 줄(`a | b`)까지 표로
+   * 잡으면 서식이 아닌 본문에 색이 붙는다(F-30 과 같은 판정).
+   */
+  let inTable = false;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     const fence = FENCE.exec(line);
 
     if (fenceMarker === null && fence) {
@@ -270,6 +316,24 @@ export function highlightMarkdown(text: string): string {
         continue;
       }
       buffer.push(line);
+      continue;
+    }
+
+    // --- 표 (F-30 잔여) ---------------------------------------------------
+    if (inTable) {
+      if (line.includes("|") && line.trim() !== "") {
+        out.push(highlightTableRow(line, parseDelimiterRow(line) !== null));
+        continue;
+      }
+      inTable = false;
+    } else if (
+      line.includes("|") &&
+      line.trim() !== "" &&
+      parseDelimiterRow(lines[index + 1] ?? "") !== null
+    ) {
+      // 다음 줄이 구분선이면 이 줄이 표의 머리다.
+      inTable = true;
+      out.push(highlightTableRow(line, false));
       continue;
     }
 
