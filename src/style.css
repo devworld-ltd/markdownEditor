@@ -31,6 +31,17 @@
   --tok-comment: #5a6169;
   --tok-number: #b3541e;
   --tok-punct: #57606a;
+
+  /* F-23 잔여: 편집 영역 마크다운 서식. 편집 표면(--surface-editor) 위에서
+     전부 AA 이상. **표식은 내용보다 흐리게** — 표식이 더 눈에 띄면 글을 읽는 데
+     방해가 된다. */
+  --md-marker: #5a6169;
+  --md-heading: #0b62c4;
+  --md-code: #0a6640;
+  --md-link-text: #0b62c4;
+  --md-url: #b3541e;
+  --md-list: #a11b8c;
+  --md-lang: #5a6169;
 }
 
 * {
@@ -251,6 +262,41 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* F-23 잔여: 하이라이트 레이어.
+   **아래 상자 규칙은 #editor 와 글자 하나까지 같아야 한다** — 패딩·글꼴·크기·
+   줄 높이·줄바꿈 규칙 중 하나라도 어긋나면 그 지점부터 글자가 밀린다. 그래서
+   두 규칙은 반드시 붙여 두고 함께 고친다. */
+.editor-overlay {
+  position: absolute;
+  inset: 0;
+  /* 왼쪽 시작점은 JS 가 textarea 의 실제 위치에서 잰다 — 줄 번호 칸(F-24)이
+     켜지고 꺼지면 값이 달라지는데, 그 폭을 CSS 에 두 번 적으면 어긋난다. */
+  padding: 16px;
+  overflow: hidden;
+  font-family: var(--editor-font-family, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace);
+  font-size: var(--editor-font-size, 14px);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  tab-size: 4;
+  color: var(--text);
+  /* 클릭·드래그·선택은 전부 진짜 textarea 의 몫이다. */
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 꺼져 있으면 그리지도 보이지도 않는다. */
+.editor-pane[data-overlay="false"] .editor-overlay {
+  display: none;
+}
+
+/* 켜지면 앞의 글자만 투명해진다 — 커서(caret)와 선택 배경은 그대로 남는다. */
+.editor-pane[data-overlay="true"] #editor {
+  color: transparent;
+  background: transparent;
+}
+
 #editor {
   /* F-24 이후 비율은 .editor-pane 이 받는다. 텍스트 영역은 남는 공간 전부. */
   flex: 1 1 auto;
@@ -263,6 +309,9 @@ body {
   font-family: var(--editor-font-family, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace);
   font-size: var(--editor-font-size, 14px);
   line-height: 1.6;
+  /* 탭 폭을 명시한다. 두 레이어가 UA 기본값(8)에 각각 기대면, 한쪽에만 값을
+     주는 순간 탭이 든 줄부터 글자가 밀린다 — E2E EH4 가 이 상태를 잡았다. */
+  tab-size: 4;
   outline: none;
   background: var(--surface-editor);
   /* 폼 컨트롤은 color 를 상속하지 않는다(UA 가 fieldtext 로 초기화). body 에만
@@ -352,6 +401,53 @@ body {
 
 #preview img {
   max-width: 100%;
+}
+
+/* F-23 잔여: 마크다운 서식 색. 토큰 색과 같은 규칙을 따른다 —
+   표식(`##`, `**`)은 **흐리게**, 내용은 진하게. 표식이 내용보다 눈에 띄면
+   글을 읽는 데 방해가 된다. */
+.md-marker {
+  color: var(--md-marker);
+}
+
+.md-heading {
+  color: var(--md-heading);
+  font-weight: 700;
+}
+
+.md-strong {
+  font-weight: 700;
+}
+
+.md-em {
+  font-style: italic;
+}
+
+.md-strike {
+  text-decoration: line-through;
+}
+
+.md-code,
+.md-code-block {
+  color: var(--md-code);
+}
+
+.md-link-text {
+  color: var(--md-link-text);
+}
+
+.md-url {
+  color: var(--md-url);
+  text-decoration: underline;
+}
+
+.md-list {
+  color: var(--md-list);
+  font-weight: 700;
+}
+
+.md-lang {
+  color: var(--md-lang);
 }
 
 /* F-23 토큰 색. class 만으로 칠한다 — DOMPurify 허용 목록을 class 하나만
@@ -1005,6 +1101,15 @@ body {
     --tok-comment: #9aa4ad;
     --tok-number: #f0a878;
     --tok-punct: #b6bfc9;
+
+    /* 다크 편집 표면 위 기준. 라이트 값을 그대로 쓰면 전부 어두워 읽을 수 없다. */
+    --md-marker: #9aa4ad;
+    --md-heading: #7fb8ff;
+    --md-code: #7fd6a8;
+    --md-link-text: #7fb8ff;
+    --md-url: #f0a878;
+    --md-list: #e08bd4;
+    --md-lang: #9aa4ad;
   }
 }
 

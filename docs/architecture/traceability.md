@@ -48,6 +48,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-35 | 편집 글꼴·크기 | 툴바 버튼 | `editorPrefs.ts` → `editorSettings.ts` → CSS 변수 | `fontId`·`fontSize` (localStorage) | — | `settings.spec.ts` |
 | F-36 | 최근 파일 | 툴바 버튼 · 파일 열기/저장 | `fileOps` 훅 → `recentFilesUi.ts` | `recent` (localStorage) + 메모리 핸들 | `showOpenFilePicker` | `recent.spec.ts` |
 | F-40 | 클립보드 복사 | 툴바 버튼 | `preview.innerHTML` → `clipboardExport.ts` | — | `navigator.clipboard` · `ClipboardItem` | `clipboard.spec.ts` |
+| F-23 잔여 | 편집 하이라이팅 | 렌더 디바운스 · 편집기 scroll | `markdownHighlight.ts` → `editorOverlay.ts` | `editorHighlight` (localStorage) | — | `editorhighlight.spec.ts` |
 | F-54 | 용량 초과 회수 | 자동 저장 실패 | `sessionReclaim.ts` → `tabs.ts` | 세션(localStorage) | — | `session.spec.ts` |
 | F-56 | 파일 드롭 열기 | `drop` (editorEl) | `dropFiles.ts` → `editorDrop.ts` → `fileOps.ts` | 탭 세션 | `getAsFileSystemHandle` | `filedrop.spec.ts` |
 | F-30 | 표 편집 보조 | 툴바 Table 버튼 | `tableFormat.ts` → `tableUi.ts` | — | `execCommand` | `table.spec.ts` |
@@ -183,6 +184,9 @@ graph LR
 | `tests/docStats.test.ts` | 21 | F-29 |
 | `tests/statusBar.test.ts` | 10 | F-29 |
 | `tests/e2e/docstats.spec.ts` | 8 | F-29 |
+| `tests/markdownHighlight.test.ts` | 49 | F-23 잔여 |
+| `tests/editorOverlay.test.ts` | 13 | F-23 잔여 |
+| `tests/e2e/editorhighlight.spec.ts` | 12 | F-23 잔여 |
 | `tests/sessionReclaim.test.ts` | 19 | F-54 |
 | `tests/dropFiles.test.ts` | 22 | F-56 |
 | `tests/e2e/filedrop.spec.ts` | 10 | F-56 |

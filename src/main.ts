@@ -31,6 +31,8 @@ import {
   saveDocStats,
   loadLineNumbers,
   saveLineNumbers,
+  loadEditorHighlight,
+  saveEditorHighlight,
   loadRecentFilesRaw,
   saveRecentFiles,
   loadEditorPrefs,
@@ -51,6 +53,7 @@ import { initViewMode, parseViewMode } from "./viewMode";
 import { initEditorSettings } from "./editorSettings";
 import { initTableUi } from "./tableUi";
 import { initLineNumbers } from "./lineNumbers";
+import { initEditorOverlay } from "./editorOverlay";
 import { initStatusBar } from "./statusBar";
 import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
@@ -155,11 +158,37 @@ if (editorEl && previewEl) {
     statsCheckEl.addEventListener("change", () => statusBar.setEnabled(statsCheckEl.checked));
   }
 
+  // F-23 잔여: 편집 영역 하이라이팅. **기본은 꺼짐** — 정렬이 어긋날 수 있는
+  // 환경에서 사용자가 켠 적 없는 기능에 발목 잡히면 안 된다.
+  const overlayEl = document.querySelector<HTMLElement>("#editor-overlay");
+  const editorPaneEl = document.querySelector<HTMLElement>("#editor-pane");
+  const editorOverlay =
+    overlayEl && editorPaneEl
+      ? initEditorOverlay({
+          editorEl,
+          overlayEl,
+          paneEl: editorPaneEl,
+          loadEnabled: loadEditorHighlight,
+          saveEnabled: saveEditorHighlight,
+        })
+      : null;
+
+  const highlightCheckEl = document.querySelector<HTMLInputElement>("#setting-highlight");
+  if (highlightCheckEl && editorOverlay) {
+    highlightCheckEl.checked = editorOverlay.isEnabled();
+    highlightCheckEl.addEventListener("change", () =>
+      editorOverlay.setEnabled(highlightCheckEl.checked),
+    );
+  }
+
   const lineNumbersCheckEl = document.querySelector<HTMLInputElement>("#setting-line-numbers");
   if (lineNumbersCheckEl && lineNumbers) {
     lineNumbersCheckEl.checked = lineNumbers.isEnabled();
     lineNumbersCheckEl.addEventListener("change", () => {
       lineNumbers.setEnabled(lineNumbersCheckEl.checked);
+      // 줄 번호 칸이 생기고 사라지면 textarea 가 옆으로 밀린다 — 오버레이도
+      // 그 자리를 다시 재야 한다.
+      editorOverlay?.refresh();
     });
   }
 
@@ -212,6 +241,8 @@ if (editorEl && previewEl) {
       lineNumbers?.refresh();
       // F-29: 같은 디바운스에 얹는다 — 매 글자마다 전체를 세면 느려진다.
       statusBar?.refresh();
+      // F-23 잔여: 하이라이트도 같은 디바운스에 얹는다.
+      editorOverlay?.refresh();
     },
   });
 
