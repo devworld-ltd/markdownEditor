@@ -193,3 +193,61 @@ describe("성능 — 오버레이는 타이핑마다 다시 그린다", () => {
     expect(performance.now() - t0).toBeLessThan(1000);
   });
 });
+
+describe("표 (F-30 잔여)", () => {
+  const TABLE = ["| 이름 | 값 |", "| :--- | ---: |", "| 한글 | 1 |"].join("\n");
+
+  it("파이프와 정렬 표식을 나눠 칠한다", () => {
+    const html = highlightMarkdown(TABLE);
+    expect(html).toContain('<span class="md-table-pipe">|</span>');
+    expect(html).toContain("md-table-align");
+  });
+
+  it("글자를 더하거나 빼지 않는다", () => {
+    expect(textOf(highlightMarkdown(TABLE))).toBe(TABLE);
+  });
+
+  it("칸 안의 인라인 서식을 그대로 칠한다", () => {
+    const html = highlightMarkdown("| **굵게** | [링크](url) |\n| --- | --- |\n| a | b |");
+    expect(html).toContain("md-strong");
+    expect(html).toContain("md-url");
+  });
+
+  it("칸의 공백을 그대로 둔다 — 걷어내면 오버레이가 밀린다", () => {
+    const padded = "|  이름   | 값 |\n| --- | --- |\n|  a  | b |";
+    expect(textOf(highlightMarkdown(padded))).toBe(padded);
+  });
+
+  it("구분선이 없으면 표가 아니다", () => {
+    const html = highlightMarkdown("a | b\nc | d");
+    expect(html).not.toContain("md-table-pipe");
+  });
+
+  it("표가 끝나면 다시 일반 서식으로 돌아온다", () => {
+    const html = highlightMarkdown(`${TABLE}\n\n# 표 뒤의 제목`);
+    expect(html).toContain("md-heading");
+  });
+
+  it("코드블록 안의 파이프는 표가 아니다", () => {
+    const html = highlightMarkdown("```\n| a | b |\n| --- | --- |\n```");
+    expect(html).not.toContain("md-table-pipe");
+  });
+
+  it("이스케이프된 파이프는 칸을 나누지 않는다", () => {
+    const html = highlightMarkdown("| a \\| b | c |\n| --- | --- |\n| 1 | 2 |");
+    // 파이프 표식은 칸 구분자 4개뿐이어야 한다 (첫 줄 기준).
+    const firstLine = html.split("\n")[0];
+    expect(firstLine.match(/md-table-pipe/g)).toHaveLength(3);
+  });
+
+  it("앞뒤 파이프가 없는 표도 칠한다", () => {
+    const html = highlightMarkdown("a | b\n--- | ---\n1 | 2");
+    expect(html).toContain("md-table-pipe");
+  });
+
+  it("빈 줄이 오면 표가 끝난다", () => {
+    const html = highlightMarkdown(`${TABLE}\n\na | b`);
+    const lastLine = html.split("\n").at(-1)!;
+    expect(lastLine).not.toContain("md-table-pipe");
+  });
+});

@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **780** | 0 | 0 | 780 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **360** | **0** | 15 ※ | 375 |
-| **합계 (dev 기준)** | | **1140** | **0** | 15 | 1155 |
+| 단위 | Vitest 4.1.10 (jsdom) | **790** | 0 | 0 | 790 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **362** | **0** | 15 ※ | 377 |
+| **합계 (dev 기준)** | | **1152** | **0** | 15 | 1167 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -76,7 +76,7 @@
 | `table.spec.ts` | 9 | ✅ F-30 표 편집 — 폭 정렬·열 정렬·undo 보존 |
 | `filedrop.spec.ts` | 10 | ✅ F-56 파일 드롭 — 다중 탭·핸들 유무·거절 |
 | `session.spec.ts` (F-54 추가분) | 2 | ✅ 용량 초과 회수 — 회수 후 저장 성공·회수 불가 시 알림 |
-| `editorhighlight.spec.ts` | 12 | ✅ F-23 잔여 편집 하이라이팅 — 정렬·스크롤·커서 보존 |
+| `editorhighlight.spec.ts` | 14 | ✅ F-23 잔여 편집 하이라이팅 — 정렬·스크롤·커서 보존·표 |
 | `searchoverlay.spec.ts` | 9 | ✅ F-22 재검증 — 오버레이 켬/끔 양쪽에서 검색·치환 |
 | `scrolloverlay.spec.ts` | 5 | ✅ F-25 재검증 — 두 동기화의 공존·탭 전환·보기 모드 |
 | `fontoverlay.spec.ts` | 9 | ✅ F-35 재검증 — 글꼴·크기·줄 번호·탭 전환에서의 정렬 |
