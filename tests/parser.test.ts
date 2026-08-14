@@ -233,3 +233,37 @@ describe("각주 라벨 슬러그 (이슈 #111)", () => {
     expect(html).toMatch(/href="#fn-[^"\s]+"/);
   });
 });
+
+describe("각주 안의 각주 (이슈 #111 리뷰에서 발견)", () => {
+  it("각주 본문이 참조한 각주도 목록에 들어간다 — 링크만 있고 항목이 없으면 안 된다", () => {
+    const html = parseMarkdown("본문[^1]\n\n[^1]: 첫 각주 참고[^2]\n[^2]: 둘째 각주");
+    expect(html).toContain('href="#fn-2"');
+    expect(html).toContain('<li id="fn-2">둘째 각주');
+  });
+
+  it("모든 각주 링크가 실재하는 항목을 가리킨다", () => {
+    const html = parseMarkdown("가[^a]\n\n[^a]: 에이 참고[^b]\n[^b]: 비 참고[^c]\n[^c]: 씨");
+    const targets = [...html.matchAll(/href="#(fn-[^"]+)"/g)].map((m) => m[1]);
+    for (const target of targets) {
+      expect(html, `${target} 항목이 없다`).toContain(`id="${target}"`);
+    }
+  });
+
+  it("자기 자신을 참조해도 멈춘다", () => {
+    const html = parseMarkdown("본문[^1]\n\n[^1]: 자기 자신[^1] 참조");
+    expect(html.match(/<li id="fn-1"/g)).toHaveLength(1);
+  });
+
+  it("같은 각주를 여러 번 참조해도 id 는 하나뿐이다", () => {
+    const html = parseMarkdown("가[^1] 나[^1] 다[^1]\n\n[^1]: 내용");
+    expect(html.match(/id="fnref-1"/g)).toHaveLength(1);
+    // 번호는 모두 같아야 한다.
+    expect(html.match(/>1<\/a>/g)).toHaveLength(3);
+  });
+
+  it("문서 전체에 같은 id 가 두 번 나오지 않는다", () => {
+    const html = parseMarkdown("가[^1] 나[^1] 다[^2]\n\n[^1]: 하나 참고[^2]\n[^2]: 둘");
+    const ids = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});

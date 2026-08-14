@@ -101,12 +101,18 @@ function slugFor(label: string): string {
   return candidate;
 }
 
-/** 참조 번호(1부터). 처음 참조된 순서를 따른다. */
-function numberFor(label: string): number {
+/**
+ * 참조 번호(1부터)와 **처음 참조인지** 여부. 번호는 처음 참조된 순서를 따른다.
+ *
+ * 처음인지 구분하는 이유: `id` 는 문서에서 유일해야 하는데, 같은 각주를 여러 번
+ * 참조하는 것은 흔한 일이다(`가[^1] 나[^1]`). 참조마다 같은 `id` 를 붙이면
+ * 문서에 같은 `id` 가 여러 개 생긴다.
+ */
+function referenceFor(label: string): { number: number; first: boolean } {
   const index = registry.order.indexOf(label);
-  if (index >= 0) return index + 1;
+  if (index >= 0) return { number: index + 1, first: false };
   registry.order.push(label);
-  return registry.order.length;
+  return { number: registry.order.length, first: true };
 }
 
 interface FootnoteRefToken extends Tokens.Generic {
@@ -161,9 +167,12 @@ const footnoteRef: MarkedExtension = {
       },
       renderer(token) {
         const { label } = token as FootnoteRefToken;
-        const slug = slugFor(label);
-        const n = numberFor(label);
-        return `<sup class="footnote-ref"><a id="fnref-${escapeHtml(slug)}" href="#fn-${escapeHtml(slug)}">${n}</a></sup>`;
+        const slug = escapeHtml(slugFor(label));
+        const { number, first } = referenceFor(label);
+        // 되돌아가기 링크는 **처음 참조**를 가리킨다. 두 번째 참조에까지 같은
+        // id 를 달면 문서에 같은 id 가 여러 개 생긴다.
+        const id = first ? ` id="fnref-${slug}"` : "";
+        return `<sup class="footnote-ref"><a${id} href="#fn-${slug}">${number}</a></sup>`;
       },
     },
   ],
@@ -303,12 +312,21 @@ export function renderFootnoteSection(
 ): string {
   if (registry.order.length === 0) return "";
 
-  const items = registry.order.map((label) => {
+  const items: string[] = [];
+  // **인덱스로 돈다.** 각주 본문 안에서 다른 각주를 참조할 수 있고
+  // (`[^1]: 참고[^2]`), 그러면 이 루프 도중에 `order` 가 늘어난다. `map` 은
+  // 시작 시점의 길이만 훑기 때문에 나중에 추가된 각주는 **링크만 있고 항목이
+  // 없는 상태**가 된다 — 어디로도 가지 않는 링크를 만들지 않는다는 이 기능의
+  // 전제가 깨진다. 새로 늘어난 만큼은 정의 개수로 자연히 멈춘다.
+  for (let i = 0; i < registry.order.length; i += 1) {
+    const label = registry.order[i];
     const slug = escapeHtml(slugFor(label));
     const body = renderBody(registry.definitions.get(label) ?? "");
     // 되돌아가기 링크가 있어야 각주를 읽고 본문으로 돌아올 수 있다.
-    return `<li id="fn-${slug}">${body} <a class="footnote-back" href="#fnref-${slug}" aria-label="본문으로 돌아가기">↩</a></li>`;
-  });
+    items.push(
+      `<li id="fn-${slug}">${body} <a class="footnote-back" href="#fnref-${slug}" aria-label="본문으로 돌아가기">↩</a></li>`,
+    );
+  }
 
   return `<section class="footnotes"><ol>${items.join("")}</ol></section>\n`;
 }
