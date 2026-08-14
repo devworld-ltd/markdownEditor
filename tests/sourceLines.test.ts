@@ -77,3 +77,24 @@ describe("lineStartOffsets", () => {
     expect(lineStartOffsets("가\n")).toEqual([0, 2]);
   });
 });
+
+describe("파서 상태 오염 (자체 리뷰)", () => {
+  it("blockStartLines 가 다음 parseMarkdown 결과를 바꾸지 않는다", () => {
+    // `blockStartLines` 는 `marked.lexer` 를 부르는데, 각주 정의 토크나이저는
+    // 모듈 수준 등록부에 정의를 쌓는다(F-73). 그 상태가 남으면 **정의가 없는
+    // 문서에서 각주가 살아나는** 사고가 난다.
+    blockStartLines("본문[^1]\n\n[^1]: 이전 문서의 각주");
+
+    const html = parseMarkdown("다른 문서의 본문[^1] 끝");
+    expect(html).toContain("[^1]");
+    expect(html).not.toContain("footnote-ref");
+    expect(html).not.toContain("이전 문서의 각주");
+  });
+
+  it("parseMarkdown 사이에 끼어들어도 각주가 정상이다", () => {
+    const first = parseMarkdown("가[^a]\n\n[^a]: 에이");
+    blockStartLines("# 다른 문서");
+    const second = parseMarkdown("가[^a]\n\n[^a]: 에이");
+    expect(second).toBe(first);
+  });
+});
