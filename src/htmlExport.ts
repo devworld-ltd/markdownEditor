@@ -69,6 +69,12 @@ const EXPORT_STYLES = `
   .tok-number { color: #a04a19; }
   .tok-punct { color: #57606a; }
   hr { border: none; border-top: 1px solid #dddddd; margin: 2em 0; }
+  /* 이슈 #111: 각주·정의 목록. 내보낸 파일은 남이 열므로 프리뷰와 같은 모양이어야 한다. */
+  .footnotes { margin-top: 2em; padding-top: 1em; border-top: 1px solid #dddddd; font-size: 0.9em; }
+  .footnotes ol { padding-left: 20px; }
+  .footnote-ref a, .footnote-back { text-decoration: none; }
+  dt { font-weight: 700; }
+  dd { margin: 0 0 4px 20px; }
 `.trim();
 
 /**

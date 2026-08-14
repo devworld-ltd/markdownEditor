@@ -45,6 +45,8 @@
   --md-url: #a04a19;
   --md-list: #a11b8c;
   --md-lang: #5a6169;
+  --md-footnote: #0a6640;
+  --md-deflist: #a11b8c;
 }
 
 * {
@@ -414,6 +416,39 @@ body {
   max-width: 100%;
 }
 
+/* 이슈 #111: 각주. 본문에서는 작게, 목록은 본문과 구분되게 위에 선을 둔다. */
+#preview .footnote-ref a {
+  text-decoration: none;
+}
+
+#preview .footnotes {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule-subtle);
+  font-size: 0.9em;
+}
+
+#preview .footnotes ol {
+  padding-left: 20px;
+}
+
+#preview .footnote-back {
+  text-decoration: none;
+}
+
+/* 이슈 #111: 정의 목록. */
+#preview dl {
+  margin-bottom: 8px;
+}
+
+#preview dt {
+  font-weight: 700;
+}
+
+#preview dd {
+  margin: 0 0 4px 20px;
+}
+
 /* F-23 잔여: 마크다운 서식 색. 토큰 색과 같은 규칙을 따른다 —
    표식(`##`, `**`)은 **흐리게**, 내용은 진하게. 표식이 내용보다 눈에 띄면
    글을 읽는 데 방해가 된다. */
@@ -469,6 +504,16 @@ body {
 
 .md-table-align {
   color: var(--md-list);
+}
+
+/* 이슈 #111: 각주·정의 목록 표식. */
+.md-footnote {
+  color: var(--md-footnote);
+}
+
+.md-deflist {
+  color: var(--md-deflist);
+  font-weight: 700;
 }
 
 /* F-23 토큰 색. class 만으로 칠한다 — DOMPurify 허용 목록을 class 하나만
@@ -1131,6 +1176,8 @@ body {
     --md-url: #f0a878;
     --md-list: #e08bd4;
     --md-lang: #9aa4ad;
+    --md-footnote: #7fd6a8;
+    --md-deflist: #e08bd4;
   }
 }
 
@@ -1206,6 +1253,12 @@ body {
   #preview blockquote {
     border-left-color: #999999 !important;
     color: #333333 !important;
+  }
+
+  /* 이슈 #111: 종이에서도 각주 목록은 본문과 구분돼야 한다. 다크 팔레트의
+     경계선 색이 그대로 인쇄되지 않도록 라이트 값으로 고정한다. */
+  #preview .footnotes {
+    border-top-color: #999999 !important;
   }
 
   #preview th,
