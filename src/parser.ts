@@ -43,6 +43,17 @@ marked.use({
  * 업로드된 .md). marked 는 raw HTML 을 그대로 통과시키므로 DOMPurify 로 정화한 뒤
  * 반환한다. 이 함수를 거치지 않고 innerHTML 에 마크다운 결과를 넣으면 안 된다.
  */
+
+/**
+ * 정화만 따로 쓰는 경로 (이슈 #118).
+ *
+ * mermaid 가 그린 SVG 도 **이 함수를 통과해야 한다.** 새 sanitize 호출을 만들면
+ * 정화 정책이 두 벌이 되고, 한쪽만 갱신되는 순간 F-18 이 뚫린다.
+ */
+export function sanitizeHtml(html: string): string {
+  return DOMPurify.sanitize(html);
+}
+
 export function parseMarkdown(source: string): string {
   // 각주 등록부는 **호출마다 새로 만든다.** 모듈 수준에 두고 재사용하면 이전
   // 문서의 각주가 다음 문서 끝에 따라붙는다.
@@ -58,5 +69,5 @@ export function parseMarkdown(source: string): string {
   // 기본 허용 목록에 `class` 가 이미 있다(제거해도 테스트가 통과해 확인했다).
   // 허용 목록을 건드리지 않는 편이 F-18 에 더 안전하므로 옵션을 지웠다.
   // 이 성질은 `parser.test.ts` 가 못 박는다.
-  return DOMPurify.sanitize(html);
+  return sanitizeHtml(html);
 }

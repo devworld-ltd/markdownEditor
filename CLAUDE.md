@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-바닐라 TypeScript로 만든 **웹 기반 마크다운 에디터**. 프레임워크 없이 순수 TypeScript + DOM API를 사용하며, `marked` + `DOMPurify` 로 마크다운을 안전한 HTML로 변환한다. Cloudflare Workers 에 정적 자산으로 배포한다.
+바닐라 TypeScript로 만든 **웹 기반 마크다운 에디터**. 프레임워크 없이 순수 TypeScript + DOM API를 사용하며, `marked` + `DOMPurify` 로 마크다운을 안전한 HTML로 변환한다. 다이어그램(F-74)에만 `mermaid` 를 **지연 로드**한다 — 문서에 ```mermaid 블록이 없으면 내려받지 않는다. Cloudflare Workers 에 정적 자산으로 배포한다.
 
 **공유 링크(F-60)를 제외하면** 서버·데이터베이스·네트워크 호출이 없다. 편집·저장·프리뷰·내보내기·인쇄는 전부 브라우저 안에서 끝나고, 문서는 사용자 브라우저(localStorage)와 로컬 디스크에만 존재한다.
 
@@ -61,6 +61,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`anchorMeasure.ts`** — 앵커 y 측정(#114). 미러 **한 장**에 표식을 심어 한 번에 읽는다. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`mermaidView.ts`** — mermaid 다이어그램(F-74). 주입형 리프. **블록이 없으면 라이브러리를 받지 않는다**(지연 로드). 그린 SVG 도 같은 `sanitizeHtml()` 을 통과한다.
 - **`markdownExtensions.ts`** — 각주·정의 목록(F-73). marked 확장. **정의 없는 참조는 각주가 아니다.**
 - **`markdownHighlight.ts`** — 편집 영역 서식 계산(F-23 잔여·F-30 표). 순수. **태그를 걷어낸 텍스트가 입력과 정확히 같아야 한다** — 오버레이 정렬의 전제다. 그래서 `tableFormat.splitRow()`(칸을 trim 한다)를 렌더에 쓰지 않는다.
 - **`editorOverlay.ts`** — 편집 하이라이팅 오버레이(F-23 잔여). 주입형 리프. **기본 꺼짐.**
@@ -169,7 +170,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 69. **`switchTab()` 은 편집기 렌더 디바운스를 타지 않는다.** `renderPreview()` 를 직접 부르므로, 그 디바운스에 얹은 것(줄 번호·통계·하이라이팅)은 **탭을 바꾸면 이전 문서의 화면으로 남는다.** `setTabRenderListener()` 로 함께 갱신하라. 글꼴·크기 변경(F-35)도 같은 이유로 오버레이 갱신이 필요하다 — 번호 칸 폭이 달라지면 편집기가 옆으로 밀린다.
 70. **marked 확장의 `start()` 에 `^` 앵커를 쓰지 말 것.** marked 는 `src.slice(1)` 을 넘기므로 잘려 나간 첫 글자 뒤가 문자열의 처음이 되어 **줄 한가운데서도 `^` 가 맞는다.** 실제로 `가[^b] 나` 의 `[^b]` 가 줄머리로 잡혀 문단이 `가<br>[^b] 나` 로 두 동강 났다. 줄바꿈(`\n`)을 명시적으로 요구하고 인덱스에 +1 하라.
 71. **스크롤 동기화는 비율이 아니라 블록 앵커로 맞춘다(#114).** 비율은 값만 비례할 뿐 **보이는 줄이 어긋난다** — 두 패널의 높이 분포가 다르기 때문이다. 앵커 개수가 어긋나면(각주 절처럼) **포기하고 비율로 되돌아간다**; 틀린 대응표는 안 맞추느니만 못하다. 그리고 앵커는 **렌더 뒤 한 번만** 재라 — 스크롤 경로에서 재면 큰 문서가 즉시 느려진다.
-72. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+72. **mermaid 라벨은 `htmlLabels: false` 여야 보인다(F-74).** 기본값은 `<foreignObject>` 인데 **DOMPurify 가 그것을 지운다** — 도형만 남고 글자가 사라진다. 그리고 **최상위와 다이어그램별 설정을 모두** 꺼야 한다: `flowchart.htmlLabels` 만 끄면 클러스터 라벨은 나오고 노드 라벨만 사라진다.
+73. **지연 로드 E2E 는 네트워크 리스너를 `goto` 앞에 붙여라.** 뒤에 붙이면 앱 기동 때 나가는 요청을 통째로 놓쳐, 지연 로드를 없애도 통과한다(실제로 그랬다).
+74. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 

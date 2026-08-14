@@ -10,6 +10,9 @@ test-results/
 # direnv (시크릿 포함 — 절대 커밋 금지)
 .envrc
 .envrc.local
+# 편집기 스왑 파일 — `.envrc.swp` 처럼 비밀이 든 파일의 사본이 될 수 있다.
+*.swp
+*.swo
 
 # devflow 실행 중 lock (커밋 대상 아님)
 .claude/.devflow.lock

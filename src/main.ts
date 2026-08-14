@@ -1,4 +1,5 @@
 import { createEditor } from "./editor";
+import { sanitizeHtml } from "./parser";
 import { initToolbar, setFileActions } from "./toolbar";
 import {
   exportFile,
@@ -58,6 +59,7 @@ import { initEditorSettings } from "./editorSettings";
 import { initTableUi } from "./tableUi";
 import { initLineNumbers } from "./lineNumbers";
 import { initEditorOverlay } from "./editorOverlay";
+import { initMermaidView, type MermaidLike } from "./mermaidView";
 import { initStatusBar } from "./statusBar";
 import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
@@ -153,6 +155,20 @@ if (editorEl && previewEl) {
     editor: editorEl,
     preview: previewEl,
     getAnchors: currentAnchors,
+  });
+
+  // 이슈 #118: mermaid 다이어그램. **문서에 블록이 있을 때만** 라이브러리를 받는다.
+  const mermaidView = initMermaidView({
+    previewEl,
+    load: async () => (await import("mermaid")).default as unknown as MermaidLike,
+    // 정화는 파서와 **같은 함수**를 넘긴다 — 경로를 둘로 만들지 않는다(F-18).
+    sanitize: sanitizeHtml,
+    isDark: () => window.matchMedia("(prefers-color-scheme: dark)").matches,
+    onRendered: () => {
+      // 그림이 들어오면 프리뷰 높이가 바뀐다 — 앵커를 다시 잰다(#114).
+      invalidateAnchors();
+    },
+    notify: (message, kind) => showNotice(message, kind ?? "info", 7000),
   });
 
   // 창 크기가 바뀌면 두 패널의 줄바꿈이 달라진다 — 좌표를 다시 재야 한다.
@@ -300,6 +316,8 @@ if (editorEl && previewEl) {
       // 이슈 #114: 본문이 바뀌면 블록 위치도 바뀐다. 여기서 버리고 다음 스크롤 때
       // 다시 잰다 — 타이핑마다 재면 큰 문서에서 즉시 느려진다.
       invalidateAnchors();
+      // 이슈 #118: 새로 그린 프리뷰에 mermaid 블록이 있으면 그림으로 바꾼다.
+      mermaidView.render();
     },
   });
 
@@ -342,6 +360,7 @@ if (editorEl && previewEl) {
       editorOverlay?.refresh();
       // 탭이 바뀌면 문서가 통째로 바뀐다 (이슈 #114).
       invalidateAnchors();
+      mermaidView.render();
     });
 
     initTabs(tabBarEl, editorEl, previewEl, titleEl);
