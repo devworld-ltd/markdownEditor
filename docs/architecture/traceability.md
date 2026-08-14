@@ -187,6 +187,7 @@ graph LR
 | `tests/markdownHighlight.test.ts` | 49 | F-23 잔여 |
 | `tests/editorOverlay.test.ts` | 13 | F-23 잔여 |
 | `tests/e2e/editorhighlight.spec.ts` | 12 | F-23 잔여 |
+| `tests/e2e/searchoverlay.spec.ts` | 9 | F-22 재검증 |
 | `tests/sessionReclaim.test.ts` | 19 | F-54 |
 | `tests/dropFiles.test.ts` | 22 | F-56 |
 | `tests/e2e/filedrop.spec.ts` | 10 | F-56 |
