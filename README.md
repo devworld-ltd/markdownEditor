@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **828건** + E2E 385건 (전부 통과) |
+| 테스트 | 단위 **862건** + E2E 394건 (전부 통과) |
 | 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -106,6 +106,9 @@ markdownEditor/
 │   ├── offline.ts            # 오프라인 상태 배지
 │   ├── fsLimitNotice.ts      # 브라우저 한계 안내
 │   ├── scrollSync.ts         # 에디터 ↔ 프리뷰 스크롤 동기화
+│   ├── scrollAnchors.ts      # 블록 앵커 보간 (순수)
+│   ├── sourceLines.ts        # 원문 블록 줄 (순수)
+│   ├── anchorMeasure.ts      # 앵커 y 좌표 측정
 │   ├── markdownExtensions.ts # 각주·정의 목록 (marked 확장)
 │   ├── markdownHighlight.ts  # 편집 영역 서식 계산 (순수)
 │   ├── editorOverlay.ts      # 편집 하이라이팅 오버레이
