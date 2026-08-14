@@ -194,6 +194,8 @@ graph LR
 | `tests/scrollAnchors.test.ts` | 16 | #114 |
 | `tests/sourceLines.test.ts` | 18 | #114 |
 | `tests/e2e/scrollanchor.spec.ts` | 9 | #114 |
+| `tests/anchorMeasure.test.ts` | 4 | #121 |
+| `tests/e2e/scrolldrift.spec.ts` | 4 | #121 |
 | `tests/editorOverlay.test.ts` | 13 | F-23 잔여 |
 | `tests/e2e/editorhighlight.spec.ts` | 14 | F-23 잔여 |
 | `tests/e2e/searchoverlay.spec.ts` | 9 | F-22 재검증 |
