@@ -340,6 +340,18 @@ sequenceDiagram
 
 ---
 
+## 7.9 marked 확장 (F-73)
+
+각주·정의 목록은 `marked.use({ extensions })` 로 더했다. 확장이 만든 HTML 도 `parseMarkdown()` 의 `DOMPurify.sanitize()` 를 그대로 통과한다 — **정화 경로는 하나뿐이다**(F-18).
+
+| 확장 | level | 비고 |
+|------|-------|------|
+| `footnoteDef` | block | 정의를 등록부에 모으고 그 자리에는 아무것도 남기지 않는다 |
+| `footnoteRef` | inline | 등록부에 정의가 있을 때만 각주로 본다 |
+| `definitionList` | block | 용어 다음 줄의 `: ` 를 잡는다 (문단보다 먼저 봐야 한다) |
+
+`start()` 는 `src.slice(1)` 을 받으므로 `^` 앵커를 쓰면 줄 한가운데서 오탐한다.
+
 ## 8. 보안 노트
 
 | 항목 | 상태 |

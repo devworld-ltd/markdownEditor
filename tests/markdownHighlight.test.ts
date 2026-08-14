@@ -251,3 +251,50 @@ describe("표 (F-30 잔여)", () => {
     expect(lastLine).not.toContain("md-table-pipe");
   });
 });
+
+describe("각주 · 정의 목록 (이슈 #111)", () => {
+  it("각주 참조를 칠한다", () => {
+    expect(highlightInline("본문[^1] 끝")).toContain('<span class="md-footnote">[^1]</span>');
+  });
+
+  it("각주 참조를 링크보다 먼저 잡는다 — 링크가 먼저 삼키면 표식이 사라진다", () => {
+    const html = highlightInline("[^1]");
+    expect(html).toContain("md-footnote");
+    expect(html).not.toContain("md-link-text");
+  });
+
+  it("각주 정의 줄의 표식을 칠한다", () => {
+    const html = highlightMarkdown("[^1]: 각주 **내용**");
+    expect(html).toContain('<span class="md-footnote">[^1]:</span>');
+    expect(html).toContain("md-strong");
+  });
+
+  it("정의 목록의 콜론을 칠한다", () => {
+    const html = highlightMarkdown("용어\n: 뜻");
+    expect(html).toContain('<span class="md-deflist">:</span>');
+  });
+
+  it("본문 속 콜론은 칠하지 않는다", () => {
+    expect(highlightMarkdown("본문에 콜론: 있음")).not.toContain("md-deflist");
+  });
+
+  it("닫히지 않은 각주 표식은 칠하지 않는다", () => {
+    expect(highlightInline("[^닫히지 않음")).not.toContain("md-footnote");
+  });
+
+  it("글자를 더하거나 빼지 않는다", () => {
+    const samples = [
+      "본문[^1] 끝",
+      "[^1]: 각주 내용",
+      "용어\n: 뜻 1\n: 뜻 2",
+      "[^한글 라벨]: 내용",
+    ];
+    for (const sample of samples) {
+      expect(textOf(highlightMarkdown(sample))).toBe(sample);
+    }
+  });
+
+  it("코드블록 안의 각주 표식은 칠하지 않는다", () => {
+    expect(highlightMarkdown("```\n[^1]: 내용\n```")).not.toContain("md-footnote");
+  });
+});

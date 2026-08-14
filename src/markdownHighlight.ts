@@ -149,6 +149,18 @@ export function highlightInline(line: string): string {
       }
     }
 
+    // 각주 참조 `[^라벨]` (이슈 #111). 링크(`[...]`)보다 **먼저** 봐야 한다 —
+    // 링크 규칙이 `[^1]` 을 먼저 삼키면 각주 표식이 사라진다.
+    if (ch === "[" && line[i + 1] === "^") {
+      const close = line.indexOf("]", i + 2);
+      if (close !== -1) {
+        flush();
+        out += span("md-footnote", line.slice(i, close + 1));
+        i = close + 1;
+        continue;
+      }
+    }
+
     if (ch === "[" || (ch === "!" && line[i + 1] === "[")) {
       const link = matchLink(line, i);
       if (link) {
@@ -183,6 +195,10 @@ export function highlightInline(line: string): string {
 /* -------------------------------------------------------------------- 블록 */
 
 const HEADING = /^(#{1,6})(\s)(.*)$/;
+/** 각주 정의 `[^라벨]: 내용` (이슈 #111). */
+const FOOTNOTE_DEF = /^(\s*)(\[\^[^\]\s][^\]]*\]:)(.*)$/;
+/** 정의 목록의 뜻 `: 정의` (이슈 #111). */
+const DEF_DETAIL = /^(:)(\s)(.*)$/;
 const QUOTE = /^(\s*)((?:>\s?)+)(.*)$/;
 const LIST = /^(\s*)([-*+]|\d+[.)])(\s)(.*)$/;
 const HR = /^(\s*)((?:-{3,}|\*{3,}|_{3,}))(\s*)$/;
@@ -238,6 +254,20 @@ function highlightBlockLine(line: string): string {
       escapeHtml(heading[2]) +
       span("md-heading", heading[3])
     );
+  }
+
+  const footnote = FOOTNOTE_DEF.exec(line);
+  if (footnote) {
+    return (
+      escapeHtml(footnote[1]) +
+      span("md-footnote", footnote[2]) +
+      highlightInline(footnote[3])
+    );
+  }
+
+  const detail = DEF_DETAIL.exec(line);
+  if (detail) {
+    return span("md-deflist", detail[1]) + escapeHtml(detail[2]) + highlightInline(detail[3]);
   }
 
   const quote = QUOTE.exec(line);
