@@ -111,6 +111,7 @@ interface StoredLayout {
   fontSize?: unknown;
   lineNumbers?: unknown;
   docStats?: unknown;
+  editorHighlight?: unknown;
 }
 
 function readLayout(): StoredLayout {
@@ -191,6 +192,18 @@ export function loadDocStats(): boolean {
 
 export function saveDocStats(enabled: boolean): void {
   writeLayout({ docStats: enabled });
+}
+
+/**
+ * 편집 영역 하이라이팅 여부 (F-23 잔여). **기본은 꺼짐** — 정렬이 어긋날 수 있는
+ * 환경(글꼴 폴백·확대)에서 사용자가 켠 적 없는 기능에 발목 잡히면 안 된다.
+ */
+export function loadEditorHighlight(): boolean {
+  return readLayout().editorHighlight === true;
+}
+
+export function saveEditorHighlight(enabled: boolean): void {
+  writeLayout({ editorHighlight: enabled });
 }
 
 /** 최근 파일 목록 원본을 읽는다 (F-36). 검증은 호출부(recentFiles)가 한다. */
