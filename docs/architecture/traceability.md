@@ -49,6 +49,7 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-36 | 최근 파일 | 툴바 버튼 · 파일 열기/저장 | `fileOps` 훅 → `recentFilesUi.ts` | `recent` (localStorage) + 메모리 핸들 | `showOpenFilePicker` | `recent.spec.ts` |
 | F-40 | 클립보드 복사 | 툴바 버튼 | `preview.innerHTML` → `clipboardExport.ts` | — | `navigator.clipboard` · `ClipboardItem` | `clipboard.spec.ts` |
 | #114 | 스크롤 블록 앵커 | 편집기·프리뷰 scroll | `sourceLines.ts`+`anchorMeasure.ts` → `scrollAnchors.ts` → `scrollSync.ts` | — | — | `scrollanchor.spec.ts` |
+| F-74 | mermaid 다이어그램 | 프리뷰 렌더 뒤 | `mermaidView.ts` → `parser.sanitizeHtml` | — | 지연 `import("mermaid")` | `mermaid.spec.ts` |
 | F-73 | 각주·정의 목록 | 프리뷰 렌더 | `markdownExtensions.ts` → `parser.ts` | — | — | `footnotes.spec.ts` |
 | F-23 잔여 | 편집 하이라이팅 | 렌더 디바운스 · 편집기 scroll | `markdownHighlight.ts` → `editorOverlay.ts` | `editorHighlight` (localStorage) | — | `editorhighlight.spec.ts` |
 | F-54 | 용량 초과 회수 | 자동 저장 실패 | `sessionReclaim.ts` → `tabs.ts` | 세션(localStorage) | — | `session.spec.ts` |
@@ -188,6 +189,8 @@ graph LR
 | `tests/e2e/docstats.spec.ts` | 8 | F-29 |
 | `tests/markdownHighlight.test.ts` | 67 | F-23 잔여 (표·각주 포함) |
 | `tests/e2e/footnotes.spec.ts` | 8 | F-73 |
+| `tests/mermaidView.test.ts` | 17 | F-74 |
+| `tests/e2e/mermaid.spec.ts` | 7 | F-74 |
 | `tests/scrollAnchors.test.ts` | 16 | #114 |
 | `tests/sourceLines.test.ts` | 18 | #114 |
 | `tests/e2e/scrollanchor.spec.ts` | 9 | #114 |

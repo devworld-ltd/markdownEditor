@@ -436,6 +436,31 @@ body {
   text-decoration: none;
 }
 
+/* 이슈 #118: mermaid 다이어그램. 그림은 본문보다 넓을 수 있으므로 **자기 프레임
+   안에서만** 가로 스크롤한다 — 페이지 본문이 옆으로 밀리면 안 된다. */
+#preview .mermaid-figure {
+  margin: 0 0 12px;
+  padding: 8px 0;
+  overflow-x: auto;
+}
+
+#preview .mermaid-figure svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 문법이 틀렸을 때. 코드블록은 그대로 두고 이유만 아래에 적는다 —
+   빈 자리를 남기면 사용자는 앱이 멈춘 줄 안다. */
+#preview .mermaid-error {
+  margin: -4px 0 12px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--danger, #8B1F3E);
+  background: var(--code-bg);
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
 /* 이슈 #111: 정의 목록. */
 #preview dl {
   margin-bottom: 8px;
