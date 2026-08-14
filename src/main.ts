@@ -23,6 +23,7 @@ import {
   persistNow,
   setCloseConfirm,
   setScrollSyncHooks,
+  setTabRenderListener,
 } from "./tabs";
 import { initNotice, showNotice } from "./notice";
 import {
@@ -276,6 +277,15 @@ if (editorEl && previewEl) {
   });
 
   if (titleEl && tabBarEl) {
+    // 탭 전환은 renderPreview 를 직접 부르므로 편집기 렌더 디바운스를 타지 않는다.
+    // 그 디바운스에 얹힌 것들을 여기서 함께 갱신한다 — 없으면 탭을 바꾼 뒤
+    // 줄 번호·통계·하이라이팅이 이전 문서의 것으로 남는다.
+    setTabRenderListener(() => {
+      lineNumbers?.refresh();
+      statusBar?.refresh();
+      editorOverlay?.refresh();
+    });
+
     initTabs(tabBarEl, editorEl, previewEl, titleEl);
   }
 
@@ -340,6 +350,9 @@ if (editorEl && previewEl) {
             saveEditorPrefs(prefs);
             // F-24: 글자 크기·글꼴이 바뀌면 줄 높이가 달라진다 — 번호를 다시 잰다.
             lineNumbers?.refresh();
+            // F-23 잔여: 그러면 번호 칸의 폭도 달라져 편집기가 옆으로 밀린다.
+            // 오버레이가 그 자리를 다시 재지 않으면 왼쪽 정렬이 어긋난다.
+            editorOverlay?.refresh();
           },
           returnFocusTo: editorEl,
         })
