@@ -26,6 +26,8 @@
  *   진동하는 것을 막기 위한 설계다.
  */
 
+import { mapWithAnchors, type ScrollAnchor } from "./scrollAnchors";
+
 /** 스크롤 컨테이너의 최소 계약. 실제 DOM 요소와 가짜 host 객체 모두 만족한다. */
 export interface ScrollPanel {
   scrollTop: number;
@@ -52,6 +54,17 @@ export interface ScrollSyncHost {
   requestFrame(cb: () => void): number;
   /** 기본 구현: cancelAnimationFrame */
   cancelFrame(id: number): void;
+  /**
+   * 블록 대응표 (이슈 #114). 있으면 비율 대신 이것으로 맞춘다.
+   *
+   * 비율 동기화는 문서 전체를 하나의 선형 대응으로 보기 때문에, 제목·코드블록처럼
+   * 두 패널의 높이비가 국소적으로 다른 지점에서 **보이는 줄이 어긋난다.** 앵커가
+   * 있으면 블록마다 대응을 다시 맞춰 오차를 블록 안에 가둔다.
+   *
+   * 없거나 2개 미만이면 기존 비율 동기화로 되돌아간다 — 틀린 대응표로 맞추는
+   * 것은 안 맞추는 것보다 나쁘다.
+   */
+  getAnchors?: () => readonly ScrollAnchor[];
 }
 
 export interface ScrollSyncController {
@@ -149,16 +162,41 @@ export function initScrollSync(
       return top / distance;
     }
 
-    function applyToPanel(kind: PanelKind, ratio: number): void {
+    /** 목표 좌표를 그대로 적용한다. 메아리 판별(R2)은 여기 한 곳에서만 걸린다. */
+    function applyTopToPanel(kind: PanelKind, rawTarget: number): void {
       const panel = panels[kind];
       const distance = scrollableDistance(panel);
       if (!(distance > 0)) return; // 종속이 갈 곳이 없다 (E2/E3)
 
-      const target = Math.round(ratio * distance);
+      const target = Math.round(Math.max(0, Math.min(distance, rawTarget)));
       if (Math.abs(target - panel.scrollTop) < ECHO_EPSILON_PX) return; // 불필요한 쓰기·고아 expectedTop 방지
 
       expectedTop[kind] = target; // R2 — 대입 직전에 기록
       panel.scrollTop = target;
+    }
+
+    function applyToPanel(kind: PanelKind, ratio: number): void {
+      const distance = scrollableDistance(panels[kind]);
+      if (!(distance > 0)) return;
+      applyTopToPanel(kind, ratio * distance);
+    }
+
+    /**
+     * 앵커로 계산한 반대편 목표. 앵커가 없으면 null 이고, 호출부는 비율로 간다.
+     *
+     * 이 함수는 **읽기만 한다** — 소유권·메아리 상태를 건드리지 않으므로 F-25 의
+     * 루프 방지 모델(R1~R3)에 손대지 않는다.
+     */
+    function anchoredTarget(from: PanelKind, top: number): number | null {
+      const anchors = host.getAnchors?.();
+      if (!anchors || anchors.length < 2) return null;
+      return mapWithAnchors(
+        anchors,
+        from,
+        top,
+        scrollableDistance(panels[otherOf(from)]),
+        scrollableDistance(panels[from]),
+      );
     }
 
     function cancelPendingFrame(): void {
@@ -181,7 +219,12 @@ export function initScrollSync(
       const ratio = computeRatio(srcPanel);
       if (ratio === null) return; // 소스가 못 움직이면 비율이 정의되지 않는다. lastRatio 갱신 안 함
 
-      applyToPanel(otherOf(source), ratio);
+      const anchored = anchoredTarget(source, srcPanel.scrollTop);
+      if (anchored !== null) applyTopToPanel(otherOf(source), anchored);
+      else applyToPanel(otherOf(source), ratio);
+
+      // 앵커로 맞췄더라도 비율은 계속 기록한다 — 렌더 직후 재적용(M9)에서
+      // 앵커가 아직 없을 수 있고, 그때 되돌아갈 자리가 필요하다.
       lastRatio = ratio;
     }
 
@@ -261,7 +304,11 @@ export function initScrollSync(
         // 에디터 → 프리뷰 단방향. 프리뷰가 소스가 되는 경로는 없다.
         const ratio = computeRatio(panels.editor);
         if (ratio === null) return;
-        applyToPanel("preview", ratio);
+
+        const anchored = anchoredTarget("editor", panels.editor.scrollTop);
+        if (anchored !== null) applyTopToPanel("preview", anchored);
+        else applyToPanel("preview", ratio);
+
         source = "editor";
         lastRatio = ratio;
       },
@@ -289,7 +336,13 @@ export function initScrollSync(
         if (ratio === null) return;
 
         doSuspend();
-        applyToPanel("preview", ratio);
+        // 이슈 #114: 렌더 직후에도 앵커가 있으면 그것으로 맞춘다. 렌더로 프리뷰
+        // 높이가 달라졌을 수 있는데, 그때 비율을 그대로 쓰면 방금 보던 줄에서
+        // 벗어난다 — 타이핑 중에 프리뷰가 슬금슬금 밀리는 증상이 이것이다.
+        const anchored =
+          source === "editor" ? anchoredTarget("editor", panels.editor.scrollTop) : null;
+        if (anchored !== null) applyTopToPanel("preview", anchored);
+        else applyToPanel("preview", ratio);
         doResumeAfterFrame();
         lastRatio = ratio;
       },
