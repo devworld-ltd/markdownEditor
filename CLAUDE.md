@@ -141,7 +141,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 45. **API 목(mock)을 쓰는 테스트는 배포 라우팅을 검증하지 못한다.** 단위 473건·E2E 253건이 전부 통과한 상태에서 위 결함이 실물 배포에서만 드러났다. 그래서 `scripts/healthcheck.sh` 가 **공유 API 왕복**을 확인한다 — 그리고 **캐시를 우회해야 한다**(공유 응답은 `immutable` 이라 엣지가 대신 답하면 라우팅이 깨져도 통과한다).
 46. **Worker 코드는 `tsconfig.worker.json` 으로 따로 검사한다.** 처음에는 `worker/` 가 `tsconfig.json` 의 `include` 밖에 있어 **타입 검사를 전혀 받지 않았다.** `npm run typecheck` 가 둘 다 돌리고, `npm run build` 가 그것을 부른다.
 47. **하이라이팅 출력은 `<span class>` 뿐이어야 한다.** `style`·이벤트 속성을 넣기 시작하면 DOMPurify 허용 목록을 계속 열어야 하고 F-18 이 약해진다. `class` 는 DOMPurify **기본 허용**이라 `ADD_ATTR` 이 필요 없다(넣었다가 불필요함을 확인하고 지웠다). 토크나이저는 **문자 단위 선형 스캔**을 유지하라 — 정규식 대안으로 바꾸면 ReDoS 가 들어온다.
-48. **토큰 색을 바꾸면 네 곳을 모두 고쳐야 한다**: `:root`(라이트) · `prefers-color-scheme: dark` · `@media print` · `htmlExport.ts`. 한 곳만 고치면 그 환경에서만 대비가 깨지고, 다크·인쇄는 눈으로 잘 안 본다.
+48. **토큰 색은 표면마다 다시 재야 한다.** 같은 값이 프리뷰 코드 배경(`#f4f4f4`)에서는 AA 를 통과하고 **편집 표면(#f2f2f0)에서는 미달**일 수 있다(F-23 잔여에서 실제로 4.46:1 이 나왔다). 그리고 토큰 색을 바꾸면 네 곳을 모두 고쳐야 한다: `:root`(라이트) · `prefers-color-scheme: dark` · `@media print` · `htmlExport.ts`. 한 곳만 고치면 그 환경에서만 대비가 깨지고, 다크·인쇄는 눈으로 잘 안 본다.
 49. **F-32 분할 비율의 대상은 `#editor` 가 아니라 `.editor-pane` 이다** (F-24 이후). 줄 번호 칸을 포함한 상자를 조절해야 비율이 맞는다. F-33 보기 모드·F-39 인쇄의 숨김 대상도 이 상자다.
 50. **`initLineNumbers()` 는 `createEditor()` 보다 먼저 호출한다.** `onAfterRender` 가 이를 참조하는데 `createEditor` 가 최초 렌더를 동기 수행하므로, 뒤에 두면 TDZ 오류가 난다 — **화면은 뜨지만 콘솔에만 남아** 눈으로는 안 보인다.
 51. **Tab 을 무조건 가로채지 말 것.** 키보드 사용자가 편집 영역에 **갇힌다**(F-59). `Esc` 뒤의 **첫 Tab 한 번**은 포커스 이동으로 돌려준다 — 영구히 끄면 다시 켜는 방법을 사용자가 알 수 없다.
