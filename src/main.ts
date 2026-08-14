@@ -47,6 +47,9 @@ import { initSwUpdate, isUpdateReloadPending } from "./swUpdate";
 import { initOfflineIndicator } from "./offline";
 import { initFsLimitNotice } from "./fsLimitNotice";
 import { initScrollSync } from "./scrollSync";
+import { buildAnchors, type ScrollAnchor } from "./scrollAnchors";
+import { blockStartLines, lineStartOffsets } from "./sourceLines";
+import { measureEditorLineTops, measurePreviewBlockTops } from "./anchorMeasure";
 import { detectApplePlatform, initShortcutHelp } from "./shortcutHelp";
 import { initSearch } from "./search";
 import { initSplitter } from "./splitter";
@@ -103,7 +106,57 @@ if (editorEl && previewEl) {
   // F-25: initTabs() 가 내부에서 restoreSession()/createTab() → switchTab() 을
   // 동기적으로 호출하므로, setScrollSyncHooks() 는 initTabs() 보다 먼저 주입되어
   // 있어야 최초 복원 시점부터 M10/M11 이 성립한다.
-  const scrollSync = initScrollSync({ editor: editorEl, preview: previewEl });
+  /**
+   * 이슈 #114: 블록 대응표.
+   *
+   * 비율만으로 맞추면 제목·코드블록에서 **보이는 줄이 어긋난다.** 원문 블록이
+   * 시작하는 줄과 프리뷰의 최상위 자식을 순서대로 짝지어, 스크롤을 그 대응 위에서
+   * 보간한다.
+   *
+   * 측정은 **렌더가 끝난 뒤 한 번**만 한다. 스크롤은 프레임마다 도는 경로라
+   * 거기서 재면 큰 문서에서 즉시 체감된다. 그래서 여기서 캐시하고,
+   * `invalidateAnchors()` 를 렌더·크기 변화 때 호출한다.
+   */
+  // 클로저 안에서는 위 `if` 의 좁히기가 유지되지 않는다. 지역 상수로 고정한다.
+  const anchorEditorEl = editorEl;
+  const anchorPreviewEl = previewEl;
+  let cachedAnchors: ScrollAnchor[] | null = null;
+
+  function invalidateAnchors(): void {
+    cachedAnchors = null;
+  }
+
+  function currentAnchors(): readonly ScrollAnchor[] {
+    if (cachedAnchors) return cachedAnchors;
+    try {
+      const lines = blockStartLines(anchorEditorEl.value);
+      if (lines.length < 2) {
+        cachedAnchors = [];
+        return cachedAnchors;
+      }
+
+      const offsets = lineStartOffsets(anchorEditorEl.value);
+      const starts = lines.map((line) => offsets[Math.min(line, offsets.length - 1)] ?? 0);
+      const editorTops = measureEditorLineTops(anchorEditorEl, starts);
+      const previewTops = measurePreviewBlockTops(anchorPreviewEl);
+
+      cachedAnchors = buildAnchors(editorTops, previewTops);
+    } catch (error) {
+      // 앵커를 못 만들어도 스크롤은 계속 돌아야 한다 — 비율 동기화로 되돌아간다.
+      console.warn("[anchors] 대응표 생성 실패:", error);
+      cachedAnchors = [];
+    }
+    return cachedAnchors;
+  }
+
+  const scrollSync = initScrollSync({
+    editor: editorEl,
+    preview: previewEl,
+    getAnchors: currentAnchors,
+  });
+
+  // 창 크기가 바뀌면 두 패널의 줄바꿈이 달라진다 — 좌표를 다시 재야 한다.
+  window.addEventListener("resize", invalidateAnchors, { passive: true });
 
   // F-22: 검색은 에디터 본문을 대상으로 하므로 editorEl 만 있으면 된다.
   // 실패하면 단축키·툴바 진입점이 조용히 없는 것처럼 동작한다.
@@ -244,6 +297,9 @@ if (editorEl && previewEl) {
       statusBar?.refresh();
       // F-23 잔여: 하이라이트도 같은 디바운스에 얹는다.
       editorOverlay?.refresh();
+      // 이슈 #114: 본문이 바뀌면 블록 위치도 바뀐다. 여기서 버리고 다음 스크롤 때
+      // 다시 잰다 — 타이핑마다 재면 큰 문서에서 즉시 느려진다.
+      invalidateAnchors();
     },
   });
 
@@ -284,6 +340,8 @@ if (editorEl && previewEl) {
       lineNumbers?.refresh();
       statusBar?.refresh();
       editorOverlay?.refresh();
+      // 탭이 바뀌면 문서가 통째로 바뀐다 (이슈 #114).
+      invalidateAnchors();
     });
 
     initTabs(tabBarEl, editorEl, previewEl, titleEl);
