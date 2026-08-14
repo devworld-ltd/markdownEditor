@@ -297,6 +297,14 @@ body {
   background: transparent;
 }
 
+/* 선택 배경은 **반투명이어야 한다.**
+   글자가 투명하므로 보이는 글자는 뒤 레이어의 것이다. 선택 사각형이 불투명하면
+   그 위를 덮어 **선택한 순간 글자가 사라진다** — 검색(F-22)은 일치를 선택으로
+   보여주므로, 찾은 자리만 안 보이는 최악의 조합이 된다. */
+.editor-pane[data-overlay="true"] #editor::selection {
+  background: rgba(46, 122, 214, 0.28);
+}
+
 #editor {
   /* F-24 이후 비율은 .editor-pane 이 받는다. 텍스트 영역은 남는 공간 전부. */
   flex: 1 1 auto;
