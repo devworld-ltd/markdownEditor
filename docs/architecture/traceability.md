@@ -184,9 +184,9 @@ graph LR
 | `tests/docStats.test.ts` | 21 | F-29 |
 | `tests/statusBar.test.ts` | 10 | F-29 |
 | `tests/e2e/docstats.spec.ts` | 8 | F-29 |
-| `tests/markdownHighlight.test.ts` | 49 | F-23 잔여 |
+| `tests/markdownHighlight.test.ts` | 59 | F-23 잔여 (표 10건 포함) |
 | `tests/editorOverlay.test.ts` | 13 | F-23 잔여 |
-| `tests/e2e/editorhighlight.spec.ts` | 12 | F-23 잔여 |
+| `tests/e2e/editorhighlight.spec.ts` | 14 | F-23 잔여 |
 | `tests/e2e/searchoverlay.spec.ts` | 9 | F-22 재검증 |
 | `tests/e2e/scrolloverlay.spec.ts` | 5 | F-25 재검증 |
 | `tests/e2e/fontoverlay.spec.ts` | 9 | F-35 재검증 |

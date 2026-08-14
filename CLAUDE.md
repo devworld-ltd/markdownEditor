@@ -58,7 +58,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
-- **`markdownHighlight.ts`** — 편집 영역 서식 계산(F-23 잔여). 순수. **태그를 걷어낸 텍스트가 입력과 정확히 같아야 한다** — 오버레이 정렬의 전제다.
+- **`markdownHighlight.ts`** — 편집 영역 서식 계산(F-23 잔여·F-30 표). 순수. **태그를 걷어낸 텍스트가 입력과 정확히 같아야 한다** — 오버레이 정렬의 전제다. 그래서 `tableFormat.splitRow()`(칸을 trim 한다)를 렌더에 쓰지 않는다.
 - **`editorOverlay.ts`** — 편집 하이라이팅 오버레이(F-23 잔여). 주입형 리프. **기본 꺼짐.**
 - **`sessionReclaim.ts`** — 용량 초과 회수 규칙(F-54). 순수. **더티 탭의 내용은 절대 버리지 않는다.**
 - **`dropFiles.ts`** — 드롭 파일 분류(F-56). 순수. **확장자가 1순위** — `.md` 의 MIME 타입은 환경마다 다르다.

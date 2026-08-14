@@ -203,3 +203,30 @@ test("EH12: 큰 문서에서도 타이핑이 막히지 않는다", async ({ page
   await expect(page.locator("#editor")).toHaveValue(/추가/);
   expect(Date.now() - start).toBeLessThan(5000);
 });
+
+test("EH13: 표의 파이프와 정렬 표식을 칠한다 (F-30 잔여)", async ({ page }) => {
+  await page.locator("#editor").fill(
+    ["| 이름 | 값 |", "| :--- | ---: |", "| 한글이름 | 1 |"].join("\n"),
+  );
+  await enableHighlight(page);
+
+  await expect(page.locator("#editor-overlay .md-table-pipe").first()).toBeVisible();
+  await expect(page.locator("#editor-overlay .md-table-align").first()).toContainText(":");
+
+  // 표를 칠하면서 글자가 밀리면 안 된다.
+  const sizes = await page.evaluate(() => {
+    const editor = document.querySelector<HTMLTextAreaElement>("#editor")!;
+    const overlay = document.querySelector<HTMLElement>("#editor-overlay")!;
+    return { editor: editor.scrollHeight, overlay: overlay.scrollHeight, text: overlay.innerText };
+  });
+  expect(sizes.overlay).toBe(sizes.editor);
+  expect(sizes.text.replace(/\n$/, "")).toBe(
+    ["| 이름 | 값 |", "| :--- | ---: |", "| 한글이름 | 1 |"].join("\n"),
+  );
+});
+
+test("EH14: 구분선이 없는 파이프 줄은 표로 칠하지 않는다", async ({ page }) => {
+  await page.locator("#editor").fill("a | b\nc | d");
+  await enableHighlight(page);
+  await expect(page.locator("#editor-overlay .md-table-pipe")).toHaveCount(0);
+});
