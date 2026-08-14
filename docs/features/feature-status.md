@@ -77,7 +77,8 @@
 | F-60 | 공유 링크 (Cloudflare R2) | `worker/index.ts`, `src/shareId.ts`, `src/share.ts` | 단위 42 + E2E 10 |
 | F-67 | dev 환경 커스텀 도메인 | `wrangler.jsonc` | 배포 헬스체크 |
 | F-23 | 프리뷰 코드블록 구문 하이라이팅 (의존성 0) | `src/highlight.ts`, `src/parser.ts` | 단위 26 + E2E 9 |
-| F-23 잔여 | **편집 영역** 하이라이팅 (오버레이, 기본 꺼짐, **표 포함**) | `src/markdownHighlight.ts`, `src/editorOverlay.ts` | 단위 72 + E2E 14 |
+| F-23 잔여 | **편집 영역** 하이라이팅 (오버레이, 기본 꺼짐, 표·각주·정의 목록 포함) | `src/markdownHighlight.ts`, `src/editorOverlay.ts` | 단위 79 + E2E 14 |
+| F-73 | 각주 · 정의 목록 (파서 + 렌더 + 내보내기) | `src/markdownExtensions.ts`, `src/parser.ts` | 단위 24 + E2E 8 |
 | F-24 | 줄 번호 표시 (줄바꿈 정렬 포함) | `src/lineNumbers.ts` | 단위 14 + E2E 10 |
 | F-26 | 리스트 자동 이어쓰기 | `src/editorKeys.ts`, `src/editorBehavior.ts` | 단위 36 + E2E 15 |
 | F-27 | Tab 들여쓰기 / Shift+Tab 내어쓰기 | `src/editorKeys.ts`, `src/editorBehavior.ts` | 단위 36 + E2E 15 |

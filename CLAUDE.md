@@ -46,7 +46,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`main.ts`** — 엔트리포인트. 초기화 순서가 중요하다: `initFileOps()` → `setCloseConfirm()` → `initTabs()`(세션 복원) → `setFileActions()` → `initToolbar()`. `beforeunload`/`visibilitychange` 가드도 여기서 등록한다.
 - **`editor.ts`** — textarea `input` 을 150ms 디바운스해 프리뷰 갱신.
 - **`preview.ts`** — 파싱 결과를 `innerHTML` 로 주입. **반드시 `parseMarkdown()` 을 거쳐야 한다.**
-- **`parser.ts`** — `marked`(GFM + breaks) → **`DOMPurify.sanitize()`**. DOM 비의존 순수 모듈.
+- **`parser.ts`** — `marked`(GFM + breaks + 각주·정의 목록 확장) → **`DOMPurify.sanitize()`**. DOM 비의존 순수 모듈.
 - **`tabs.ts`** — 멀티 탭 상태(`Map<string, TabState>`) + 탭바 렌더 + 타이틀 + localStorage 세션 영속화.
 - **`storage.ts`** — localStorage 세션 저장/복원. 스키마 버전 검증·손상 데이터 필터·접근 불가 감지.
 - **`fileOps.ts`** — 파일 I/O 2경로 분기. FS Access API(Chrome·Edge) ↔ `<input type=file>` + Blob 다운로드(Safari·Firefox).
@@ -58,6 +58,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`scrollSync.ts`** — 에디터 ↔ 프리뷰 양방향 스크롤 동기화(F-25). 주입형 리프. `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
 - **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`markdownExtensions.ts`** — 각주·정의 목록(F-73). marked 확장. **정의 없는 참조는 각주가 아니다.**
 - **`markdownHighlight.ts`** — 편집 영역 서식 계산(F-23 잔여·F-30 표). 순수. **태그를 걷어낸 텍스트가 입력과 정확히 같아야 한다** — 오버레이 정렬의 전제다. 그래서 `tableFormat.splitRow()`(칸을 trim 한다)를 렌더에 쓰지 않는다.
 - **`editorOverlay.ts`** — 편집 하이라이팅 오버레이(F-23 잔여). 주입형 리프. **기본 꺼짐.**
 - **`sessionReclaim.ts`** — 용량 초과 회수 규칙(F-54). 순수. **더티 탭의 내용은 절대 버리지 않는다.**
@@ -163,7 +164,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 67. **오버레이가 켜지면 `::selection` 배경은 반투명이어야 한다.** 보이는 글자가 뒤 레이어의 것이라, 불투명한 선택 사각형은 **선택한 순간 글자를 지운다** — 검색(F-22)이 일치를 선택으로 보여주므로 찾은 자리만 안 보이게 된다.
 68. **오버레이 스크롤 단언은 두 프레임 안에 끝내라.** 폴링으로 여유를 주면 150ms 렌더 디바운스가 대신 맞춰 줘서 **스크롤 리스너를 통째로 지워도 통과한다**(실제로 그랬다). 트랩 #16 의 오버레이 버전이다.
 69. **`switchTab()` 은 편집기 렌더 디바운스를 타지 않는다.** `renderPreview()` 를 직접 부르므로, 그 디바운스에 얹은 것(줄 번호·통계·하이라이팅)은 **탭을 바꾸면 이전 문서의 화면으로 남는다.** `setTabRenderListener()` 로 함께 갱신하라. 글꼴·크기 변경(F-35)도 같은 이유로 오버레이 갱신이 필요하다 — 번호 칸 폭이 달라지면 편집기가 옆으로 밀린다.
-70. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+70. **marked 확장의 `start()` 에 `^` 앵커를 쓰지 말 것.** marked 는 `src.slice(1)` 을 넘기므로 잘려 나간 첫 글자 뒤가 문자열의 처음이 되어 **줄 한가운데서도 `^` 가 맞는다.** 실제로 `가[^b] 나` 의 `[^b]` 가 줄머리로 잡혀 문단이 `가<br>[^b] 나` 로 두 동강 났다. 줄바꿈(`\n`)을 명시적으로 요구하고 인덱스에 +1 하라.
+71. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
