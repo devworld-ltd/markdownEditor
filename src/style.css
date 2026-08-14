@@ -29,7 +29,10 @@
   --tok-keyword: #a11b8c;
   --tok-string: #0a6640;
   --tok-comment: #5a6169;
-  --tok-number: #b3541e;
+  /* #b3541e 는 코드 배경(#f4f4f4)에서 4.54 지만 **편집 표면에서는 4.46** 으로
+     AA 에 못 미친다(F-59 재검증에서 axe 가 잡았다). 두 표면 모두에서 통과하는
+     값으로 내린다. */
+  --tok-number: #a04a19;
   --tok-punct: #57606a;
 
   /* F-23 잔여: 편집 영역 마크다운 서식. 편집 표면(--surface-editor) 위에서
@@ -39,7 +42,7 @@
   --md-heading: #0b62c4;
   --md-code: #0a6640;
   --md-link-text: #0b62c4;
-  --md-url: #b3541e;
+  --md-url: #a04a19;
   --md-list: #a11b8c;
   --md-lang: #5a6169;
 }
@@ -1187,7 +1190,7 @@ body {
   #preview .tok-keyword { color: #a11b8c !important; }
   #preview .tok-string { color: #0a6640 !important; }
   #preview .tok-comment { color: #555555 !important; }
-  #preview .tok-number { color: #b3541e !important; }
+  #preview .tok-number { color: #a04a19 !important; }
   #preview .tok-punct { color: #444444 !important; }
 
   #preview blockquote {
