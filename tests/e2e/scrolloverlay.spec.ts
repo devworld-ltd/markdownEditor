@@ -83,25 +83,39 @@ test("SS2: 프리뷰를 스크롤해도 오버레이가 편집기와 어긋나�
 });
 
 test("SS3: 오버레이를 켜고 꺼도 동기화 비율이 달라지지 않는다", async ({ page }) => {
-  await scrollEditor(page, 700);
-  const before = await page.evaluate(() => {
-    const r = (el: Element) => {
+  /**
+   * 프리뷰 동기화는 rAF 를 거친다. 스크롤 직후에 값을 한 번 읽으면 아직 0 일 수
+   * 있어, 로컬에서는 통과하고 CI 에서만 깨진다(실제로 그랬다). 두 비율이 맞을
+   * 때까지 기다린 **뒤에** 그 값을 기록한다.
+   */
+  async function settledPreviewRatio(): Promise<number> {
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const r = (el: Element) => {
+            const max = el.scrollHeight - el.clientHeight;
+            return max > 0 ? el.scrollTop / max : 0;
+          };
+          return Math.abs(
+            r(document.querySelector("#editor")!) - r(document.querySelector("#preview")!),
+          );
+        }),
+      )
+      .toBeLessThan(0.05);
+
+    return page.evaluate(() => {
+      const el = document.querySelector("#preview")!;
       const max = el.scrollHeight - el.clientHeight;
       return max > 0 ? el.scrollTop / max : 0;
-    };
-    return r(document.querySelector("#preview")!);
-  });
+    });
+  }
+
+  await scrollEditor(page, 700);
+  const before = await settledPreviewRatio();
 
   await setOverlay(page, true);
   await scrollEditor(page, 700);
-
-  const after = await page.evaluate(() => {
-    const r = (el: Element) => {
-      const max = el.scrollHeight - el.clientHeight;
-      return max > 0 ? el.scrollTop / max : 0;
-    };
-    return r(document.querySelector("#preview")!);
-  });
+  const after = await settledPreviewRatio();
 
   expect(Math.abs(after - before)).toBeLessThan(0.02);
 });
