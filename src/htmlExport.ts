@@ -66,7 +66,7 @@ const EXPORT_STYLES = `
   .tok-keyword { color: #a11b8c; font-weight: 600; }
   .tok-string { color: #0a6640; }
   .tok-comment { color: #5a6169; font-style: italic; }
-  .tok-number { color: #b3541e; }
+  .tok-number { color: #a04a19; }
   .tok-punct { color: #57606a; }
   hr { border: none; border-top: 1px solid #dddddd; margin: 2em 0; }
 `.trim();

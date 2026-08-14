@@ -70,8 +70,11 @@
       <main class="editor-container" data-mode="split">
         <!-- F-24 줄 번호. textarea 바깥이라 선택·복사에 섞이지 않는다.
              스크린리더에는 숨긴다 — 번호를 한 줄씩 읽는 건 소음이다. -->
-        <div id="editor-pane" class="editor-pane">
+        <div id="editor-pane" class="editor-pane" data-overlay="false">
           <div id="line-gutter" class="line-gutter" aria-hidden="true" hidden></div>
+          <!-- F-23 잔여: 하이라이트 레이어. textarea 뒤에 같은 글자를 같은
+               자리에 그린다. 보조 표시이므로 스크린리더·포인터 대상이 아니다. -->
+          <div id="editor-overlay" class="editor-overlay" aria-hidden="true"></div>
           <textarea
           id="editor"
           placeholder="마크다운을 입력하세요..."
@@ -154,6 +157,10 @@
           <div class="setting-row">
             <label for="setting-doc-stats">문서 통계</label>
             <input type="checkbox" id="setting-doc-stats" class="setting-check" />
+          </div>
+          <div class="setting-row">
+            <label for="setting-highlight">편집 영역 하이라이팅</label>
+            <input type="checkbox" id="setting-highlight" class="setting-check" />
           </div>
           <div class="setting-row">
             <label for="setting-line-numbers">줄 번호</label>

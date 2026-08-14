@@ -59,6 +59,24 @@ export interface TabScrollSyncHooks {
 
 let scrollSyncHooks: TabScrollSyncHooks | null = null;
 
+/**
+ * 탭을 전환한 뒤 **화면 부속을 다시 그리게 하는 훅.**
+ *
+ * `switchTab()` 은 `renderPreview()` 를 직접 부르므로 `editor.ts` 의 렌더
+ * 디바운스를 타지 않는다. 그래서 그 디바운스에 얹힌 것들(줄 번호 F-24, 통계
+ * F-29, 편집 하이라이팅 F-23 잔여)이 **탭을 바꿔도 갱신되지 않았다** — 3줄짜리
+ * 문서로 돌아와도 줄 번호가 1 에 멈춰 있고 하이라이팅은 비어 있었다.
+ *
+ * `setScrollSyncHooks()` 와 같은 주입 패턴이다 — tabs.ts 는 그 모듈들을
+ * import 하지 않는다.
+ */
+let tabRenderListener: (() => void) | null = null;
+
+/** main.ts 가 주입한다. 주입하지 않으면 무동작이다(기존 동작 그대로). */
+export function setTabRenderListener(listener: (() => void) | null): void {
+  tabRenderListener = listener;
+}
+
 /** main.ts 가 주입한다. 주입하지 않으면 전 경로가 무동작이다(기존 동작 그대로). */
 export function setScrollSyncHooks(hooks: TabScrollSyncHooks): void {
   scrollSyncHooks = hooks;
@@ -202,6 +220,8 @@ export function switchTab(id: string): void {
     renderTabs();
     updateTitle();
     schedulePersist();
+    // 렌더 디바운스를 타지 않는 경로이므로 여기서 직접 알린다.
+    tabRenderListener?.();
   } finally {
     scrollSyncHooks?.resumeAndSync(); // M11 — 억제 해제는 항상 나중. 예외가 나도 억제가 영구히 남지 않게 한다
   }
