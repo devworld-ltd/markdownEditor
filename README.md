@@ -8,7 +8,7 @@
 |------|-----|
 | 버전 | 2.0.0 (웹 전환) |
 | 코드 규모 | TypeScript 약 900줄 (10개 모듈) |
-| 테스트 | 단위 **864건** + E2E 394건 (전부 통과) |
+| 테스트 | 단위 **881건** + E2E 401건 (전부 통과) |
 | 기능 커버리지 | 38/41 자동 검증 · 라인 커버리지 **78.83%** |
 | 번들 | 83.7 kB (gzip 28.0 kB) |
 | 배포 (prod) | https://md-editor.devworld.co.kr |
@@ -50,6 +50,7 @@
 - **문서 통계** (어절·글자·읽기 시간, 선택 범위 지원)
 - **표 편집 보조** (삽입·열 정렬·한글/이모지 폭까지 맞추는 파이프 정렬)
 - **각주·정의 목록** (GFM 밖 문법을 marked 확장으로 지원, 의존성 추가 없음)
+- **mermaid 다이어그램** (프리뷰·내보내기·인쇄에 그림으로. **문서에 쓸 때만** 라이브러리를 받는다)
 - **파일 드래그앤드롭** (마크다운·텍스트는 새 탭, 이미지는 업로드)
 - **공유 링크** (Cloudflare R2 — 이 앱에서 **유일하게** 네트워크를 타는 기능)
 - **키보드 접근성** — 전 기능 키보드 도달, 스크린리더 지원
@@ -81,7 +82,8 @@ File System Access API 는 **보안 컨텍스트(HTTPS 또는 localhost)** 에�
 | 영역 | 기술 |
 |------|------|
 | 언어 | TypeScript (프레임워크 없음) |
-| 마크다운 파싱 | [marked](https://github.com/markedjs/marked) (GFM + line breaks) |
+| 마크다운 파싱 | [marked](https://github.com/markedjs/marked) (GFM + line breaks + 각주·정의 목록 확장) |
+| 다이어그램 | [mermaid](https://github.com/mermaid-js/mermaid) — **지연 로드** (문서에 ```mermaid 블록이 있을 때만 내려받는다) |
 | HTML 정화 | [DOMPurify](https://github.com/cure53/DOMPurify) |
 | 번들러 | [Vite](https://vitejs.dev/) |
 | 단위 테스트 | [Vitest](https://vitest.dev/) + jsdom |
@@ -109,6 +111,7 @@ markdownEditor/
 │   ├── scrollAnchors.ts      # 블록 앵커 보간 (순수)
 │   ├── sourceLines.ts        # 원문 블록 줄 (순수)
 │   ├── anchorMeasure.ts      # 앵커 y 좌표 측정
+│   ├── mermaidView.ts        # mermaid 다이어그램 (지연 로드)
 │   ├── markdownExtensions.ts # 각주·정의 목록 (marked 확장)
 │   ├── markdownHighlight.ts  # 편집 영역 서식 계산 (순수)
 │   ├── editorOverlay.ts      # 편집 하이라이팅 오버레이
