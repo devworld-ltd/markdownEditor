@@ -8,7 +8,8 @@ MarkdownEditor 프로젝트의 전체 문서 목록. 최종 갱신: 2026-08-12 (
 
 | 알고 싶은 것 | 문서 |
 |--------------|------|
-| 이 앱은 어떻게 동작하나 | [서비스 아키텍처](./architecture/service-architecture.md) |
+| 이 앱은 어떻게 동작하나 (**비개발자용**) | [동작 방식 해설](./how-it-works.md) |
+| 이 앱은 어떻게 동작하나 (개발자용) | [서비스 아키텍처](./architecture/service-architecture.md) |
 | 어떻게 빌드·배포되나 | [인프라 아키텍처](./architecture/infrastructure.md) |
 | 상태는 어디에 어떻게 저장되나 | [데이터 모델](./architecture/data-model.md) |
 | 브라우저 API 를 어떻게 쓰나 | [브라우저 API 명세](./api/browser-apis.md) |
@@ -40,6 +41,7 @@ MarkdownEditor 프로젝트의 전체 문서 목록. 최종 갱신: 2026-08-12 (
 
 | 문서 | 내용 |
 |------|------|
+| [동작 방식 해설](./how-it-works.md) | **비개발자용** — 일이 어디서 벌어지나, 정화 경로, 스크롤 짝 맞추기, 공유, 저장 공간 회수 |
 | [사용자 시나리오](./user-scenarios.md) | 페르소나 3종, US-01~US-08, 미충족 시나리오 |
 | [기능 개발 현황](./features/feature-status.md) | F-01~F-66 구현/부분/미구현/제거 분류, 권장 개발 순서 |
 
