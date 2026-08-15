@@ -898,6 +898,13 @@ body {
   opacity: 0.75;
 }
 
+/* #125: 보관된 핸들이 있는 항목. 열 수는 있지만 권한 확인이 한 번 뜰 수 있어
+   살아 있는 항목과 완전히 같게 보이면 안 된다 — 다만 끊긴 항목만큼 흐리지도 않다.
+   실제 구분은 우측 텍스트("접근 허용 필요")가 한다. */
+.recent-row[data-state="stored"] .recent-meta {
+  opacity: 0.85;
+}
+
 .recent-meta {
   flex-shrink: 0;
   color: var(--text-muted);

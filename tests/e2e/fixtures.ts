@@ -376,3 +376,47 @@ export function buildProseDoc(
   }
   return lines.join("\n");
 }
+
+/**
+ * **진짜** 파일 핸들로 파일 선택 창을 흉내낸다 (이슈 #125).
+ *
+ * `installFsMock()` 의 목 핸들은 **메서드를 가진 평범한 객체**라 구조화 복제가
+ * 아예 안 된다(`DataCloneError`). 그래서 그것으로는 핸들을 IndexedDB 에 보관하는
+ * 경로를 **검증할 수 없다** — 통과해도 진짜로 되는지 알 수 없고, 깨져도 안 보인다.
+ *
+ * OPFS(`navigator.storage.getDirectory()`)는 파일 선택 창 없이 **실제
+ * `FileSystemFileHandle`** 을 준다. 브라우저가 실제로 그 핸들을 복제·복원하는지가
+ * 이 기능의 전제이므로, 그 전제를 진짜 객체로 확인한다.
+ */
+export async function installRealHandleMock(
+  page: Page,
+  files: Record<string, string>,
+): Promise<void> {
+  await page.addInitScript((seed: Record<string, string>) => {
+    const state = { openName: Object.keys(seed)[0] ?? "a.md" };
+    (window as unknown as { __realMock: typeof state }).__realMock = state;
+
+    async function handleFor(name: string): Promise<FileSystemFileHandle> {
+      const dir = await navigator.storage.getDirectory();
+      const handle = await dir.getFileHandle(name, { create: true });
+      // 이미 내용이 있으면 덮지 않는다 — 앱이 저장한 것을 지우면 안 된다.
+      const existing = await handle.getFile();
+      if (existing.size === 0 && seed[name] !== undefined) {
+        const writable = await handle.createWritable();
+        await writable.write(seed[name]);
+        await writable.close();
+      }
+      return handle;
+    }
+
+    window.showOpenFilePicker = async () => [await handleFor(state.openName)];
+    window.showSaveFilePicker = async () => handleFor(state.openName);
+  }, files);
+}
+
+/** 다음에 열릴 파일명을 바꾼다 (`installRealHandleMock` 전용). */
+export async function setRealMockOpenName(page: Page, name: string): Promise<void> {
+  await page.evaluate((n) => {
+    (window as unknown as { __realMock: { openName: string } }).__realMock.openName = n;
+  }, name);
+}

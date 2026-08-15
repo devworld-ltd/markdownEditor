@@ -195,6 +195,8 @@ graph LR
 | `tests/sourceLines.test.ts` | 18 | #114 |
 | `tests/e2e/scrollanchor.spec.ts` | 9 | #114 |
 | `tests/anchorMeasure.test.ts` | 4 | #121 |
+| `tests/handleStore.test.ts` | 15 | #125 |
+| `tests/e2e/recentReopen.spec.ts` | 5 | #125 |
 | `tests/e2e/scrolldrift.spec.ts` | 4 | #121 |
 | `tests/editorOverlay.test.ts` | 13 | F-23 잔여 |
 | `tests/e2e/editorhighlight.spec.ts` | 14 | F-23 잔여 |

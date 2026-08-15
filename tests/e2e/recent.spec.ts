@@ -69,9 +69,13 @@ test("R4: 이미 열려 있는 문서를 고르면 그 탭으로 전환된다", 
   await expect(page.locator("#tab-bar .tab.active .tab-name")).toHaveText("a.md");
 });
 
-test("R5: 새로고침하면 이름은 남지만 '다시 선택 필요' 로 바뀐다", async ({ page }) => {
-  // 파일 핸들은 직렬화할 수 없다(트랩 #6). 이 한계를 숨기면 사용자는 목록을
-  // 눌렀는데 선택 창이 뜨는 것을 버그로 받아들인다.
+test("R5: 핸들을 보관할 수 없으면 새로고침 뒤 '다시 선택 필요' 로 바뀐다", async ({ page }) => {
+  // #125 로 핸들은 IndexedDB 에 보관된다. 다만 **여기 목 핸들은 메서드를 가진
+  // 평범한 객체라 구조화 복제가 안 되므로**(DataCloneError) 보관되지 않는다 —
+  // 보관이 불가능한 브라우저·상황과 같은 경로다. 진짜 핸들의 보관·복원은
+  // `recentReopen.spec.ts` 가 OPFS 실물 핸들로 검증한다.
+  //
+  // 이 한계를 숨기면 사용자는 목록을 눌렀는데 선택 창이 뜨는 것을 버그로 받아들인다.
   await openMock(page, "a.md");
 
   await page.reload();
@@ -96,7 +100,8 @@ test("R6: 끊긴 항목을 고르면 이유를 알리고 선택 창을 연다", 
   await page.locator("#recent-files-list .recent-open").click();
 
   await expect(page.locator("#notice")).toBeVisible();
-  await expect(page.locator("#notice")).toContainText("권한");
+  // #125 이후 안내가 바뀌었다 — "권한이 유지되지 않는다" 는 더 이상 사실이 아니다.
+  await expect(page.locator("#notice")).toContainText("파일 위치를 알 수 없습니다");
   // 선택 창(목)이 열려 실제로 파일이 열린다.
   await expect(page.locator("#editor")).toHaveValue("# a.md");
 });
