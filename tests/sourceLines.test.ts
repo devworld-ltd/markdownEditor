@@ -56,11 +56,21 @@ describe("blockStartLines ↔ 프리뷰 블록 수", () => {
     expect(blockStartLines(md).length).toBe(previewBlockCount(md));
   });
 
-  it("각주가 있는 문서는 프리뷰에 각주 절이 하나 더 붙는다", () => {
-    // 각주 절은 원문 블록이 아니다. 개수가 하나 어긋나므로 앵커가 꺼진다 —
-    // 알고 있는 한계이며, 틀린 대응표로 맞추는 것보다 낫다.
+  it("각주 절은 `data-generated` 로 표시돼 대응에서 빠진다 (이슈 #121)", () => {
+    // 각주 절은 원문 블록이 아니다. 예전에는 개수가 하나 어긋나 **앵커가 통째로
+    // 꺼졌고**, 각주를 쓴 문서만 스크롤이 수십 px 어긋났다.
     const md = "본문[^1]\n\n[^1]: 각주";
-    expect(previewBlockCount(md) - blockStartLines(md).length).toBe(1);
+    const container = document.createElement("div");
+    container.innerHTML = parseMarkdown(md);
+
+    const generated = [...container.children].filter(
+      (c) => (c as HTMLElement).dataset.generated,
+    );
+    expect(generated).toHaveLength(1);
+    expect(generated[0].className).toContain("footnotes");
+
+    // 표식을 뺀 개수가 원문 블록 수와 같아야 앵커가 산다.
+    expect(container.children.length - generated.length).toBe(blockStartLines(md).length);
   });
 });
 

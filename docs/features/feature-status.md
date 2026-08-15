@@ -79,6 +79,7 @@
 | F-23 | 프리뷰 코드블록 구문 하이라이팅 (의존성 0) | `src/highlight.ts`, `src/parser.ts` | 단위 26 + E2E 9 |
 | F-23 잔여 | **편집 영역** 하이라이팅 (오버레이, 기본 꺼짐, 표·각주·정의 목록 포함) | `src/markdownHighlight.ts`, `src/editorOverlay.ts` | 단위 79 + E2E 14 |
 | F-73 | 각주 · 정의 목록 (파서 + 렌더 + 내보내기) | `src/markdownExtensions.ts`, `src/parser.ts` | 단위 24 + E2E 8 |
+| — | 각주 문서 스크롤 어긋남 수정 (#121) | `src/anchorMeasure.ts`, `src/markdownExtensions.ts` | 단위 4 + E2E 4 |
 | F-74 | mermaid 다이어그램 렌더 (지연 로드) | `src/mermaidView.ts` | 단위 17 + E2E 7 |
 | F-24 | 줄 번호 표시 (줄바꿈 정렬 포함) | `src/lineNumbers.ts` | 단위 14 + E2E 10 |
 | F-26 | 리스트 자동 이어쓰기 | `src/editorKeys.ts`, `src/editorBehavior.ts` | 단위 36 + E2E 15 |
