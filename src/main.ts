@@ -65,6 +65,13 @@ import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
+import {
+  forgetHandle,
+  isHandleStoreSupported,
+  recallHandle,
+  rememberHandle,
+  storedNames,
+} from "./handleStore";
 import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htmlExport";
 import { copyRenderedHtml } from "./clipboardExport";
 import { createShareLink, loadSharedDocument, type ShareHost } from "./share";
@@ -435,8 +442,10 @@ if (editorEl && previewEl) {
         })
       : null;
 
-  // F-36 최근 파일. 핸들은 직렬화되지 않으므로(트랩 #6) **이번 세션 동안만**
-  // 메모리에 들고 있다가, 살아 있으면 바로 열고 아니면 파일 선택 창을 연다.
+  // F-36 최근 파일. 핸들은 JSON 으로 직렬화되지 않으므로(트랩 #6) 세션 저장에는
+  // 이름과 시각만 들어간다. 핸들 자체는 두 곳에 있다:
+  //   - `liveHandles` — 이번 세션. 권한이 이미 있어 곧바로 열린다.
+  //   - IndexedDB(`handleStore`) — 다음 세션까지. 열 때 권한을 한 번 확인한다(#125).
   const liveHandles = new Map<string, FileSystemFileHandle>();
   const recentDialogEl = document.querySelector<HTMLDialogElement>("#recent-files");
   const recentListEl = document.querySelector<HTMLElement>("#recent-files-list");
@@ -457,6 +466,31 @@ if (editorEl && previewEl) {
             const handle = liveHandles.get(name);
             if (handle) void openFileFromHandle(handle);
           },
+
+          // #125: 보관된 핸들 경로. 이 세 개를 주입하지 않으면 예전 동작 그대로다.
+          openStored: isHandleStoreSupported()
+            ? async (name) => {
+                const result = await recallHandle(name);
+                if (result.status !== "ok") {
+                  // 파일이 사라졌거나 권한을 거부했다 — 낡은 핸들을 남겨 두면
+                  // 목록이 "열 수 있다" 고 계속 거짓말한다.
+                  if (result.status === "missing") void forgetHandle(name);
+                  return false;
+                }
+                try {
+                  await openFileFromHandle(result.handle);
+                  return true;
+                } catch {
+                  void forgetHandle(name);
+                  return false;
+                }
+              }
+            : undefined,
+          listStored: isHandleStoreSupported() ? () => storedNames() : undefined,
+          forgetStored: isHandleStoreSupported()
+            ? (name) => void forgetHandle(name)
+            : undefined,
+
           openPicker: () => void openFile(),
           notify: (message) => showNotice(message, "info", 6000),
           returnFocusTo: editorEl,
@@ -498,7 +532,12 @@ if (editorEl && previewEl) {
       : null;
 
   setFileTouchListener((name, handle) => {
-    if (handle) liveHandles.set(name, handle);
+    if (handle) {
+      liveHandles.set(name, handle);
+      // #125: 다음 세션에서도 목록에서 바로 열 수 있게 보관한다. 실패해도
+      // 조용히 넘어간다 — 보관이 파일 열기·저장을 막으면 안 된다.
+      void rememberHandle(name, handle);
+    }
     recentFiles?.record(name);
   });
 
