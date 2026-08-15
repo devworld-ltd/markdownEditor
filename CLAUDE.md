@@ -196,6 +196,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 | `dev` | dev | `markdown-editor-dev` | `md-editor-dev.devworld.co.kr` |
 | `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
 
+**이슈는 수동으로 닫아야 한다.** PR 본문의 `Closes #N` 은 **기본 브랜치(`main`)로 머지될 때만** 동작하는데, 이 저장소는 `feature/*` → `dev` 로 머지하고 `dev` → `main` 은 별도 PR 이라 걸리지 않는다. prod 배포까지 끝나면 `gh issue close` 로 직접 닫는다 — 안 닫으면 완료된 작업이 백로그에 쌓여 **다음 사람이 이미 있는 기능을 다시 만든다**(실제로 이슈 #125 가 그럴 뻔했다).
+
 **`main`·`dev` 모두 브랜치 보호 규칙이 걸려 있다.** 직접 push 가 거부되므로 문서 한 줄 수정이라도 `feature/*` → PR → 머지 경로를 거쳐야 한다.
 
 `.github/workflows/ci.yml` 한 파일에 `verify`(빌드+단위+E2E) → `deploy`(needs: verify) 두 잡. **CI 는 Node 24 를 써야 한다** — jsdom 30 → undici 8 이 Node >=22.19 를 요구해 Node 20 에서는 vitest 가 기동하지 못한다. 배포는 `cloudflare/wrangler-action` 대신 `npx wrangler` 직접 호출 (액션 번들 wrangler 3.x 는 `wrangler.jsonc` 를 못 읽는다). `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿은 등록 완료. **커스텀 도메인은 첫 prod 배포 때 생성되므로 `main` 에 병합되기 전까지 서비스되지 않는다.**
