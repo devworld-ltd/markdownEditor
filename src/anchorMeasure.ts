@@ -78,10 +78,16 @@ export function measureEditorLineTops(
   return tops;
 }
 
-/** 프리뷰 최상위 자식들의 y (프리뷰 스크롤 좌표계). */
+/**
+ * 프리뷰 최상위 자식들의 y (프리뷰 스크롤 좌표계).
+ *
+ * **원문에 대응이 없는 블록(`data-generated`)은 세지 않는다.** 각주 절처럼
+ * 렌더가 덧붙인 블록이 하나라도 끼면 개수가 어긋나 대응표가 통째로 버려지고,
+ * 그 문서만 예전 비율 동기화로 돌아간다(이슈 #121 — 각주 문서에서 수십 px 어긋났다).
+ */
 export function measurePreviewBlockTops(previewEl: HTMLElement): number[] {
   const base = previewEl.getBoundingClientRect().top - previewEl.scrollTop;
-  return [...previewEl.children].map(
-    (child) => child.getBoundingClientRect().top - base,
-  );
+  return [...previewEl.children]
+    .filter((child) => !(child as HTMLElement).dataset?.generated)
+    .map((child) => child.getBoundingClientRect().top - base);
 }

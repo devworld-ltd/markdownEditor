@@ -95,7 +95,8 @@ describe("각주 (이슈 #111)", () => {
   it("참조를 위첨자 링크로, 정의를 문서 끝 목록으로 만든다", () => {
     const html = parseMarkdown("본문[^1] 끝\n\n[^1]: 각주 내용");
     expect(html).toContain('<sup class="footnote-ref"><a id="fnref-1" href="#fn-1">1</a></sup>');
-    expect(html).toContain('<section class="footnotes">');
+    // `data-generated` 는 스크롤 앵커(#121)가 원문 없는 블록을 빼는 표식이다.
+    expect(html).toContain('<section class="footnotes" data-generated="true">');
     expect(html).toContain('<li id="fn-1">각주 내용');
   });
 

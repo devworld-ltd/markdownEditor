@@ -328,5 +328,8 @@ export function renderFootnoteSection(
     );
   }
 
-  return `<section class="footnotes"><ol>${items.join("")}</ol></section>\n`;
+  // `data-generated` 는 **스크롤 앵커(#114)를 위한 표식**이다. 이 절은 원문에
+  // 대응하는 블록이 없어서, 프리뷰 자식을 원문 블록과 1:1 로 짝지을 때 하나가
+  // 남아 대응이 통째로 포기된다(이슈 #121 에서 각주 문서만 어긋난 이유).
+  return `<section class="footnotes" data-generated="true"><ol>${items.join("")}</ol></section>\n`;
 }
