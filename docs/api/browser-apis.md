@@ -188,6 +188,22 @@ const url = URL.createObjectURL(blob);
 
 ---
 
+## 3.9 IndexedDB — 파일 핸들 보관 (#125)
+
+| 항목 | 값 |
+|------|-----|
+| DB | `markdown-editor-handles` (버전 1) |
+| 저장소 | `handles` — 키는 파일명, 값은 `FileSystemFileHandle` |
+| 모듈 | `src/handleStore.ts` |
+
+**IndexedDB 는 구조화 복제(structured clone)를 쓰므로 핸들을 그대로 담는다.** 세션 저장(localStorage)은 JSON 이라 담을 수 없다 — 이 차이가 이 저장소를 따로 두는 이유 전부다.
+
+되살린 핸들에는 **권한이 따라오지 않는다.** `queryPermission({ mode: "readwrite" })` 로 확인하고, `granted` 가 아니면 `requestPermission()` 을 부른다. 권한 요청은 **사용자 제스처 안에서만** 통과하므로 최근 목록의 **클릭 핸들러에서** 호출한다 — 앱 기동 시 자동 복원은 하지 않는다(누르지도 않았는데 권한 창이 뜨면 침입이다).
+
+`read` 가 아니라 `readwrite` 로 묻는다. 읽기 권한만 받으면 그 다음 저장에서 다시 막힌다.
+
+**문서 내용은 넣지 않는다** — 핸들뿐이다.
+
 ## 4.1 Service Worker / Cache Storage
 
 | 항목 | 값 |

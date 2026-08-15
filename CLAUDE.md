@@ -82,6 +82,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`worker/index.ts`** — 공유 API Worker(F-60). `tsconfig.worker.json` 으로 따로 타입 검사한다.
 - **`clipboardExport.ts`** — 클립보드 복사(F-40). 주입형 리프. **`text/html` 과 `text/plain` 을 함께** 넣어야 한다.
 - **`recentFiles.ts`** — 최근 파일 목록 계산만 담당하는 순수 리프(F-36).
+- **`handleStore.ts`** — 파일 핸들 보관소(#125). IndexedDB 는 **구조화 복제**라 핸들을 그대로 담는다 — JSON 이 안 되는 것과 다른 이야기다. 권한은 따로이며 **사용자 제스처 안에서만** 물을 수 있다.
 - **`recentFilesUi.ts`** — 최근 파일 `<dialog>`(F-36). 주입형 리프.
 - **`editorPrefs.ts`** — 편집 글꼴·크기 계산만 담당하는 순수 리프(F-35). **웹폰트 금지** — 네트워크 요청이 없는 앱이고 CSP 가 `font-src 'self' data:` 다.
 - **`editorSettings.ts`** — 편집 설정 `<dialog>`(F-35). 주입형 리프.
@@ -103,7 +104,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 3. **툴바 버튼의 `editsText: true` 는 서식 액션에만 붙인다.** 파일 액션까지 `input` 이벤트를 재발행하면 방금 연 문서가 즉시 dirty 로 표시된다.
 4. **`Cmd/Ctrl+W`·`Cmd/Ctrl+N` 은 쓸 수 없다.** 브라우저가 선점하며 `preventDefault()` 로도 막히지 않는다. `Alt+W`/`Alt+N` 을 쓴다. Alt 조합은 macOS 에서 `e.key` 가 특수문자가 되므로 **`e.code` 로 판별**한다.
 5. **File System Access API 는 보안 컨텍스트에서만 동작한다.** LAN IP(`192.168.x.x`)로 접속하면 폴백 경로로 떨어져 관련 E2E 가 실패한다.
-6. **파일 핸들은 직렬화할 수 없다.** 세션 복원 탭은 항상 `handle: null` 이며 저장 시 위치를 다시 묻는다.
+6. **파일 핸들은 JSON 으로 직렬화할 수 없다.** 그래서 세션 복원 탭은 항상 `handle: null` 이며 저장 시 위치를 다시 묻는다. **다만 IndexedDB 에는 담긴다**(구조화 복제) — `handleStore.ts` 가 그 경로이고, 최근 목록(F-36)은 그것으로 새로고침 뒤에도 바로 연다(#125). 되살린 핸들은 **권한이 따라오지 않으므로** `requestPermission()` 을 거쳐야 하고, 그 호출은 **클릭 핸들러 안**이어야 한다 — 제스처 밖에서는 조용히 거부된다.
 7. **`vite.config.ts` 의 `base:"/"`** — v1.x 의 `"./"`·`modulePreload:false` 는 `app://` 스킴 호환용이었다. 되돌리지 말 것.
 8. **`tsc` 는 타입 검사 전용이다** (`tsc --noEmit && vite build`). tsconfig 에 `outDir`/`declaration` 을 되살리면 `tsc` 가 `dist/` 에 `.js`/`.d.ts` 를 쏟아내고, 타입 오류로 멈출 때 중간 산출물이 남는다.
 9. **`_headers` 와 서비스 워커는 로컬에서 동작하지 않는다.** `_headers` 는 Cloudflare 가, 서비스 워커는 `import.meta.env.PROD` 조건이 가른다. 관련 E2E 는 원격 baseURL 일 때만 실행되고 로컬에서는 skip 된다.
@@ -173,7 +174,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 72. **스크롤 동기화는 비율이 아니라 블록 앵커로 맞춘다(#114).** 비율은 값만 비례할 뿐 **보이는 줄이 어긋난다** — 두 패널의 높이 분포가 다르기 때문이다. 앵커 개수가 어긋나면(각주 절처럼) **포기하고 비율로 되돌아간다**; 틀린 대응표는 안 맞추느니만 못하다. 그리고 앵커는 **렌더 뒤 한 번만** 재라 — 스크롤 경로에서 재면 큰 문서가 즉시 느려진다.
 73. **mermaid 라벨은 `htmlLabels: false` 여야 보인다(F-74).** 기본값은 `<foreignObject>` 인데 **DOMPurify 가 그것을 지운다** — 도형만 남고 글자가 사라진다. 그리고 **최상위와 다이어그램별 설정을 모두** 꺼야 한다: `flowchart.htmlLabels` 만 끄면 클러스터 라벨은 나오고 노드 라벨만 사라진다.
 74. **지연 로드 E2E 는 네트워크 리스너를 `goto` 앞에 붙여라.** 뒤에 붙이면 앱 기동 때 나가는 요청을 통째로 놓쳐, 지연 로드를 없애도 통과한다(실제로 그랬다).
-75. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+75. **파일 I/O 를 진짜로 검증하려면 목 핸들로는 안 된다(#125).** `installFsMock()` 의 핸들은 **메서드를 가진 평범한 객체**라 구조화 복제가 아예 안 된다(`DataCloneError`) — 그것으로 "핸들을 보관한다" 를 검증하면 통과해도 아무것도 증명하지 못한다. OPFS(`navigator.storage.getDirectory()`)는 **파일 선택 창 없이 실물 핸들**을 주므로 이 전제를 진짜 객체로 확인할 수 있다(`installRealHandleMock()`).
+76. **파일에 쓴 직후 디스크를 한 번만 읽지 말 것.** 쓰기는 스왑 파일을 거쳐 커밋되므로, 알림이 뜬 직후 읽으면 **새 내용 뒤에 옛 꼬리가 남은 중간 상태**가 보인다(실측: 5회 중 2회). 폴링하라 — 트랩 #43(클립보드)과 같은 성격이다.
+77. **세션이 복원해 둔 내용을 "파일이 열렸다" 의 증거로 쓰지 말 것(#125).** 새로고침 뒤 탭에는 같은 글이 이미 들어 있어 `toHaveValue(...)` 가 **곧바로 참**이 된다. 그 상태에서 고쳐 쓰면 새 탭이 뜨며 덮어써 **저장되는 것은 옛 내용**이다(실측: 5회 중 2회). 탭 개수·활성 탭 이름처럼 **파일 열기만이 만드는 변화**를 기다려라.
+78. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
