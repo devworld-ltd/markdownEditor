@@ -85,6 +85,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`recentFiles.ts`** — 최근 파일 목록 계산만 담당하는 순수 리프(F-36).
 - **`handleStore.ts`** — 파일 핸들 보관소(#125). IndexedDB 는 **구조화 복제**라 핸들을 그대로 담는다 — JSON 이 안 되는 것과 다른 이야기다. 권한은 따로이며 **사용자 제스처 안에서만** 물을 수 있다.
 - **`recentFilesUi.ts`** — 최근 파일 `<dialog>`(F-36). 주입형 리프.
+- **`launchFiles.ts`** — OS 파일 연결로 실행됐을 때(#135). 주입형 리프. **핸들을 그대로 `openFileFromHandle` 에 넘긴다** — 직접 읽으면 중복 탭 방지·최근 목록·핸들 보관을 다시 구현하게 된다.
 - **`releaseNotes.ts`** — 릴리스 노트 계산(#131). 순수. **버전 비교는 자리별 숫자로** — 사전순이면 `2.10.0 < 2.9.0` 이 되어 큰 갱신에서만 틀린다.
 - **`releaseNotesUi.ts`** — 새 소식 `<dialog>`(#131). 주입형 리프. 본문은 **`parseMarkdown()` 을 거친다**(F-18).
 - **`editorPrefs.ts`** — 편집 글꼴·크기 계산만 담당하는 순수 리프(F-35). **웹폰트 금지** — 네트워크 요청이 없는 앱이고 CSP 가 `font-src 'self' data:` 다.
@@ -183,7 +184,9 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 78. **파일 I/O 를 진짜로 검증하려면 목 핸들로는 안 된다(#125).** `installFsMock()` 의 핸들은 **메서드를 가진 평범한 객체**라 구조화 복제가 아예 안 된다(`DataCloneError`) — 그것으로 "핸들을 보관한다" 를 검증하면 통과해도 아무것도 증명하지 못한다. OPFS(`navigator.storage.getDirectory()`)는 **파일 선택 창 없이 실물 핸들**을 주므로 이 전제를 진짜 객체로 확인할 수 있다(`installRealHandleMock()`).
 79. **파일에 쓴 직후 디스크를 한 번만 읽지 말 것.** 쓰기는 스왑 파일을 거쳐 커밋되므로, 알림이 뜬 직후 읽으면 **새 내용 뒤에 옛 꼬리가 남은 중간 상태**가 보인다(실측: 5회 중 2회). 폴링하라 — 트랩 #43(클립보드)과 같은 성격이다.
 80. **세션이 복원해 둔 내용을 "파일이 열렸다" 의 증거로 쓰지 말 것(#125).** 새로고침 뒤 탭에는 같은 글이 이미 들어 있어 `toHaveValue(...)` 가 **곧바로 참**이 된다. 그 상태에서 고쳐 쓰면 새 탭이 뜨며 덮어써 **저장되는 것은 옛 내용**이다(실측: 5회 중 2회). 탭 개수·활성 탭 이름처럼 **파일 열기만이 만드는 변화**를 기다려라.
-81. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+81. **`window.launchQueue` 는 대입으로 갈아끼워지지 않는다(#135).** 플랫폼이 제공하는 속성이라 Chromium 이 자기 것을 되돌려 준다 — **대입 직후에는 바뀐 것처럼 보이지만** 앱이 읽을 때는 원래 것이 와서, 소비자가 영영 불리지 않는다. 기능이 멀쩡한데 테스트만 실패하므로 원인을 코드에서 찾게 된다. `Object.defineProperty` 로 심어라 (트랩 #60 의 `DataTransferItem.prototype` 과 같은 성격).
+82. **PWA 파일 연결은 자동 테스트로 끝까지 확인할 수 없다(#135).** Finder "다음으로 열기" 목록은 macOS Launch Services 가 만들고, 헤드리스 Chromium 에는 그것이 없다. 검증할 수 있는 것은 **매니페스트 선언과 `launchQueue` 배선까지**다 — 실제 등록 여부는 PWA 를 설치한 실기기에서 확인한다.
+83. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
@@ -221,6 +224,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 | `src/swUpdate.ts` · `public/sw.js` (생명주기) | `docs/architecture/service-architecture.md` §7.2, `docs/api/browser-apis.md` §4.1 |
 | `vite.config.ts` 빌드 ID 플러그인 | `docs/architecture/infrastructure.md` §3.2 |
 | `src/toolbar.ts` (버튼 증감) | `docs/features/feature-status.md`, `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
+| `public/manifest.webmanifest` (`file_handlers`) | `docs/api/browser-apis.md`, `tests/e2e/fileHandler.spec.ts` |
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | `docs/architecture/service-architecture.md`, `docs/api/browser-apis.md` §8, `tests/parser.test.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | `docs/architecture/infrastructure.md`, `docs/operations/cloudflare-workers.md` |
 | `index.html` (DOM id) | 전 E2E 셀렉터, `docs/architecture/service-architecture.md` |

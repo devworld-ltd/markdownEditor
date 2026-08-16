@@ -204,6 +204,23 @@ const url = URL.createObjectURL(blob);
 
 **문서 내용은 넣지 않는다** — 핸들뿐이다.
 
+## 3.10 File Handling API — OS 파일 연결 (#135)
+
+브라우저 탭에는 앱 번들이 없어 macOS **Launch Services** 에 등록될 수 없다. 그런데 Chrome·Edge 로 **PWA 를 설치하면 실제 `.app` 셸이 생기고**, 매니페스트의 `file_handlers` 선언이 그 번들의 문서 타입이 된다. 그때 Finder "다음으로 열기" 목록에 뜬다.
+
+| 항목 | 값 |
+|------|-----|
+| 선언 | `public/manifest.webmanifest` 의 `file_handlers` |
+| 수신 | `window.launchQueue.setConsumer()` → `src/launchFiles.ts` |
+| 넘어오는 것 | **`FileSystemFileHandle`** — 파일 선택 창으로 연 것과 같은 종류 |
+| 지원 | Chrome · Edge (설치된 PWA). **Safari · Firefox 미지원** |
+
+핸들은 `fileOps.openFileFromHandle()` 에 **그대로 넘긴다.** 여기서 파일을 직접 읽어 탭을 만들면 중복 탭 방지·최근 목록(F-36)·핸들 보관(#125)을 다시 구현하게 되고, 곧 두 경로가 갈라진다.
+
+여러 파일은 **순서를 지켜 하나씩** 연다. 동시에 열면 탭 순서가 실행 인자 순서와 달라지고, 중복 탭 판정(`isSameEntry`)도 서로를 못 본 채 지나쳐 같은 파일이 두 탭으로 열릴 수 있다.
+
+확장자는 `.md`·`.markdown`·`.mdown`·`.mkd` 를 `text/markdown` 과 `text/plain` **양쪽에** 건다 — `.md` 의 MIME 은 환경마다 다르고 빈 문자열로 오는 경우도 흔하다(트랩 #61).
+
 ## 4.1 Service Worker / Cache Storage
 
 | 항목 | 값 |
