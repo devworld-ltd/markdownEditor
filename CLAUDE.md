@@ -208,6 +208,14 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 | `dev` | dev | `markdown-editor-dev` | `md-editor-dev.devworld.co.kr` |
 | `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
 
+**배포 검증 시 워크플로 실행은 SHA 로 특정한다.** 머지 직후에는 새 실행이 아직 만들어지지 않아 `gh run list --limit 1` 이 **이전 버전의 실행**을 준다. 그것이 `success` 라 배포가 끝난 줄 알고 넘어간 적이 있다(v2.3.0 승격). 헬스체크가 SHA 를 대조하는 덕에 드러났다:
+
+```bash
+SHA=$(git rev-parse origin/main)
+RUN=$(gh run list --branch main --limit 5 --json databaseId,headSha \
+      -q ".[] | select(.headSha==\"$SHA\") | .databaseId" | head -1)
+```
+
 **이슈는 수동으로 닫아야 한다.** PR 본문의 `Closes #N` 은 **기본 브랜치(`main`)로 머지될 때만** 동작하는데, 이 저장소는 `feature/*` → `dev` 로 머지하고 `dev` → `main` 은 별도 PR 이라 걸리지 않는다. prod 배포까지 끝나면 `gh issue close` 로 직접 닫는다 — 안 닫으면 완료된 작업이 백로그에 쌓여 **다음 사람이 이미 있는 기능을 다시 만든다**(실제로 이슈 #125 가 그럴 뻔했다).
 
 **`main`·`dev` 모두 브랜치 보호 규칙이 걸려 있다.** 직접 push 가 거부되므로 문서 한 줄 수정이라도 `feature/*` → PR → 머지 경로를 거쳐야 한다.
