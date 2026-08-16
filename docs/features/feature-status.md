@@ -77,6 +77,9 @@
 | F-75 | 릴리스 노트 · 버전 표시 · GitHub Release 자동화 (#131) | `src/releaseNotes.ts`, `src/releaseNotesUi.ts`, `scripts/release.mjs` | 단위 49 + E2E 9 |
 | F-76 | OS 파일 연결 (Finder "다음으로 열기") — PWA 파일 핸들러 (#135) | `src/launchFiles.ts`, `public/manifest.webmanifest` | 단위 12 + E2E 5 |
 | F-77 | 사용 설명서 (툴바 매뉴얼 버튼) (#141) | `src/manualView.ts`, `docs/manual.md` | 단위 11 + E2E 8 |
+| F-78 | 디자인 토큰 — 툴바·탭바 테마 대응 (#146) | `src/style.css` | E2E 11 |
+| F-79 | 툴바 7묶음 그룹화 (#147) | `src/toolbar.ts` | E2E 5 |
+| F-80 | 상태 표시줄 저장 상태·파일명 (#148) | `src/saveState.ts` | 단위 9 + E2E 8 |
 | F-40 | 렌더된 HTML 클립보드 복사 | `src/clipboardExport.ts` | 단위 10 + E2E 7 |
 | F-60 | 공유 링크 (Cloudflare R2) | `worker/index.ts`, `src/shareId.ts`, `src/share.ts` | 단위 42 + E2E 10 |
 | F-67 | dev 환경 커스텀 도메인 | `wrangler.jsonc` | 배포 헬스체크 |

@@ -61,7 +61,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`sourceLines.ts`** — 원문 최상위 블록의 시작 줄(#114). 순수. **HTML 을 만들지 않는 토큰은 세지 않는다.**
 - **`anchorMeasure.ts`** — 앵커 y 측정(#114). 미러 **한 장**에 표식을 심어 한 번에 읽는다. **`data-generated` 블록(각주 절)은 세지 않는다**(#121). `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
-- **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`toolbar.ts`** — 버튼 26개 · **묶음 순서는 `GROUP_ORDER` 가 정한다**(#147). 배열 선언 순서가 아니라 그것이 화면 순서이고, 구분선은 묶음 경계에서 자동 생성된다 — 손으로 놓으면 버튼을 옮길 때 어긋나도 타입이 통과한다. 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
 - **`mermaidView.ts`** — mermaid 다이어그램(F-74). 주입형 리프. **블록이 없으면 라이브러리를 받지 않는다**(지연 로드). 그린 SVG 도 같은 `sanitizeHtml()` 을 통과한다.
 - **`markdownExtensions.ts`** — 각주·정의 목록(F-73). marked 확장. **정의 없는 참조는 각주가 아니다.**
 - **`markdownHighlight.ts`** — 편집 영역 서식 계산(F-23 잔여·F-30 표). 순수. **태그를 걷어낸 텍스트가 입력과 정확히 같아야 한다** — 오버레이 정렬의 전제다. 그래서 `tableFormat.splitRow()`(칸을 trim 한다)를 렌더에 쓰지 않는다.
@@ -71,6 +71,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`tableFormat.ts`** — 표 계산(F-30). 순수. **표시 폭**(한글·이모지 2칸)으로 파이프를 맞춘다.
 - **`tableUi.ts`** — 표 대화상자(F-30). 커서가 표 안이면 편집, 밖이면 삽입.
 - **`docStats.ts`** — 문서 통계 계산(F-29). 순수. **한국어에서는 "단어" 가 아니라 "어절" 이라고 쓴다** — 공백으로 자른 결과에 정확히 맞는 이름이다.
+- **`saveState.ts`** — 저장 상태 표시(#148). 주입형 리프. **통계와 다른 경로로 갱신한다** — 통계는 150ms 디바운스에 얹혀 있지만 저장 상태는 dirty 가 바뀔 때만 달라진다.
 - **`statusBar.ts`** — 통계 표시(F-29). 주입형 리프.
 - **`imageUpload.ts`** — 이미지 형식·크기·키 검증(F-28). 순수. **Worker 와 브라우저가 함께 쓴다.**
 - **`editorDrop.ts`** — 드롭·붙여넣기(F-28). 주입형 리프. **드롭 처리는 여기 한 곳뿐이다.**
@@ -189,7 +190,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 82. **PWA 파일 연결은 자동 테스트로 끝까지 확인할 수 없다(#135).** Finder "다음으로 열기" 목록은 macOS Launch Services 가 만들고, 헤드리스 Chromium 에는 그것이 없다. 검증할 수 있는 것은 **매니페스트 선언과 `launchQueue` 배선까지**다 — 실제 등록 여부는 PWA 를 설치한 실기기에서 확인한다.
 83. **릴리스 기준 태그를 `git describe` 로 찾지 말 것(#131).** 그것은 **HEAD 의 조상**에 붙은 태그만 본다. 이 저장소는 태그를 `main` 의 머지 커밋에 붙이고 릴리스 계산은 `dev` 에서 하므로 태그가 dev HEAD 의 조상이 아니고, `describe` 는 **영영 아무것도 못 찾는다** — 그러면 전체 이력을 훑어 **이미 릴리스된 것까지 CHANGELOG 에 다시 싣는다**(실측: v2.1.0 이 있는데도 기준 태그 없음 · 커밋 91건). `git tag --list` 에서 **버전 순으로 직접 고른다.**
 84. **`<dialog>` 에 `display` 를 무조건 주지 말 것(#141).** 닫혀 있을 때 UA 가 `display: none` 으로 숨기는데, `display: flex` 를 그냥 주면 그것을 덮어써 **닫아도 사라지지 않는다.** 기능은 멀쩡하고 화면만 안 닫히므로 원인을 JS 에서 찾게 된다. `dialog[open]` 으로 한정하라.
-85. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+85. **툴바·탭바 색은 토큰이다(#146).** 예전에는 `#1e1e1e`·`#252526` 하드코딩이라 **라이트 모드에서도 검은 띠**로 남았다. `--surface-chrome`(툴바)·`--surface-tabbar`(탭바)로 나뉘어 있고 **둘을 한 색으로 합치지 말 것** — F-72 의 명도 계단(툴바 < 탭바 < 에디터 < 프리뷰)을 D3 E2E 가 단언한다.
+86. **`--text-faint` 를 글자에 쓰지 말 것(#146).** 라이트 툴바 표면에서 `--text-muted` 가 이미 4.67 이라 **그보다 옅으면서 AA 를 넘는 값이 없다.** 세 번째 글자 단계는 존재할 수 없으므로 라벨도 `--text-muted` 를 쓴다. faint 는 아이콘·구분선 전용(3:1)이다.
+87. **의도적 버그를 되돌릴 때 `git checkout <파일>` 을 쓰지 말 것.** 그 파일의 **커밋되지 않은 변경 전체**가 함께 날아간다 — 주입한 한 줄만 되돌아가는 것이 아니다. 이 세션에서 두 번 당했고, 두 번째는 `main.ts` 의 배선이 통째로 빠진 채 커밋돼 **CI 에서야** 드러났다(로컬은 지우기 전에 통과했다). 주입 전에 `cp <파일> /tmp/…` 로 사본을 뜨고 `cp` 로 되돌린다.
+88. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
@@ -208,6 +212,14 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 | `dev` | dev | `markdown-editor-dev` | `md-editor-dev.devworld.co.kr` |
 | `main` | prod | `markdown-editor-prod` | `md-editor.devworld.co.kr` |
 
+**배포 검증 시 워크플로 실행은 SHA 로 특정한다.** 머지 직후에는 새 실행이 아직 만들어지지 않아 `gh run list --limit 1` 이 **이전 버전의 실행**을 준다. 그것이 `success` 라 배포가 끝난 줄 알고 넘어간 적이 있다(v2.3.0 승격). 헬스체크가 SHA 를 대조하는 덕에 드러났다:
+
+```bash
+SHA=$(git rev-parse origin/main)
+RUN=$(gh run list --branch main --limit 5 --json databaseId,headSha \
+      -q ".[] | select(.headSha==\"$SHA\") | .databaseId" | head -1)
+```
+
 **이슈는 수동으로 닫아야 한다.** PR 본문의 `Closes #N` 은 **기본 브랜치(`main`)로 머지될 때만** 동작하는데, 이 저장소는 `feature/*` → `dev` 로 머지하고 `dev` → `main` 은 별도 PR 이라 걸리지 않는다. prod 배포까지 끝나면 `gh issue close` 로 직접 닫는다 — 안 닫으면 완료된 작업이 백로그에 쌓여 **다음 사람이 이미 있는 기능을 다시 만든다**(실제로 이슈 #125 가 그럴 뻔했다).
 
 **`main`·`dev` 모두 브랜치 보호 규칙이 걸려 있다.** 직접 push 가 거부되므로 문서 한 줄 수정이라도 `feature/*` → PR → 머지 경로를 거쳐야 한다.
@@ -222,11 +234,12 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 
 | 변경 대상 | 갱신 문서 |
 |-----------|-----------|
+| `src/tabs.ts` (`renderTabs` · 리스너) | `src/saveState.ts` — `setTabStateListener` 가 dirty·파일명·탭 전환의 단일 통로다 |
 | `src/tabs.ts` (`TabState`) · `src/storage.ts` (세션 스키마) | `docs/architecture/data-model.md`, `docs/architecture/traceability.md` |
 | `src/fileOps.ts` · `src/shortcuts.ts` · `src/notice.ts` | `docs/api/browser-apis.md` |
 | `src/swUpdate.ts` · `public/sw.js` (생명주기) | `docs/architecture/service-architecture.md` §7.2, `docs/api/browser-apis.md` §4.1 |
 | `vite.config.ts` 빌드 ID 플러그인 | `docs/architecture/infrastructure.md` §3.2 |
-| `src/toolbar.ts` (버튼 증감) | `docs/features/feature-status.md`, `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
+| `src/toolbar.ts` (버튼 증감 · `GROUP_ORDER`) | `docs/features/feature-status.md`, `tests/e2e/toolbar.spec.ts` 버튼·묶음·구분선 개수 단언 |
 | `public/manifest.webmanifest` (`file_handlers`) | `docs/api/browser-apis.md`, `tests/e2e/fileHandler.spec.ts` |
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | `docs/architecture/service-architecture.md`, `docs/api/browser-apis.md` §8, `tests/parser.test.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | `docs/architecture/infrastructure.md`, `docs/operations/cloudflare-workers.md` |
