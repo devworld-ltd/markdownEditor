@@ -25,6 +25,7 @@ import {
   setCloseConfirm,
   setScrollSyncHooks,
   setTabRenderListener,
+  setTabStateListener,
 } from "./tabs";
 import { initNotice, showNotice } from "./notice";
 import {
@@ -71,6 +72,7 @@ import { parseMarkdown } from "./parser";
 import { manual as manualMarkdown } from "virtual:manual";
 
 import { initManual } from "./manualView";
+import { initSaveState } from "./saveState";
 import { initLaunchFiles, type LaunchQueueLike } from "./launchFiles";
 import { initReleaseNotes } from "./releaseNotesUi";
 import { parseChangelog } from "./releaseNotes";
@@ -238,6 +240,36 @@ if (editorEl && previewEl) {
         saveEnabled: saveDocStats,
       })
     : null;
+
+  // #148 저장 상태. 통계와 **다른 경로**로 갱신한다 — 통계는 매 글자마다 전체를
+  // 훑어야 해서 150ms 디바운스에 얹혀 있지만, 저장 상태는 dirty 가 바뀔 때만
+  // 달라지므로 탭 상태 변화에 맞춰 갱신하면 된다.
+  const saveStateEl = document.querySelector<HTMLElement>("#save-state");
+  const saveIconEl = document.querySelector<HTMLElement>("#save-state-icon");
+  const saveTextEl = document.querySelector<HTMLElement>("#save-state-text");
+  const saveNameEl = document.querySelector<HTMLElement>("#save-state-name");
+
+  const saveState =
+    saveStateEl && saveIconEl && saveTextEl && saveNameEl
+      ? initSaveState({
+          rootEl: saveStateEl,
+          iconEl: saveIconEl,
+          textEl: saveTextEl,
+          nameEl: saveNameEl,
+          read: () => {
+            const tab = getActiveTab();
+            if (!tab) return null;
+            // 파일이 없으면 "저장한 적 없음" — dirty 여부와 별개로 알려야 한다.
+            // 저장할 곳이 정해지지 않았다는 것이 더 중요한 정보다.
+            if (!tab.fileName || tab.fileName === UNTITLED) {
+              return { status: "unsaved", fileName: null };
+            }
+            return { status: tab.isDirty ? "dirty" : "saved", fileName: tab.fileName };
+          },
+        })
+      : null;
+
+  setTabStateListener(() => saveState?.refresh());
 
   const statsCheckEl = document.querySelector<HTMLInputElement>("#setting-doc-stats");
   if (statsCheckEl && statusBar) {
