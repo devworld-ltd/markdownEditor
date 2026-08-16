@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // @ts-expect-error — 스크립트는 .mjs 라 타입 선언이 없다. 검증 대상은 순수 함수뿐이다.
-import { decideBump, insertSection, nextVersion } from "../scripts/release.mjs";
+import { decideBump, insertSection, nextVersion, pickLatestTag } from "../scripts/release.mjs";
 
 /**
  * #131 버전 계산.
@@ -83,5 +83,34 @@ describe("insertSection", () => {
     const out = insertSection("# 변경 이력\n\n아직 없음\n", "## [1.0.0]\n- 첫 릴리스\n");
     expect(out).toContain("1.0.0");
     expect(out.indexOf("아직 없음")).toBeLessThan(out.indexOf("1.0.0"));
+  });
+});
+
+
+describe("pickLatestTag", () => {
+  it("가장 높은 버전을 고른다", () => {
+    expect(pickLatestTag(["v1.0.0", "v2.1.0", "v2.0.5"])).toBe("v2.1.0");
+  });
+
+  it("두 자리 이상도 맞다 — 사전순이면 v2.10.0 < v2.9.0 이 되어 큰 갱신에서만 틀린다", () => {
+    expect(pickLatestTag(["v2.9.0", "v2.10.0"])).toBe("v2.10.0");
+    expect(pickLatestTag(["v9.0.0", "v10.0.0"])).toBe("v10.0.0");
+  });
+
+  it("`v` 없는 태그·쓰레기 값은 무시한다", () => {
+    expect(pickLatestTag(["2.0.0", "release-1", "v1.2.3", ""])).toBe("v1.2.3");
+  });
+
+  it("사전 릴리스 태그는 고르지 않는다 — 릴리스 기준점이 아니다", () => {
+    expect(pickLatestTag(["v1.0.0", "v2.0.0-rc.1"])).toBe("v1.0.0");
+  });
+
+  it("태그가 없으면 null — 첫 릴리스", () => {
+    expect(pickLatestTag([])).toBeNull();
+    expect(pickLatestTag(["", "  "])).toBeNull();
+  });
+
+  it("공백이 섞여도 읽는다 (git 출력 그대로)", () => {
+    expect(pickLatestTag([" v1.0.0 ", "v0.9.0"])).toBe("v1.0.0");
   });
 });
