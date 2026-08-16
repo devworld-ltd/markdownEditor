@@ -85,6 +85,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`recentFiles.ts`** — 최근 파일 목록 계산만 담당하는 순수 리프(F-36).
 - **`handleStore.ts`** — 파일 핸들 보관소(#125). IndexedDB 는 **구조화 복제**라 핸들을 그대로 담는다 — JSON 이 안 되는 것과 다른 이야기다. 권한은 따로이며 **사용자 제스처 안에서만** 물을 수 있다.
 - **`recentFilesUi.ts`** — 최근 파일 `<dialog>`(F-36). 주입형 리프.
+- **`manualView.ts`** — 사용 설명서 `<dialog>`(#141). 주입형 리프. 본문은 **`parseMarkdown()` 을 거친다**(F-18). 원문은 `docs/manual.md` — 빌드 시각 번들.
 - **`launchFiles.ts`** — OS 파일 연결로 실행됐을 때(#135). 주입형 리프. **핸들을 그대로 `openFileFromHandle` 에 넘긴다** — 직접 읽으면 중복 탭 방지·최근 목록·핸들 보관을 다시 구현하게 된다.
 - **`releaseNotes.ts`** — 릴리스 노트 계산(#131). 순수. **버전 비교는 자리별 숫자로** — 사전순이면 `2.10.0 < 2.9.0` 이 되어 큰 갱신에서만 틀린다.
 - **`releaseNotesUi.ts`** — 새 소식 `<dialog>`(#131). 주입형 리프. 본문은 **`parseMarkdown()` 을 거친다**(F-18).
@@ -187,7 +188,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 81. **`window.launchQueue` 는 대입으로 갈아끼워지지 않는다(#135).** 플랫폼이 제공하는 속성이라 Chromium 이 자기 것을 되돌려 준다 — **대입 직후에는 바뀐 것처럼 보이지만** 앱이 읽을 때는 원래 것이 와서, 소비자가 영영 불리지 않는다. 기능이 멀쩡한데 테스트만 실패하므로 원인을 코드에서 찾게 된다. `Object.defineProperty` 로 심어라 (트랩 #60 의 `DataTransferItem.prototype` 과 같은 성격).
 82. **PWA 파일 연결은 자동 테스트로 끝까지 확인할 수 없다(#135).** Finder "다음으로 열기" 목록은 macOS Launch Services 가 만들고, 헤드리스 Chromium 에는 그것이 없다. 검증할 수 있는 것은 **매니페스트 선언과 `launchQueue` 배선까지**다 — 실제 등록 여부는 PWA 를 설치한 실기기에서 확인한다.
 83. **릴리스 기준 태그를 `git describe` 로 찾지 말 것(#131).** 그것은 **HEAD 의 조상**에 붙은 태그만 본다. 이 저장소는 태그를 `main` 의 머지 커밋에 붙이고 릴리스 계산은 `dev` 에서 하므로 태그가 dev HEAD 의 조상이 아니고, `describe` 는 **영영 아무것도 못 찾는다** — 그러면 전체 이력을 훑어 **이미 릴리스된 것까지 CHANGELOG 에 다시 싣는다**(실측: v2.1.0 이 있는데도 기준 태그 없음 · 커밋 91건). `git tag --list` 에서 **버전 순으로 직접 고른다.**
-84. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+84. **`<dialog>` 에 `display` 를 무조건 주지 말 것(#141).** 닫혀 있을 때 UA 가 `display: none` 으로 숨기는데, `display: flex` 를 그냥 주면 그것을 덮어써 **닫아도 사라지지 않는다.** 기능은 멀쩡하고 화면만 안 닫히므로 원인을 JS 에서 찾게 된다. `dialog[open]` 으로 한정하라.
+85. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
@@ -229,6 +231,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | `docs/architecture/service-architecture.md`, `docs/api/browser-apis.md` §8, `tests/parser.test.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | `docs/architecture/infrastructure.md`, `docs/operations/cloudflare-workers.md` |
 | `index.html` (DOM id) | 전 E2E 셀렉터, `docs/architecture/service-architecture.md` |
+| `docs/manual.md` | 앱의 사용 설명서 화면 (빌드 시각 번들 — 따로 옮겨 적지 말 것) |
 | `CHANGELOG.md` · `package.json` 버전 | 앱의 새 소식 화면 · GitHub Release 본문 (둘 다 이 파일에서 파생 — 따로 쓰지 말 것) |
 | 기능 추가/삭제 | `docs/features/feature-status.md` (F-ID 부여, 제거는 🗑 로 남김) |
 | 테스트 변경 | `docs/testing/test-plan.md`, `docs/testing/test-results.md` |

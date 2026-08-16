@@ -187,6 +187,19 @@
         </div>
       </dialog>
 
+      <!-- #141 사용 설명서 -->
+      <dialog id="manual" class="shortcut-help manual-dialog" aria-labelledby="manual-title">
+        <div class="shortcut-help-header">
+          <h2 id="manual-title">사용 설명서</h2>
+          <button type="button" id="manual-close" class="shortcut-help-close" aria-label="닫기">
+            &times;
+          </button>
+        </div>
+        <!-- 본문이 길어 스크롤된다. `tabindex="0"` 이 없으면 키보드만으로는
+             내려 읽을 방법이 없다. -->
+        <div id="manual-body" class="shortcut-help-list manual-body" tabindex="0"></div>
+      </dialog>
+
       <!-- #131 새 소식 (릴리스 노트) -->
       <dialog id="release-notes" class="shortcut-help" aria-labelledby="release-notes-title">
         <div class="shortcut-help-header">
