@@ -19,6 +19,8 @@ const LAYOUT_KEY = "markdown-editor:layout:v1";
  * 셋 중 하나가 깨져도 나머지는 살아야 한다.
  */
 const RECENT_KEY = "markdown-editor:recent:v1";
+/** #131: 마지막으로 본 릴리스 노트 버전. 세션·레이아웃과 수명이 달라 별도 키다. */
+const SEEN_VERSION_KEY = "markdown-editor:seen-version:v1";
 const SCHEMA_VERSION = 1;
 
 export interface PersistedTab {
@@ -233,4 +235,28 @@ export function createSession(
   activeTabId: string,
 ): PersistedSession {
   return { version: SCHEMA_VERSION, activeTabId, tabs };
+}
+
+
+/** 마지막으로 본 릴리스 노트 버전 (#131). 없으면 `null` — "이 브라우저에서 처음". */
+export function loadSeenVersion(): string | null {
+  const s = storage();
+  if (!s) return null;
+  try {
+    const raw = s.getItem(SEEN_VERSION_KEY);
+    return typeof raw === "string" && raw ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 본 버전을 적는다 (#131). 실패해도 조용히 넘어간다 — 다음에 한 번 더 뜰 뿐이다. */
+export function saveSeenVersion(version: string): void {
+  const s = storage();
+  if (!s) return;
+  try {
+    s.setItem(SEEN_VERSION_KEY, version);
+  } catch {
+    // 용량 초과 등. 새 소식이 한 번 더 뜨는 것은 데이터 유실이 아니다.
+  }
 }

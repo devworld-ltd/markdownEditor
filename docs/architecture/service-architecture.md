@@ -1019,3 +1019,24 @@ shortcutDefs.ts  (유일한 정의: 조합 판별 + 표시용 키 캡)
 - [데이터 모델](./data-model.md)
 - [브라우저 API 명세](../api/browser-apis.md)
 - [기능 ↔ 모듈 ↔ 상태 ↔ API 상호 관계](./traceability.md)
+
+## 릴리스 노트와 버전 (#131)
+
+`CHANGELOG.md` 한 파일이 **단일 출처**다. 앱의 "새 소식" 화면과 GitHub Release 본문이 모두 여기서 나온다 — 두 곳에 따로 쓰면 반드시 한쪽이 낡는다.
+
+```
+CHANGELOG.md ─┬─ virtual:release-notes (빌드 시각) → releaseNotes.ts → releaseNotesUi.ts → 새 소식 화면
+              └─ scripts/changelog-section.mjs (CI) ────────────────────────────────────→ GitHub Release 본문
+```
+
+| 단계 | 누가 | 무엇을 |
+|------|------|--------|
+| 버전 계산 | `npm run release` (승격 PR 안) | 마지막 태그 이후 커밋으로 major/minor/patch 결정 → `package.json`·`CHANGELOG.md` 갱신 |
+| 태그·릴리스 | CI `release` 잡 (main) | **배포·헬스체크가 끝난 뒤** `v<version>` 태그 + GitHub Release 생성 |
+| 앱 표시 | 상태 표시줄 버전 버튼 | 누르면 이력 전체, 갱신 뒤 처음 열면 자동으로 한 번 |
+
+**CI 는 커밋을 되밀지 않는다** — `main`·`dev` 는 브랜치 보호가 걸려 있다. 태그 push 는 보호 대상이 아니라 가능하다.
+
+**태그는 배포 뒤에 만든다.** 태그는 "이 버전이 서비스되고 있다" 는 표식이어야 하고, 배포가 실패했는데 태그가 남으면 그 표식이 거짓말을 한다.
+
+**문서·잡무만 있는 배포는 버전을 올리지 않는다**(`docs`·`chore`·`test`·`style`·`ci`·`build`). 빈 새 소식이 반복되면 사용자가 알림을 무시하게 된다. 그때 CI 는 "태그가 이미 있다" 로 조용히 끝낸다 — 실패로 다루면 정상 배포마다 빨간 X 가 뜬다.

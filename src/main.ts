@@ -65,6 +65,12 @@ import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
 import { parseRecent } from "./recentFiles";
+import { changelog, version as appVersion } from "virtual:release-notes";
+
+import { parseMarkdown } from "./parser";
+import { initReleaseNotes } from "./releaseNotesUi";
+import { parseChangelog } from "./releaseNotes";
+import { loadSeenVersion, saveSeenVersion } from "./storage";
 import {
   forgetHandle,
   isHandleStoreSupported,
@@ -219,7 +225,7 @@ if (editorEl && previewEl) {
     : null;
 
   // F-29 문서 통계. 렌더 디바운스에 얹어 매 글자마다 전체를 훑지 않는다.
-  const statusBarEl = document.querySelector<HTMLElement>("#status-bar");
+  const statusBarEl = document.querySelector<HTMLElement>("#status-stats");
   const statusBar = statusBarEl
     ? initStatusBar({
         barEl: statusBarEl,
@@ -496,6 +502,41 @@ if (editorEl && previewEl) {
           returnFocusTo: editorEl,
         })
       : null;
+
+  // #131 새 소식(릴리스 노트). `CHANGELOG.md` 는 **빌드 시각에** 번들로 들어온다 —
+  // 받아오면 이 앱의 "공유 외 네트워크 요청 0건"(E2E SH8)이 깨진다.
+  const releaseDialogEl = document.querySelector<HTMLDialogElement>("#release-notes");
+  const releaseListEl = document.querySelector<HTMLElement>("#release-list");
+  const releaseEmptyEl = document.querySelector<HTMLElement>("#release-empty");
+  const releaseCloseEl = document.querySelector<HTMLElement>("#release-close");
+  const releaseOpenEl = document.querySelector<HTMLButtonElement>("#release-open");
+  const releaseVersionEl = document.querySelector<HTMLElement>("#release-version");
+
+  const releaseNotes =
+    releaseDialogEl && releaseListEl && releaseEmptyEl && releaseCloseEl
+      ? initReleaseNotes({
+          dialogEl: releaseDialogEl,
+          listEl: releaseListEl,
+          emptyEl: releaseEmptyEl,
+          closeEl: releaseCloseEl,
+          currentVersion: appVersion,
+          entries: parseChangelog(changelog),
+          // **정화 경로는 하나뿐이다** (F-18) — 프리뷰와 같은 함수를 넘긴다.
+          render: parseMarkdown,
+          loadSeen: loadSeenVersion,
+          saveSeen: saveSeenVersion,
+          returnFocusTo: editorEl,
+        })
+      : null;
+
+  if (releaseOpenEl && releaseVersionEl && releaseNotes && appVersion) {
+    releaseVersionEl.textContent = `v${appVersion}`;
+    releaseOpenEl.hidden = false;
+    releaseOpenEl.addEventListener("click", () => releaseNotes.open());
+    // 갱신 뒤 처음이면 한 번 띄운다 — F-69 알림이 "새 버전이 있습니다" 까지만
+    // 말하고 **무엇이 바뀌었는지**는 말하지 못하던 자리를 여기서 메운다.
+    releaseNotes.maybeAutoShow();
+  }
 
   // F-30 표. 대화상자 하나가 커서 위치에 따라 삽입/편집으로 갈린다.
   const tableDialogEl = document.querySelector<HTMLDialogElement>("#table-dialog");
