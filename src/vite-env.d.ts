@@ -10,3 +10,12 @@ declare module "virtual:release-notes" {
   /** `package.json` 의 `version`. */
   export const version: string;
 }
+
+/**
+ * #141: 빌드 시각에 `docs/manual.md` 를 넣어 주는 가상 모듈.
+ * 구현은 `vite.config.ts` 의 `releaseNotesPlugin()`.
+ */
+declare module "virtual:manual" {
+  /** `docs/manual.md` 원문. 렌더는 `parseMarkdown()` 이 한다 (F-18). */
+  export const manual: string;
+}

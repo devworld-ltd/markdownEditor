@@ -201,6 +201,8 @@ graph LR
 | `tests/release-script.test.ts` | 13 | #131 |
 | `tests/e2e/release.spec.ts` | 9 | #131 |
 | `tests/launchFiles.test.ts` | 12 | #135 |
+| `tests/manualView.test.ts` | 11 | #141 |
+| `tests/e2e/manual.spec.ts` | 8 | #141 |
 | `tests/release-script.test.ts` (pickLatestTag) | 6 | #137 |
 | `tests/e2e/fileHandler.spec.ts` | 5 | #135 |
 | `tests/e2e/recentReopen.spec.ts` | 5 | #125 |

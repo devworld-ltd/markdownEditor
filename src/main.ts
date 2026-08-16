@@ -68,6 +68,9 @@ import { parseRecent } from "./recentFiles";
 import { changelog, version as appVersion } from "virtual:release-notes";
 
 import { parseMarkdown } from "./parser";
+import { manual as manualMarkdown } from "virtual:manual";
+
+import { initManual } from "./manualView";
 import { initLaunchFiles, type LaunchQueueLike } from "./launchFiles";
 import { initReleaseNotes } from "./releaseNotesUi";
 import { parseChangelog } from "./releaseNotes";
@@ -539,6 +542,25 @@ if (editorEl && previewEl) {
     releaseNotes.maybeAutoShow();
   }
 
+  // #141 사용 설명서. `docs/manual.md` 가 빌드 시각에 번들로 들어온다 —
+  // 받아오면 이 앱의 "공유 외 네트워크 요청 0건"(E2E SH8)이 깨진다.
+  const manualDialogEl = document.querySelector<HTMLDialogElement>("#manual");
+  const manualBodyEl = document.querySelector<HTMLElement>("#manual-body");
+  const manualCloseEl = document.querySelector<HTMLElement>("#manual-close");
+
+  const manualView =
+    manualDialogEl && manualBodyEl && manualCloseEl
+      ? initManual({
+          dialogEl: manualDialogEl,
+          bodyEl: manualBodyEl,
+          closeEl: manualCloseEl,
+          markdown: manualMarkdown,
+          // **정화 경로는 하나뿐이다** (F-18) — 프리뷰와 같은 함수를 넘긴다.
+          render: parseMarkdown,
+          returnFocusTo: editorEl,
+        })
+      : null;
+
   // F-30 표. 대화상자 하나가 커서 위치에 따라 삽입/편집으로 갈린다.
   const tableDialogEl = document.querySelector<HTMLDialogElement>("#table-dialog");
   const tableInsertEl = document.querySelector<HTMLElement>("#table-insert");
@@ -618,6 +640,7 @@ if (editorEl && previewEl) {
     showSettings: editorSettings ? () => editorSettings.open() : undefined,
     showTable: tableUi ? () => tableUi.open() : undefined,
     showRecent: recentFiles ? () => recentFiles.open() : undefined,
+    showManual: manualView ? () => manualView.open() : undefined,
 
     // F-60: 이 앱에서 유일하게 네트워크를 타는 동작이다. 버튼을 눌러야만 fetch 한다.
     share: () => {

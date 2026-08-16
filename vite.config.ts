@@ -6,6 +6,8 @@ const SW_VERSION_PLACEHOLDER = "__BUILD_ID__";
 
 const RELEASE_MODULE_ID = "virtual:release-notes";
 const RELEASE_RESOLVED_ID = `\0${RELEASE_MODULE_ID}`;
+const MANUAL_MODULE_ID = "virtual:manual";
+const MANUAL_RESOLVED_ID = `\0${MANUAL_MODULE_ID}`;
 
 /**
  * #131: `CHANGELOG.md` 와 `package.json` 의 버전을 **빌드 시각에** 번들로 넣는다.
@@ -19,11 +21,18 @@ const RELEASE_RESOLVED_ID = `\0${RELEASE_MODULE_ID}`;
  */
 function releaseNotesPlugin(): Plugin {
   return {
-    name: "release-notes",
+    name: "bundled-docs",
     resolveId(id) {
-      return id === RELEASE_MODULE_ID ? RELEASE_RESOLVED_ID : null;
+      if (id === RELEASE_MODULE_ID) return RELEASE_RESOLVED_ID;
+      if (id === MANUAL_MODULE_ID) return MANUAL_RESOLVED_ID;
+      return null;
     },
     async load(id) {
+      // #141: 사용 설명서. 같은 이유로 받아오지 않고 번들에 넣는다.
+      if (id === MANUAL_RESOLVED_ID) {
+        const manual = await readFile(resolve(process.cwd(), "docs/manual.md"), "utf-8");
+        return `export const manual = ${JSON.stringify(manual)};\n`;
+      }
       if (id !== RELEASE_RESOLVED_ID) return null;
 
       const [changelog, pkg] = await Promise.all([
@@ -37,17 +46,20 @@ function releaseNotesPlugin(): Plugin {
       return `export const changelog = ${JSON.stringify(changelog)};\n` +
         `export const version = ${JSON.stringify(version)};\n`;
     },
-    /** 개발 중 CHANGELOG 를 고치면 즉시 반영한다. */
+    /** 개발 중 원본을 고치면 즉시 반영한다. */
     configureServer(server) {
       const watched = [
         resolve(process.cwd(), "CHANGELOG.md"),
         resolve(process.cwd(), "package.json"),
+        resolve(process.cwd(), "docs/manual.md"),
       ];
       server.watcher.add(watched);
       server.watcher.on("change", (file) => {
         if (!watched.includes(file)) return;
-        const mod = server.moduleGraph.getModuleById(RELEASE_RESOLVED_ID);
-        if (mod) server.moduleGraph.invalidateModule(mod);
+        for (const resolved of [RELEASE_RESOLVED_ID, MANUAL_RESOLVED_ID]) {
+          const mod = server.moduleGraph.getModuleById(resolved);
+          if (mod) server.moduleGraph.invalidateModule(mod);
+        }
         server.ws.send({ type: "full-reload" });
       });
     },

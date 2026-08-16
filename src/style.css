@@ -659,6 +659,103 @@ body {
   border: 0;
 }
 
+/* #141 사용 설명서.
+   본문이 길어 대화상자를 넓게 잡는다 — 표가 많아 좁으면 가로 스크롤만 생긴다. */
+.manual-dialog {
+  max-width: min(760px, 92vw);
+  overflow: hidden;
+}
+
+/* **스크롤은 본문이 맡는다.** 대화상자가 통째로 스크롤되면 제목과 닫기 버튼이
+   같이 밀려 올라가, 긴 문서를 내려 읽는 도중 닫을 방법이 사라진다.
+
+   `[open]` 을 반드시 붙인다 — `<dialog>` 는 닫혀 있을 때 UA 가 `display: none`
+   으로 숨기는데, `display: flex` 를 무조건 주면 그것을 덮어써 **닫아도 사라지지
+   않는다.** 기능은 멀쩡하고 화면만 안 닫히므로 원인을 JS 에서 찾게 된다. */
+.manual-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.manual-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.manual-body h1 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.manual-body h2 {
+  margin: 28px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule-subtle);
+  font-size: 16px;
+}
+
+.manual-body h3 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+}
+
+.manual-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 12px;
+}
+
+.manual-body th,
+.manual-body td {
+  padding: 6px 10px;
+  border: 1px solid var(--rule-subtle);
+  text-align: left;
+  vertical-align: top;
+}
+
+.manual-body th {
+  background: var(--code-bg);
+}
+
+/* 표가 좁은 화면에서 페이지를 밀지 않도록 자기 안에서만 스크롤한다. */
+.manual-body table {
+  display: block;
+  overflow-x: auto;
+}
+
+.manual-body code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--code-bg);
+  font-size: 0.92em;
+}
+
+.manual-body pre {
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  overflow-x: auto;
+}
+
+.manual-body pre code {
+  padding: 0;
+  background: none;
+}
+
+.manual-body blockquote {
+  margin: 10px 0;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--rule-subtle);
+  color: var(--text-muted);
+}
+
+.manual-body a {
+  color: var(--link);
+}
+
 /* #131 새 소식 */
 .release-list {
   display: flex;
