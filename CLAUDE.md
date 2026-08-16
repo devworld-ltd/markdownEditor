@@ -61,7 +61,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`sourceLines.ts`** — 원문 최상위 블록의 시작 줄(#114). 순수. **HTML 을 만들지 않는 토큰은 세지 않는다.**
 - **`anchorMeasure.ts`** — 앵커 y 측정(#114). 미러 **한 장**에 표식을 심어 한 번에 읽는다. **`data-generated` 블록(각주 절)은 세지 않는다**(#121). `tabs.ts` 는 `setScrollSyncHooks()` 로, `editor.ts` 는 `onAfterRender` 콜백으로 연결된다 — 양쪽 다 import 하지 않는다.
 - **`public/`** — vite 가 `dist/` 루트로 복사한다. `_headers`(CSP·캐시), `manifest.webmanifest`, `icon.svg`, `sw.js`(서비스 워커).
-- **`toolbar.ts`** — 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
+- **`toolbar.ts`** — 버튼 26개 · **묶음 순서는 `GROUP_ORDER` 가 정한다**(#147). 배열 선언 순서가 아니라 그것이 화면 순서이고, 구분선은 묶음 경계에서 자동 생성된다 — 손으로 놓으면 버튼을 옮길 때 어긋나도 타입이 통과한다. 버튼 16개(파일 4 + 서식 12). `execCommand("insertText")` 로 undo 스택 보존. `fileOps` 를 import 하지 않고 `setFileActions()` 콜백을 주입받는다.
 - **`mermaidView.ts`** — mermaid 다이어그램(F-74). 주입형 리프. **블록이 없으면 라이브러리를 받지 않는다**(지연 로드). 그린 SVG 도 같은 `sanitizeHtml()` 을 통과한다.
 - **`markdownExtensions.ts`** — 각주·정의 목록(F-73). marked 확장. **정의 없는 참조는 각주가 아니다.**
 - **`markdownHighlight.ts`** — 편집 영역 서식 계산(F-23 잔여·F-30 표). 순수. **태그를 걷어낸 텍스트가 입력과 정확히 같아야 한다** — 오버레이 정렬의 전제다. 그래서 `tableFormat.splitRow()`(칸을 trim 한다)를 렌더에 쓰지 않는다.
@@ -236,7 +236,7 @@ RUN=$(gh run list --branch main --limit 5 --json databaseId,headSha \
 | `src/fileOps.ts` · `src/shortcuts.ts` · `src/notice.ts` | `docs/api/browser-apis.md` |
 | `src/swUpdate.ts` · `public/sw.js` (생명주기) | `docs/architecture/service-architecture.md` §7.2, `docs/api/browser-apis.md` §4.1 |
 | `vite.config.ts` 빌드 ID 플러그인 | `docs/architecture/infrastructure.md` §3.2 |
-| `src/toolbar.ts` (버튼 증감) | `docs/features/feature-status.md`, `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
+| `src/toolbar.ts` (버튼 증감 · `GROUP_ORDER`) | `docs/features/feature-status.md`, `tests/e2e/toolbar.spec.ts` 버튼·묶음·구분선 개수 단언 |
 | `public/manifest.webmanifest` (`file_handlers`) | `docs/api/browser-apis.md`, `tests/e2e/fileHandler.spec.ts` |
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | `docs/architecture/service-architecture.md`, `docs/api/browser-apis.md` §8, `tests/parser.test.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | `docs/architecture/infrastructure.md`, `docs/operations/cloudflare-workers.md` |

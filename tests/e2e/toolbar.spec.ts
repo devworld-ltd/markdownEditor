@@ -12,8 +12,44 @@ test("툴바 버튼이 26개 렌더링된다", async ({ page }) => {
   await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(26);
 });
 
-test("파일·서식·도움말 세 묶음이 구분선으로 나뉜다", async ({ page }) => {
-  await expect(page.locator("#toolbar-actions .toolbar-separator")).toHaveCount(3);
+test("#147: 묶음 7개가 구분선 6개로 나뉜다 — 구분선은 경계에서 자동 생성된다", async ({ page }) => {
+  const groups = ["파일", "강조", "블록", "삽입", "부가", "공유", "보기·도움"];
+  await expect(page.locator("#toolbar-actions .toolbar-group")).toHaveCount(groups.length);
+  // 구분선은 묶음 사이에만 — 마지막 묶음 뒤에는 없다.
+  await expect(page.locator("#toolbar-actions .toolbar-separator")).toHaveCount(groups.length - 1);
+
+  // **묶음은 눈으로만 나뉘는 것이 아니다.** 구분선은 스크린리더에게 아무 뜻도 아니므로
+  // 묶음 컨테이너의 접근 가능한 이름이 그 역할을 대신해야 한다.
+  for (const g of groups) {
+    await expect(page.locator(`#toolbar-actions [role="group"][aria-label="${g}"]`)).toHaveCount(1);
+  }
+});
+
+test("#147: 묶음 순서가 화면 순서와 같다", async ({ page }) => {
+  const order = await page.evaluate(() =>
+    [...document.querySelectorAll("#toolbar-actions .toolbar-group")].map((g) =>
+      g.getAttribute("aria-label"),
+    ),
+  );
+  expect(order).toEqual(["파일", "강조", "블록", "삽입", "부가", "공유", "보기·도움"]);
+});
+
+test("#147: 모든 버튼이 어느 묶음엔가 들어 있다 — 묶음 밖에 떨어진 버튼이 없다", async ({
+  page,
+}) => {
+  const total = await page.locator("#toolbar-actions .toolbar-btn").count();
+  const inGroups = await page.locator("#toolbar-actions .toolbar-group .toolbar-btn").count();
+  expect(inGroups).toBe(total);
+});
+
+test("#147: 단축키가 없는 기능이 툴바에 남아 있다 — 더보기(#149) 전까지 닿을 곳이 여기뿐이다", async ({
+  page,
+}) => {
+  // 코드 블록·구분선·HTML 내보내기·HTML 복사는 `shortcutDefs.ts` 에 정의가 없다.
+  // 팝오버가 생기기 전에 툴바에서 빼면 마우스로도 키보드로도 실행할 방법이 사라진다.
+  for (const title of ["Code Block", "Horizontal Rule", "Export HTML", "Copy HTML"]) {
+    await expect(page.locator(`.toolbar-btn[title="${title}"]`)).toHaveCount(1);
+  }
 });
 
 const INLINE_CASES: Array<{ title: string; expected: string }> = [
