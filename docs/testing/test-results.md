@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **908** | 0 | 0 | 908 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **395** | **0** | 15 ※ | 410 |
-| **합계 (dev 기준)** | | **1303** | **0** | 15 | 1318 |
+| 단위 | Vitest 4.1.10 (jsdom) | **957** | 0 | 0 | 957 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **404** | **0** | 15 ※ | 419 |
+| **합계 (dev 기준)** | | **1361** | **0** | 15 | 1376 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -81,6 +81,7 @@
 | `scrollanchor.spec.ts` | 9 | ✅ #114 블록 앵커 — 보이는 내용 일치·양 끝·폴백 |
 | `mermaid.spec.ts` | 7 | ✅ F-74 다이어그램 — 렌더·실패·캐시·내보내기·다크·지연 로드 |
 | `recentReopen.spec.ts` | 5 | ✅ #125 최근 목록에서 바로 열기 — OPFS 실물 핸들 |
+| `release.spec.ts` | 9 | ✅ #131 릴리스 노트 — 번들 포함·자동 표시·네트워크 무증가 |
 | `scrolldrift.spec.ts` | 4 | ✅ #121 각주 문서 스크롤 어긋남 — 오차 ≤ 5px |
 | `searchoverlay.spec.ts` | 9 | ✅ F-22 재검증 — 오버레이 켬/끔 양쪽에서 검색·치환 |
 | `scrolloverlay.spec.ts` | 5 | ✅ F-25 재검증 — 두 동기화의 공존·탭 전환·보기 모드 |
