@@ -200,6 +200,8 @@ graph LR
 | `tests/releaseNotesUi.test.ts` | 17 | #131 |
 | `tests/release-script.test.ts` | 13 | #131 |
 | `tests/e2e/release.spec.ts` | 9 | #131 |
+| `tests/launchFiles.test.ts` | 12 | #135 |
+| `tests/e2e/fileHandler.spec.ts` | 5 | #135 |
 | `tests/e2e/recentReopen.spec.ts` | 5 | #125 |
 | `tests/e2e/scrolldrift.spec.ts` | 4 | #121 |
 | `tests/editorOverlay.test.ts` | 13 | F-23 잔여 |

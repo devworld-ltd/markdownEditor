@@ -75,6 +75,7 @@
 | F-36 | 최근 파일 목록 (핸들 수명 안내 포함) | `src/recentFiles.ts`, `src/recentFilesUi.ts` | 단위 31 + E2E 12 |
 | F-36+ | 목록에서 고르면 새로고침 뒤에도 바로 열기 (#125) | `src/handleStore.ts` | 단위 23 + E2E 5 |
 | F-75 | 릴리스 노트 · 버전 표시 · GitHub Release 자동화 (#131) | `src/releaseNotes.ts`, `src/releaseNotesUi.ts`, `scripts/release.mjs` | 단위 49 + E2E 9 |
+| F-76 | OS 파일 연결 (Finder "다음으로 열기") — PWA 파일 핸들러 (#135) | `src/launchFiles.ts`, `public/manifest.webmanifest` | 단위 12 + E2E 5 |
 | F-40 | 렌더된 HTML 클립보드 복사 | `src/clipboardExport.ts` | 단위 10 + E2E 7 |
 | F-60 | 공유 링크 (Cloudflare R2) | `worker/index.ts`, `src/shareId.ts`, `src/share.ts` | 단위 42 + E2E 10 |
 | F-67 | dev 환경 커스텀 도메인 | `wrangler.jsonc` | 배포 헬스체크 |

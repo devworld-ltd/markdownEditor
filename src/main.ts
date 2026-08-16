@@ -68,6 +68,7 @@ import { parseRecent } from "./recentFiles";
 import { changelog, version as appVersion } from "virtual:release-notes";
 
 import { parseMarkdown } from "./parser";
+import { initLaunchFiles, type LaunchQueueLike } from "./launchFiles";
 import { initReleaseNotes } from "./releaseNotesUi";
 import { parseChangelog } from "./releaseNotes";
 import { loadSeenVersion, saveSeenVersion } from "./storage";
@@ -714,6 +715,18 @@ if (editorEl && previewEl) {
       }
     });
   }
+
+  // #135: Finder "다음으로 열기" 등 OS 파일 연결로 실행됐으면 그 파일을 연다.
+  //
+  // **탭 시스템이 준비된 뒤여야 한다** — `openFileFromHandle` 이 탭을 만든다.
+  // `launchQueue` 는 소비자가 붙을 때까지 인자를 들고 기다리므로 여기서 등록해도
+  // 늦지 않지만, **등록 자체를 빠뜨리면 조용히 아무 일도 일어나지 않는다**
+  // (사용자는 앱이 빈 문서로 뜨는 것만 본다).
+  initLaunchFiles({
+    queue: (window as unknown as { launchQueue?: LaunchQueueLike }).launchQueue,
+    openHandle: openFileFromHandle,
+    notify: (message, kind) => showNotice(message, kind ?? "info", 6000),
+  });
 
   // F-60: /s/<id> 로 들어왔으면 문서를 가져와 새 탭으로 연다.
   // 실패해도 앱은 정상적으로 떠야 한다 — 흰 화면이 되면 안 된다.

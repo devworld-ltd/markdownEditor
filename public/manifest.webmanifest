@@ -38,5 +38,23 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/markdown": [
+          ".md",
+          ".markdown",
+          ".mdown",
+          ".mkd"
+        ],
+        "text/plain": [
+          ".md",
+          ".markdown",
+          ".txt"
+        ]
+      }
+    }
   ]
 }
