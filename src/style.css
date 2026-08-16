@@ -160,6 +160,13 @@ body {
   background: var(--border-strong);
 }
 
+/* #147: 묶음. 버튼 사이 간격은 좁게, 묶음 사이는 구분선이 벌린다. */
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .toolbar-separator {
   width: 1px;
   height: 20px;
