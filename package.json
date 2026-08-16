@@ -1,6 +1,6 @@
 {
   "name": "markdown-editor",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "브라우저에서 바로 쓰는 바닐라 TypeScript 마크다운 에디터",
   "type": "module",
   "scripts": {
