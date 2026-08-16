@@ -28,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npx playwright test tests/e2e/tabs.spec.ts` | 단일 E2E 파일 |
 | `npm run cf:dev` | 로컬 workerd 런타임으로 `dist/` 서빙 |
 | `npm run deploy:dev` / `deploy:prod` | Cloudflare Workers 배포 |
+| `npm run release` | 커밋 메시지로 다음 버전 계산 + `package.json`·`CHANGELOG.md` 갱신 |
 | `npx wrangler deploy --env dev --dry-run` | 배포 설정 검증 |
 
 ## 아키텍처
@@ -84,6 +85,8 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`recentFiles.ts`** — 최근 파일 목록 계산만 담당하는 순수 리프(F-36).
 - **`handleStore.ts`** — 파일 핸들 보관소(#125). IndexedDB 는 **구조화 복제**라 핸들을 그대로 담는다 — JSON 이 안 되는 것과 다른 이야기다. 권한은 따로이며 **사용자 제스처 안에서만** 물을 수 있다.
 - **`recentFilesUi.ts`** — 최근 파일 `<dialog>`(F-36). 주입형 리프.
+- **`releaseNotes.ts`** — 릴리스 노트 계산(#131). 순수. **버전 비교는 자리별 숫자로** — 사전순이면 `2.10.0 < 2.9.0` 이 되어 큰 갱신에서만 틀린다.
+- **`releaseNotesUi.ts`** — 새 소식 `<dialog>`(#131). 주입형 리프. 본문은 **`parseMarkdown()` 을 거친다**(F-18).
 - **`editorPrefs.ts`** — 편집 글꼴·크기 계산만 담당하는 순수 리프(F-35). **웹폰트 금지** — 네트워크 요청이 없는 앱이고 CSP 가 `font-src 'self' data:` 다.
 - **`editorSettings.ts`** — 편집 설정 `<dialog>`(F-35). 주입형 리프.
 - **`tabOrder.ts`** — 탭 재정렬 인덱스 계산만 담당하는 순수 리프(F-34).
@@ -174,10 +177,13 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 72. **스크롤 동기화는 비율이 아니라 블록 앵커로 맞춘다(#114).** 비율은 값만 비례할 뿐 **보이는 줄이 어긋난다** — 두 패널의 높이 분포가 다르기 때문이다. 앵커 개수가 어긋나면(각주 절처럼) **포기하고 비율로 되돌아간다**; 틀린 대응표는 안 맞추느니만 못하다. 그리고 앵커는 **렌더 뒤 한 번만** 재라 — 스크롤 경로에서 재면 큰 문서가 즉시 느려진다.
 73. **mermaid 라벨은 `htmlLabels: false` 여야 보인다(F-74).** 기본값은 `<foreignObject>` 인데 **DOMPurify 가 그것을 지운다** — 도형만 남고 글자가 사라진다. 그리고 **최상위와 다이어그램별 설정을 모두** 꺼야 한다: `flowchart.htmlLabels` 만 끄면 클러스터 라벨은 나오고 노드 라벨만 사라진다.
 74. **지연 로드 E2E 는 네트워크 리스너를 `goto` 앞에 붙여라.** 뒤에 붙이면 앱 기동 때 나가는 요청을 통째로 놓쳐, 지연 로드를 없애도 통과한다(실제로 그랬다).
-75. **파일 I/O 를 진짜로 검증하려면 목 핸들로는 안 된다(#125).** `installFsMock()` 의 핸들은 **메서드를 가진 평범한 객체**라 구조화 복제가 아예 안 된다(`DataCloneError`) — 그것으로 "핸들을 보관한다" 를 검증하면 통과해도 아무것도 증명하지 못한다. OPFS(`navigator.storage.getDirectory()`)는 **파일 선택 창 없이 실물 핸들**을 주므로 이 전제를 진짜 객체로 확인할 수 있다(`installRealHandleMock()`).
-76. **파일에 쓴 직후 디스크를 한 번만 읽지 말 것.** 쓰기는 스왑 파일을 거쳐 커밋되므로, 알림이 뜬 직후 읽으면 **새 내용 뒤에 옛 꼬리가 남은 중간 상태**가 보인다(실측: 5회 중 2회). 폴링하라 — 트랩 #43(클립보드)과 같은 성격이다.
-77. **세션이 복원해 둔 내용을 "파일이 열렸다" 의 증거로 쓰지 말 것(#125).** 새로고침 뒤 탭에는 같은 글이 이미 들어 있어 `toHaveValue(...)` 가 **곧바로 참**이 된다. 그 상태에서 고쳐 쓰면 새 탭이 뜨며 덮어써 **저장되는 것은 옛 내용**이다(실측: 5회 중 2회). 탭 개수·활성 탭 이름처럼 **파일 열기만이 만드는 변화**를 기다려라.
-78. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
+75. **릴리스 노트를 받아오지 말 것(#131).** `CHANGELOG.md` 는 **빌드 시각에 가상 모듈(`virtual:release-notes`)로 번들에 들어간다.** `fetch("/releases.json")` 하나면 이 앱의 "공유 외 네트워크 요청 0건" 이 깨지고 E2E `SH8` 이 죽는다. 그리고 **커밋되는 생성 `.ts` 로 만들지 말 것** — 재생성을 잊으면 빌드도 테스트도 통과하면서 화면만 옛 내용으로 남는다(트랩 #22 의 아이콘 사고와 같은 구조).
+76. **`addInitScript` 는 내비게이션마다 다시 실행된다.** "한 번만 일어나는 일" 을 검증하는데 초기 상태를 그것으로 심으면, 새로고침할 때 값이 되살아나 **영원히 첫 번째**가 된다(#131 RN6 이 그것 때문에 실패했다). 그런 검증에서는 `page.evaluate()` 로 심고 새로고침하라. 반대로 **`beforeunload` 가 덮어쓰는 값**(세션)은 트랩 #64 대로 `addInitScript` 여야 한다 — 두 경우를 헷갈리지 말 것.
+77. **버전을 올리는 것은 CI 가 아니라 승격 PR 이다(#131).** `main`·`dev` 는 브랜치 보호라 **CI 가 되밀어 push 할 수 없다.** `npm run release` 가 PR 안에서 `package.json`·`CHANGELOG.md` 를 고치고, CI 는 머지된 결과를 읽어 **태그와 GitHub Release 만** 만든다. 그리고 **문서·잡무만 있는 배포는 버전을 올리지 않는다** — 빈 새 소식이 반복되면 사용자가 알림을 무시하게 된다.
+78. **파일 I/O 를 진짜로 검증하려면 목 핸들로는 안 된다(#125).** `installFsMock()` 의 핸들은 **메서드를 가진 평범한 객체**라 구조화 복제가 아예 안 된다(`DataCloneError`) — 그것으로 "핸들을 보관한다" 를 검증하면 통과해도 아무것도 증명하지 못한다. OPFS(`navigator.storage.getDirectory()`)는 **파일 선택 창 없이 실물 핸들**을 주므로 이 전제를 진짜 객체로 확인할 수 있다(`installRealHandleMock()`).
+79. **파일에 쓴 직후 디스크를 한 번만 읽지 말 것.** 쓰기는 스왑 파일을 거쳐 커밋되므로, 알림이 뜬 직후 읽으면 **새 내용 뒤에 옛 꼬리가 남은 중간 상태**가 보인다(실측: 5회 중 2회). 폴링하라 — 트랩 #43(클립보드)과 같은 성격이다.
+80. **세션이 복원해 둔 내용을 "파일이 열렸다" 의 증거로 쓰지 말 것(#125).** 새로고침 뒤 탭에는 같은 글이 이미 들어 있어 `toHaveValue(...)` 가 **곧바로 참**이 된다. 그 상태에서 고쳐 쓰면 새 탭이 뜨며 덮어써 **저장되는 것은 옛 내용**이다(실측: 5회 중 2회). 탭 개수·활성 탭 이름처럼 **파일 열기만이 만드는 변화**를 기다려라.
+81. **F-69 E2E 는 `E2E_PREVIEW=1` 에서만 돈다.** 서비스 워커가 `import.meta.env.PROD` 에서만 등록되기 때문. 이 가드를 테스트용으로 완화하면 원래 막으려던 "고쳤는데 안 바뀌는" 문제가 되살아난다.
 
 ## 테스트
 
@@ -218,6 +224,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 | `src/parser.ts` (marked 옵션 · sanitize 정책) | `docs/architecture/service-architecture.md`, `docs/api/browser-apis.md` §8, `tests/parser.test.ts` |
 | `vite.config.ts` · `wrangler.jsonc` · `.github/workflows/*` | `docs/architecture/infrastructure.md`, `docs/operations/cloudflare-workers.md` |
 | `index.html` (DOM id) | 전 E2E 셀렉터, `docs/architecture/service-architecture.md` |
+| `CHANGELOG.md` · `package.json` 버전 | 앱의 새 소식 화면 · GitHub Release 본문 (둘 다 이 파일에서 파생 — 따로 쓰지 말 것) |
 | 기능 추가/삭제 | `docs/features/feature-status.md` (F-ID 부여, 제거는 🗑 로 남김) |
 | 테스트 변경 | `docs/testing/test-plan.md`, `docs/testing/test-results.md` |
 

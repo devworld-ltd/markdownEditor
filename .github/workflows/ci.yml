@@ -78,3 +78,56 @@ jobs:
         run: |
           URL="${{ github.ref == 'refs/heads/main' && 'https://md-editor.devworld.co.kr' || 'https://md-editor-dev.devworld.co.kr' }}"
           ./scripts/healthcheck.sh "$URL" "${GITHUB_SHA:0:7}"
+
+  # #131: 릴리스 태그 + GitHub Release.
+  #
+  # **배포와 헬스체크가 끝난 뒤에만** 만든다 — 태그는 "이 버전이 서비스되고 있다"
+  # 는 표식이어야 하고, 배포가 실패했는데 태그가 남으면 그 표식이 거짓말을 한다.
+  #
+  # CI 는 커밋을 되밀지 않는다(main 은 브랜치 보호). 버전 올리기와 CHANGELOG 작성은
+  # 승격 PR 안에서 이미 끝나 있고, 여기서는 그 결과를 **읽어서** 태그만 붙인다.
+  release:
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 버전 읽기
+        id: v
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # 이미 있으면 조용히 끝낸다. 문서만 고친 배포는 버전이 그대로라 이 경로로 온다 —
+      # 실패로 다루면 정상 배포마다 빨간 X 가 뜬다.
+      - name: 태그 존재 확인
+        id: tag
+        run: |
+          if git rev-parse "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v${{ steps.v.outputs.version }} 태그가 이미 있습니다 — 새 릴리스를 만들지 않습니다."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # CHANGELOG 의 해당 버전 절만 잘라 릴리스 본문으로 쓴다.
+      # **없으면 실패시킨다** — 빈 릴리스 노트는 없는 것보다 나쁘다(무엇이 바뀌었는지
+      # 알려주겠다고 해 놓고 빈 화면을 보여주는 셈이다).
+      - name: 릴리스 본문 추출
+        if: steps.tag.outputs.exists == 'false'
+        run: |
+          node scripts/changelog-section.mjs "${{ steps.v.outputs.version }}" > /tmp/notes.md
+          echo "--- 릴리스 본문 ---"; cat /tmp/notes.md
+
+      - name: 태그 + GitHub Release 생성
+        if: steps.tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V="v${{ steps.v.outputs.version }}"
+          git tag "$V"
+          git push origin "$V"
+          gh release create "$V" --title "$V" --notes-file /tmp/notes.md --latest
