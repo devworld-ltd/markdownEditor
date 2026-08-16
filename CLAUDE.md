@@ -71,6 +71,7 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`tableFormat.ts`** — 표 계산(F-30). 순수. **표시 폭**(한글·이모지 2칸)으로 파이프를 맞춘다.
 - **`tableUi.ts`** — 표 대화상자(F-30). 커서가 표 안이면 편집, 밖이면 삽입.
 - **`docStats.ts`** — 문서 통계 계산(F-29). 순수. **한국어에서는 "단어" 가 아니라 "어절" 이라고 쓴다** — 공백으로 자른 결과에 정확히 맞는 이름이다.
+- **`saveState.ts`** — 저장 상태 표시(#148). 주입형 리프. **통계와 다른 경로로 갱신한다** — 통계는 150ms 디바운스에 얹혀 있지만 저장 상태는 dirty 가 바뀔 때만 달라진다.
 - **`statusBar.ts`** — 통계 표시(F-29). 주입형 리프.
 - **`imageUpload.ts`** — 이미지 형식·크기·키 검증(F-28). 순수. **Worker 와 브라우저가 함께 쓴다.**
 - **`editorDrop.ts`** — 드롭·붙여넣기(F-28). 주입형 리프. **드롭 처리는 여기 한 곳뿐이다.**
@@ -232,6 +233,7 @@ RUN=$(gh run list --branch main --limit 5 --json databaseId,headSha \
 
 | 변경 대상 | 갱신 문서 |
 |-----------|-----------|
+| `src/tabs.ts` (`renderTabs` · 리스너) | `src/saveState.ts` — `setTabStateListener` 가 dirty·파일명·탭 전환의 단일 통로다 |
 | `src/tabs.ts` (`TabState`) · `src/storage.ts` (세션 스키마) | `docs/architecture/data-model.md`, `docs/architecture/traceability.md` |
 | `src/fileOps.ts` · `src/shortcuts.ts` · `src/notice.ts` | `docs/api/browser-apis.md` |
 | `src/swUpdate.ts` · `public/sw.js` (생명주기) | `docs/architecture/service-architecture.md` §7.2, `docs/api/browser-apis.md` §4.1 |

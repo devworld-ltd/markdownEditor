@@ -7,9 +7,9 @@
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **986** | 0 | 0 | 986 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **431** | **0** | 15 ※ | 446 |
-| **합계 (dev 기준)** | | **1417** | **0** | 15 | 1432 |
+| 단위 | Vitest 4.1.10 (jsdom) | **995** | 0 | 0 | 995 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **439** | **0** | 15 ※ | 454 |
+| **합계 (dev 기준)** | | **1434** | **0** | 15 | 1449 |
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 
@@ -83,6 +83,7 @@
 | `recentReopen.spec.ts` | 5 | ✅ #125 최근 목록에서 바로 열기 — OPFS 실물 핸들 |
 | `release.spec.ts` | 9 | ✅ #131 릴리스 노트 — 번들 포함·자동 표시·네트워크 무증가 |
 | `fileHandler.spec.ts` | 5 | ✅ #135 PWA 파일 핸들러 — 매니페스트 선언·launchQueue 배선 |
+| `saveState.spec.ts` | 8 | ✅ #148 저장 상태 — 입력·저장·탭 전환 연동, aria-live 부재 |
 | `tokens.spec.ts` | 11 | ✅ #146 디자인 토큰 — 양쪽 모드 정의·AA 대비·명도 계단 |
 | `manual.spec.ts` | 8 | ✅ #141 사용 설명서 — 번들 포함·렌더·헤더 고정·네트워크 무증가 |
 | `scrolldrift.spec.ts` | 4 | ✅ #121 각주 문서 스크롤 어긋남 — 오차 ≤ 5px |
