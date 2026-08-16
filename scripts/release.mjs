@@ -41,9 +41,40 @@ function git(...args) {
   }
 }
 
-/** 가장 최근 `v*` 태그. 없으면 `null` — 첫 릴리스다. */
+/**
+ * 태그 목록에서 **가장 높은 버전**을 고른다.
+ *
+ * `git describe` 를 쓰면 안 된다 — 그것은 **HEAD 의 조상**에 붙은 태그만 본다.
+ * 이 저장소는 태그를 `main` 의 머지 커밋에 붙이고 릴리스 계산은 `dev` 에서 하므로,
+ * 태그가 dev HEAD 의 조상이 아니다. 그래서 `describe` 는 **영영 아무것도 못 찾고**,
+ * 그러면 전체 이력을 훑어 이미 릴리스된 것까지 CHANGELOG 에 다시 싣는다
+ * (실측: v2.1.0 이 있는데도 "기준 태그: 없음 · 커밋 91건").
+ *
+ * 순수 함수로 분리한 이유는 **정렬이 틀리기 쉬워서**다 — 사전순이면
+ * `v2.10.0 < v2.9.0` 이 되어 큰 갱신에서만 조용히 틀린다.
+ */
+export function pickLatestTag(tags) {
+  const parsed = [];
+  for (const raw of tags) {
+    const t = String(raw ?? "").trim();
+    const m = /^v(\d+)\.(\d+)\.(\d+)$/.exec(t);
+    if (m) parsed.push({ tag: t, nums: [+m[1], +m[2], +m[3]] });
+  }
+  if (parsed.length === 0) return null;
+
+  parsed.sort((a, b) => {
+    for (let i = 0; i < 3; i += 1) {
+      if (a.nums[i] !== b.nums[i]) return b.nums[i] - a.nums[i];
+    }
+    return 0;
+  });
+  return parsed[0].tag;
+}
+
+/** 가장 높은 `v*` 태그. 없으면 `null` — 첫 릴리스다. */
 function lastTag() {
-  return git("describe", "--tags", "--abbrev=0", "--match", "v*") || null;
+  // `--sort` 에 기대지 않고 직접 고른다 — git 버전에 따라 `v:refname` 지원이 다르다.
+  return pickLatestTag(git("tag", "--list", "v*").split("\n"));
 }
 
 function commitsSince(tag) {
@@ -134,6 +165,12 @@ export function insertSection(changelog, section) {
 function main() {
   const pkg = JSON.parse(readFileSync(PKG, "utf-8"));
   const tag = lastTag();
+  if (!tag) {
+    console.log(
+      "[release] 경고: `v*` 태그가 하나도 없습니다 — 전체 이력을 기준으로 계산합니다.\n" +
+        "          이미 릴리스한 적이 있다면 `git fetch --tags` 후 다시 실행하세요.",
+    );
+  }
   const commits = commitsSince(tag);
   const bump = decideBump(commits);
 
