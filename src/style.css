@@ -658,6 +658,50 @@ body {
   gap: 12px;
 }
 
+/* #148 저장 상태. **색만으로 알리지 않는다** — 아이콘·글자가 함께 있고,
+   색은 그 위에 얹는 보조 신호다. */
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.save-state[hidden] {
+  display: none;
+}
+
+.save-state-icon {
+  font-size: 9px;
+  line-height: 1;
+}
+
+.save-state[data-status="saved"] .save-state-icon {
+  color: var(--status-ok);
+}
+
+.save-state[data-status="dirty"] .save-state-icon {
+  color: var(--status-warn);
+}
+
+.save-state[data-status="unsaved"] .save-state-icon {
+  color: var(--text-faint);
+}
+
+.save-state-name {
+  color: var(--text-muted);
+}
+
+.save-state-name::before {
+  content: "·";
+  margin-right: 6px;
+  color: var(--text-faint);
+}
+
+.save-state-name[hidden] {
+  display: none;
+}
+
 .status-stats {
   flex: 1;
   text-align: right;

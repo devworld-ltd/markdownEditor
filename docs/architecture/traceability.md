@@ -204,6 +204,8 @@ graph LR
 | `tests/manualView.test.ts` | 11 | #141 |
 | `tests/e2e/manual.spec.ts` | 8 | #141 |
 | `tests/e2e/tokens.spec.ts` | 11 | #146 |
+| `tests/saveState.test.ts` | 9 | #148 |
+| `tests/e2e/saveState.spec.ts` | 8 | #148 |
 | `tests/release-script.test.ts` (pickLatestTag) | 6 | #137 |
 | `tests/e2e/fileHandler.spec.ts` | 5 | #135 |
 | `tests/e2e/recentReopen.spec.ts` | 5 | #125 |

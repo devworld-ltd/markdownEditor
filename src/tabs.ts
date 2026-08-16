@@ -77,6 +77,22 @@ export function setTabRenderListener(listener: (() => void) | null): void {
   tabRenderListener = listener;
 }
 
+/**
+ * 탭 **상태**가 바뀔 때마다 부른다 (#148).
+ *
+ * `setTabRenderListener` 와 다른 이유: 그쪽은 **문서가 통째로 바뀌는** 시점
+ * (탭 전환)에만 필요한 무거운 갱신(줄 번호·앵커·mermaid)을 위한 것이다. 저장
+ * 상태는 dirty 가 바뀔 때마다 갱신돼야 하는데 그때마다 앵커를 다시 재면 낭비다.
+ *
+ * `renderTabs()` 가 dirty 변경·파일명 변경·탭 전환의 **단일 통로**라 여기 한 곳에
+ * 걸면 전부 잡힌다.
+ */
+let tabStateListener: (() => void) | null = null;
+
+export function setTabStateListener(listener: (() => void) | null): void {
+  tabStateListener = listener;
+}
+
 /** main.ts 가 주입한다. 주입하지 않으면 전 경로가 무동작이다(기존 동작 그대로). */
 export function setScrollSyncHooks(hooks: TabScrollSyncHooks): void {
   scrollSyncHooks = hooks;
@@ -433,6 +449,8 @@ function renderTabs(): void {
 
     tabBarEl.appendChild(el);
   }
+
+  tabStateListener?.();
 }
 
 function updateTitle(): void {
