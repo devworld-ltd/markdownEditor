@@ -127,3 +127,101 @@ test("MB10: 좁은 화면에서 보기 모드 순환은 분할을 건너뛴다",
   await page.keyboard.press("Alt+KeyM");
   await expect(page.locator(".editor-container")).toHaveAttribute("data-mode", "editor");
 });
+
+/**
+ * #155 좁은 화면 서식 바.
+ *
+ * **가상 키보드 대응은 여기서 검증되지 않는다** — 헤드리스 브라우저에는 키보드가
+ * 없다. 계산 규칙은 `tests/virtualKeyboard.test.ts` 가, 실기기 확인은 이슈 댓글의
+ * 절차가 맡는다.
+ */
+
+test("KB1: 좁은 화면·편집 모드에서 서식 바가 보인다", async ({ page }) => {
+  const bar = page.locator("#format-bar");
+  await expect(bar).toBeVisible();
+  await expect(bar.locator(".format-btn")).toHaveCount(8);
+  // 화면 아래에 붙어야 엄지가 닿는다.
+  const box = (await bar.boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(box.y + box.height).toBeCloseTo(viewport.height, -1);
+});
+
+test("KB2: 서식 버튼이 툴바와 같은 결과를 낸다", async ({ page }) => {
+  await page.locator("#editor").click();
+  await page.locator("#editor").fill("가나다");
+  await page.locator("#editor").evaluate((el: HTMLTextAreaElement) => {
+    el.focus();
+    el.setSelectionRange(0, 3);
+  });
+
+  await page.locator('#format-bar [data-action="Bold"]').click();
+
+  await expect(page.locator("#editor")).toHaveValue("**가나다**");
+});
+
+test("KB3: 서식 삽입이 Cmd/Ctrl+Z 로 되돌아간다", async ({ page }) => {
+  await page.locator("#editor").click();
+  await page.locator("#editor").fill("가나다");
+  await page.locator("#editor").evaluate((el: HTMLTextAreaElement) => {
+    el.focus();
+    el.setSelectionRange(0, 3);
+  });
+  await page.locator('#format-bar [data-action="Bold"]').click();
+  await expect(page.locator("#editor")).toHaveValue("**가나다**");
+
+  // `execCommand("insertText")` 를 유지해야만 되돌아온다 (트랩 #27).
+  await page.locator("#editor").focus();
+  await page.keyboard.press("ControlOrMeta+z");
+
+  await expect(page.locator("#editor")).toHaveValue("가나다");
+});
+
+test("KB4: 넓은 화면에서는 서식 바가 없다 — 툴바와 중복이다", async ({ page }) => {
+  await page.setViewportSize(WIDE);
+  await expect(page.locator("#format-bar")).toBeHidden();
+});
+
+test("KB5: 미리보기 모드에서는 서식 바가 사라진다 — 넣을 곳이 없다", async ({ page }) => {
+  await expect(page.locator("#format-bar")).toBeVisible();
+  await page.locator('#view-segment [data-mode="preview"]').click();
+  await expect(page.locator("#format-bar")).toBeHidden();
+});
+
+test("KB6: 서식 바가 편집 영역을 가리지 않는다", async ({ page }) => {
+  const editor = (await page.locator("#editor-pane").boundingBox())!;
+  const bar = (await page.locator("#format-bar").boundingBox())!;
+  // 편집 영역의 아래 끝이 서식 바 위쪽보다 위여야 한다.
+  expect(editor.y + editor.height).toBeLessThanOrEqual(bar.y + 1);
+});
+
+test("KB7: 버튼을 눌러도 편집기 포커스와 선택이 유지된다", async ({ page }) => {
+  await page.locator("#editor").click();
+  await page.locator("#editor").fill("가나다라");
+  await page.locator("#editor").evaluate((el: HTMLTextAreaElement) => {
+    el.focus();
+    el.setSelectionRange(0, 2);
+  });
+
+  await page.locator('#format-bar [data-action="Italic"]').click();
+
+  // 포커스를 잃으면 선택이 사라져 서식이 엉뚱한 곳에 들어가고, 모바일에서는
+  // 키보드까지 내려간다.
+  await expect(page.locator("#editor")).toBeFocused();
+  await expect(page.locator("#editor")).toHaveValue("*가나*다라");
+});
+
+test("KB8: 버튼의 pointerdown 이 취소된다 — 눌러도 키보드가 내려가지 않는 근거", async ({
+  page,
+}) => {
+  // 실기기에서 포커스를 잃으면 **가상 키보드가 내려간다.** 헤드리스에는 키보드가
+  // 없어 그 결과를 볼 수 없으므로, 트랩 #38(dragover)과 같은 방법으로 **이벤트가
+  // 취소됐는지 자체**를 본다.
+  const cancelled = await page
+    .locator('#format-bar [data-action="Bold"]')
+    .evaluate((el) => {
+      const event = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
+      el.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+  expect(cancelled).toBe(true);
+});

@@ -63,6 +63,7 @@ import { initEditorOverlay } from "./editorOverlay";
 import { initMermaidView, type MermaidLike } from "./mermaidView";
 import { initStatusBar } from "./statusBar";
 import { initCaretStatus } from "./caretStatus";
+import { initFormatBar } from "./formatBar";
 import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
@@ -506,6 +507,18 @@ if (editorEl && previewEl) {
 
   // 폭이 경계를 넘나들면 다시 그린다 — 안 그리면 넓혔을 때 편집 전용으로 남는다.
   narrowQuery.addEventListener("change", () => viewMode?.refresh());
+
+  // #155 좁은 화면 서식 바. 보이고 숨는 것은 CSS 가 정한다 — 폭과 보기 모드
+  // 조건이 이미 CSS 에 있으므로 JS 에 같은 조건을 한 벌 더 두지 않는다.
+  const formatBarEl = document.querySelector<HTMLElement>("#format-bar");
+  if (formatBarEl) {
+    initFormatBar({
+      barEl: formatBarEl,
+      editorEl,
+      viewport: window.visualViewport,
+      windowHeight: () => window.innerHeight,
+    });
+  }
 
   // F-35: 툴바가 버튼을 만든 뒤라야 #settings 관련 요소를 찾을 수 있다(F-33 과 같은 이유).
   const settingsDialogEl = document.querySelector<HTMLDialogElement>("#editor-settings");
