@@ -223,8 +223,8 @@ E2E_BASE_URL=https://md-editor.devworld.co.kr npx playwright test \
 
 ```bash
 npm install
-npm test              # 단위 1010건
-npm run test:e2e      # E2E 465건 (dev 서버 자동 기동)
+npm test              # 단위 1023건
+npm run test:e2e      # E2E 456건 (dev 서버 자동 기동)
 npm run test:coverage # 커버리지
 npx tsc --noEmit
 npx wrangler deploy --env dev --dry-run
