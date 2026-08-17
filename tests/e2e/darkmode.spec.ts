@@ -142,7 +142,10 @@ test.describe("F-57 다크 모드", () => {
   });
 
   test("D6: 720px 이하 상하 분할에서도 다크 구분과 2px 경계가 유지된다", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
+    // #154 이후 **520px 이하에는 분할이 없다**(세그먼트로 바뀐다). 상하 분할이
+    // 살아 있는 구간에서 재야 한다 — 375 로 두면 리사이저가 아예 없어
+    // 높이가 0 으로 나온다.
+    await page.setViewportSize({ width: 700, height: 812 });
 
     const result = await page.evaluate(() => {
       const editor = getComputedStyle(document.querySelector("#editor")!);

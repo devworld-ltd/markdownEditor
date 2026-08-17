@@ -139,7 +139,9 @@ test("P8: 비율을 바꿔도 편집 위치가 움직이지 않는다 (F-25 경�
 });
 
 test("P9: 720px 이하에서는 세로 방향으로 동작한다", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
+  // #154 이후 **520px 이하에는 분할이 없다** — 세로 분할이 살아 있는 구간
+  // (521~720px)에서 잰다.
+  await page.setViewportSize({ width: 700, height: 812 });
 
   const before = await page.locator("#editor-pane").boundingBox();
   const box = (await page.locator(RESIZER).boundingBox())!;
