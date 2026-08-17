@@ -404,6 +404,10 @@ export function initToolbar(
         groupEl.className = "toolbar-group";
         groupEl.setAttribute("role", "group");
         groupEl.setAttribute("aria-label", group);
+        // #154: 좁은 화면에서 묶음 단위로 접기 위한 표식. 이름으로 CSS 가 고른다.
+        groupEl.dataset.group = group;
+        // #154: 좁은 화면에서 묶음 단위로 접기 위한 표식. 이름으로 CSS 가 고른다.
+
         container.appendChild(groupEl);
       }
     }

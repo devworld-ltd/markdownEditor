@@ -489,14 +489,23 @@ if (editorEl && previewEl) {
   }
 
   // 모드는 분할 비율과 독립이다 — 모드를 되돌리면 맞춰 둔 비율이 그대로 돌아온다.
+  // #154: 좁은 화면에서는 분할이 의미가 없어 **표시만** 편집/미리보기로 접힌다.
+  // 저장하는 값은 그대로라 상태가 두 벌이 되지 않는다.
+  // 경계가 720 이 아니라 520 인 이유는 `style.css` 의 #154 절에 적혀 있다.
+  const narrowQuery = window.matchMedia("(max-width: 520px)");
   const viewMode = editorContainerEl
     ? initViewMode({
         containerEl: editorContainerEl,
         buttonEl: document.querySelector<HTMLElement>("#view-mode") ?? undefined,
+        segmentEl: document.querySelector<HTMLElement>("#view-segment"),
+        isNarrow: () => narrowQuery.matches,
         loadMode: () => parseViewMode(loadViewMode()),
         saveMode: saveViewMode,
       })
     : null;
+
+  // 폭이 경계를 넘나들면 다시 그린다 — 안 그리면 넓혔을 때 편집 전용으로 남는다.
+  narrowQuery.addEventListener("change", () => viewMode?.refresh());
 
   // F-35: 툴바가 버튼을 만든 뒤라야 #settings 관련 요소를 찾을 수 있다(F-33 과 같은 이유).
   const settingsDialogEl = document.querySelector<HTMLDialogElement>("#editor-settings");
