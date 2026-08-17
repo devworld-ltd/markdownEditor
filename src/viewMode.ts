@@ -31,10 +31,29 @@ export function parseViewMode(raw: unknown): ViewMode {
   return VIEW_MODES.includes(raw as ViewMode) ? (raw as ViewMode) : DEFAULT_MODE;
 }
 
-/** 다음 모드. 분할 → 에디터 → 프리뷰 → 분할. */
-export function nextViewMode(mode: ViewMode): ViewMode {
+/**
+ * 다음 모드. 분할 → 에디터 → 프리뷰 → 분할.
+ *
+ * **좁은 화면(#154)에서는 분할을 건너뛴다** — 390px 에서 위아래로 나누면 양쪽 다
+ * 너무 얕아 쓸 수 없다. 순환에서 빼는 것이지 **저장하는 값을 따로 두는 것이
+ * 아니다** — 상태는 하나다.
+ */
+export function nextViewMode(mode: ViewMode, narrow = false): ViewMode {
+  if (narrow) return effectiveViewMode(mode, true) === "editor" ? "preview" : "editor";
   const index = VIEW_MODES.indexOf(mode);
   return VIEW_MODES[(index + 1) % VIEW_MODES.length];
+}
+
+/**
+ * 화면 폭까지 셈한 **실제로 보여 줄** 모드.
+ *
+ * 저장된 값은 그대로 두고 **표시만** 좁은 화면 규칙을 따른다. 좁은 화면 전용
+ * 상태를 따로 만들면 넓은 화면과 두 벌이 되어, 한쪽만 갱신되는 사고가 난다
+ * (트랩 #21 의 레이아웃 버전).
+ */
+export function effectiveViewMode(mode: ViewMode, narrow: boolean): ViewMode {
+  if (!narrow) return mode;
+  return mode === "split" ? "editor" : mode;
 }
 
 const MODE_LABEL: Record<ViewMode, string> = {
@@ -52,6 +71,14 @@ export interface ViewModeHost {
   /** `.editor-container` — `data-mode` 가 여기 붙는다. */
   containerEl: HTMLElement;
   /**
+   * 좁은 화면 세그먼트(#154). 두 버튼(`data-mode="editor"|"preview"`)이 들어 있고
+   * 이 모듈이 클릭과 `aria-pressed` 를 맡는다 — 툴바 버튼과 달리 **세그먼트는
+   * 툴바가 다루지 않으므로** 여기서 들어야 한다.
+   */
+  segmentEl?: HTMLElement | null;
+  /** 지금 좁은 화면인가. 앱은 `matchMedia` 를 넘긴다. */
+  isNarrow?: () => boolean;
+  /**
    * 상태를 표시할 툴바 버튼. **클릭 처리는 하지 않는다** — 툴바가 이미 모든
    * 버튼의 클릭을 다루므로 여기서도 듣게 하면 한 번 눌러 두 단계 넘어간다
    * (실제로 그렇게 동작했다). 이 모듈은 `aria-*` 갱신만 맡는다.
@@ -62,15 +89,22 @@ export interface ViewModeHost {
 }
 
 export interface ViewModeController {
+  /** 저장된 값. */
   get(): ViewMode;
+  /** 화면 폭까지 셈한 실제 표시 모드. */
+  effective(): ViewMode;
   set(mode: ViewMode): void;
   cycle(): void;
+  /** 화면 폭이 바뀌었을 때 다시 그린다. */
+  refresh(): void;
 }
 
 const noopController: ViewModeController = {
   get: () => DEFAULT_MODE,
+  effective: () => DEFAULT_MODE,
   set() {},
   cycle() {},
+  refresh() {},
 };
 
 let initialized = false;
@@ -85,19 +119,36 @@ export function initViewMode(host: ViewModeHost): ViewModeController {
     const { containerEl } = host;
     let mode: ViewMode = parseViewMode(host.loadMode?.() ?? DEFAULT_MODE);
 
+    function narrow(): boolean {
+      try {
+        return host.isNarrow?.() ?? false;
+      } catch {
+        return false;
+      }
+    }
+
     function paint(): void {
-      containerEl.dataset.mode = mode;
+      const shown = effectiveViewMode(mode, narrow());
+      // **CSS 가 나머지를 한다.** 요소를 지우거나 다시 만들면 스크롤·선택·
+      // 포커스가 날아간다.
+      containerEl.dataset.mode = shown;
       if (host.buttonEl) {
-        host.buttonEl.setAttribute("aria-label", modeButtonLabel(mode));
-        host.buttonEl.setAttribute("title", MODE_LABEL[mode]);
+        host.buttonEl.setAttribute("aria-label", modeButtonLabel(shown));
+        host.buttonEl.setAttribute("title", MODE_LABEL[shown]);
         // 분할이 아닐 때만 "켜짐" 이다 — 기본 상태를 눌린 것으로 표시하면
         // 스크린리더 사용자가 늘 뭔가 켜져 있다고 오해한다.
-        host.buttonEl.setAttribute("aria-pressed", String(mode !== "split"));
+        host.buttonEl.setAttribute("aria-pressed", String(shown !== "split"));
+      }
+      if (host.segmentEl) {
+        for (const btn of host.segmentEl.querySelectorAll<HTMLElement>("[data-mode]")) {
+          btn.setAttribute("aria-pressed", String(btn.dataset.mode === shown));
+        }
       }
     }
 
     const controller: ViewModeController = {
       get: () => mode,
+      effective: () => effectiveViewMode(mode, narrow()),
       set(next) {
         mode = parseViewMode(next);
         paint();
@@ -108,9 +159,16 @@ export function initViewMode(host: ViewModeHost): ViewModeController {
         }
       },
       cycle() {
-        controller.set(nextViewMode(mode));
+        controller.set(nextViewMode(mode, narrow()));
       },
+      refresh: () => paint(),
     };
+
+    host.segmentEl?.addEventListener("click", (event) => {
+      const btn = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-mode]");
+      if (!btn?.dataset.mode) return;
+      controller.set(parseViewMode(btn.dataset.mode));
+    });
 
     paint();
     initialized = true; // 성공 경로에서만 잠근다

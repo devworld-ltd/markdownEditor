@@ -105,7 +105,7 @@ test.describe("F-72 편집/프리뷰 시각 구분", () => {
   test("E1 엣지: 너비 375px(720px 이하)에서는 가로 경계로 전환되지만 색 관계는 그대로다", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
+    await page.setViewportSize({ width: 700, height: 812 });
 
     const editor = await page.locator("#editor").evaluate((el) => ({
       bg: getComputedStyle(el).backgroundColor,
@@ -291,7 +291,7 @@ test.describe("F-25 스크롤 동기화", () => {
   });
 
   test("E5: 타이핑으로 미리보기가 다시 그려져도 스크롤 위치가 유지된다", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 }); // §10.0: E5 만 375x812
+    await page.setViewportSize({ width: 700, height: 812 }); // §10.0: E5 만 좁은 화면 (#154 이후 분할이 살아 있는 700px)
     const issues = watchConsoleIssues(page);
     const editor = page.locator("#editor");
 

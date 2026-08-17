@@ -258,6 +258,7 @@ graph LR
 | `docs/manual.md` (`##` 절 증감) | 차례가 자동 생성된다 — `tests/e2e/manual.spec.ts` MT1 이 개수 일치를 단언 |
 | `src/sourceLines.ts` (`lineStartOffsets`) | `src/caretStatus.ts`(#152) 가 재사용 — 새 파서를 만들지 말 것 |
 | `src/notice.ts` (`kind` 종류 증감) | `src/style.css` 상태 막대 색, `tests/e2e/visualStyle.spec.ts` VS1 (종류 수 단언) |
+| `src/toolbar.ts` (묶음 이름 변경) | `src/style.css` 의 `.toolbar-group[data-group=…]` 좁은 화면 축약(#154) |
 | `src/textEdit.ts` (감싸기·줄머리·블록 삽입 계산) | `tests/textEdit.test.ts`, `tests/e2e/toolbar.spec.ts` (동작 회귀 게이트) |
 | `src/shortcutDefs.ts` (단축키 추가/변경) | [서비스 아키텍처 §7.4](./service-architecture.md) — 안내 UI 는 **자동 반영**된다. `shortcuts.ts` 의 디스패치 누락은 타입 오류로 걸린다 |
 | `src/shortcuts.ts` | [API 명세 §5](../api/browser-apis.md#5-키보드-단축키), [사용자 시나리오](../user-scenarios.md), README 단축키 표 |
