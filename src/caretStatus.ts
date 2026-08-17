@@ -21,6 +21,14 @@ import { lineStartOffsets } from "./sourceLines";
 export interface CaretStatusHost {
   barEl: HTMLElement;
   editorEl: HTMLTextAreaElement;
+  /**
+   * 줄 시작 오프셋을 만든다. 기본값은 `sourceLines.lineStartOffsets`.
+   *
+   * **주입 경계인 이유는 캐시를 셀 방법이 그것뿐이라서다**(#177). 모듈을 통째로
+   * 목(mock)하면 테스트가 모듈 패치에 의존하게 된다 — 트랩 #15 가 경계하는 것과
+   * 같은 성격이다.
+   */
+  lineStarts?: (text: string) => number[];
 }
 
 export interface CaretStatusController {
@@ -42,6 +50,7 @@ export function initCaretStatus(host: CaretStatusHost): CaretStatusController {
 
   try {
     const { barEl, editorEl } = host;
+    const computeStarts = host.lineStarts ?? lineStartOffsets;
 
     /**
      * 마지막으로 배열을 만든 본문. 같으면 다시 만들지 않는다.
@@ -58,7 +67,7 @@ export function initCaretStatus(host: CaretStatusHost): CaretStatusController {
     function starts(value: string): number[] {
       if (cachedText === value) return cachedStarts;
       cachedText = value;
-      cachedStarts = lineStartOffsets(value);
+      cachedStarts = computeStarts(value);
       return cachedStarts;
     }
 
