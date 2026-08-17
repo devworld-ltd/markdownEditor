@@ -47,6 +47,13 @@ const ITEMS: ReadonlyArray<{ label: string; text: string }> = [
 export interface FormatBarHost {
   barEl: HTMLElement;
   editorEl: HTMLTextAreaElement;
+  /**
+   * 놓을 항목. 기본값은 아래 `ITEMS`.
+   *
+   * **주입 경계인 이유는 "없는 이름은 그 버튼만 조용히 빠진다" 를 확인할 방법이
+   * 그것뿐이라서다**(#177).
+   */
+  items?: ReadonlyArray<{ label: string; text: string }>;
   /** `window.visualViewport`. 없는 브라우저면 키보드 보정을 하지 않는다. */
   viewport?: (VisualViewport & ViewportMetrics) | null;
   /** `window.innerHeight` 를 읽는다. 테스트가 갈아끼운다. */
@@ -75,7 +82,7 @@ export function initFormatBar(host: FormatBarHost): FormatBarController {
     let shown = 0;
     let currentInset = 0;
 
-    for (const item of ITEMS) {
+    for (const item of host.items ?? ITEMS) {
       const action = toolbarActionByLabel(item.label);
       // 이름이 바뀌면 그 버튼만 빠진다 — 앱 전체가 죽는 것보다 낫고, `count()`
       // 로 드러난다.
@@ -87,11 +94,16 @@ export function initFormatBar(host: FormatBarHost): FormatBarController {
       btn.dataset.action = item.label;
       btn.textContent = item.text;
       btn.setAttribute("aria-label", item.text);
-      // **누르는 순간 편집기가 포커스를 잃으면 안 된다.** 잃으면 선택이 사라져
-      // 서식이 엉뚱한 곳에 들어가고, 모바일에서는 키보드까지 내려간다.
+      // **누르는 순간 편집기가 포커스를 잃으면 안 된다** — 실기기에서 가상
+      // 키보드가 내려간다. (선택 자체는 포커스를 잃어도 남으므로 그것까지
+      // 이유로 적지 않는다 — 근거 없는 이유를 적으면 다음 사람이 믿는다.)
       btn.addEventListener("pointerdown", (event) => event.preventDefault());
       btn.addEventListener("click", () => {
-        editorEl.focus();
+        // **여기서 `editorEl.focus()` 를 부르지 않는다.** 서식 액션들이
+        // (`wrapSelection`·`insertAtLineStart`·`insertBlock`) 이미 자기 안에서
+        // 편집기에 포커스를 준다 — `execCommand` 가 포커스 없이는 조용히
+        // 아무것도 안 하기 때문이다. 여기서 한 번 더 부르면 **어떤 테스트도
+        // 구별하지 못하는 배선**이 되어, 다음 사람이 필요하다고 믿게 된다.
         runToolbarAction(action, editorEl);
       });
       barEl.appendChild(btn);
