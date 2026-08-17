@@ -1,6 +1,6 @@
 # 테스트 실행 결과
 
-> 실행일: 2026-08-12 · 대상: 웹 전환 (v2.0.0)
+> 실행일: 2026-08-17 · 대상: v2.6.0
 > 환경: macOS 25.5.0 / Node v26.7.0 / Chromium (Playwright 1.62.1) / Vite dev server `http://127.0.0.1:5173`
 
 ## 1. 종합
@@ -223,8 +223,8 @@ E2E_BASE_URL=https://md-editor.devworld.co.kr npx playwright test \
 
 ```bash
 npm install
-npm test              # 단위 1068건
-npm run test:e2e      # E2E 497건 (dev 서버 자동 기동)
+npm test              # 단위 1070건
+npm run test:e2e      # E2E 512건 (dev 서버 자동 기동)
 npm run test:coverage # 커버리지
 npx tsc --noEmit
 npx wrangler deploy --env dev --dry-run
