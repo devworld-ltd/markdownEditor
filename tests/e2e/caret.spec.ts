@@ -43,9 +43,16 @@ test("CP3: 입력하면 곧바로 따라온다 — 렌더 디바운스를 기다
   await page.locator("#editor").click();
   await page.locator("#editor").pressSequentially("가나다");
 
-  // 디바운스(150ms)에 얹혀 있으면 이 시점에는 아직 이전 값이다.
-  const text = await page.locator(CARET).textContent();
-  expect(text).toBe("1행 4열");
+  /**
+   * **한 번만 읽지 말 것.** `selectionchange` 는 작업(task)으로 큐에 들어가므로
+   * 마지막 입력 직후의 단 한 번 읽기는 도착 전일 수 있다 — 실제로 로컬에서는
+   * 통과하고 prod 검증에서만 실패했다(그리고 다시 돌리면 로컬에서도 실패했다).
+   *
+   * 그렇다고 여유를 넉넉히 주면 **150ms 렌더 디바운스에 얹어도 통과**해 이
+   * 테스트가 지키려는 것이 사라진다(트랩 #68). 그래서 **디바운스보다 짧은
+   * 100ms 안에** 도착하는지를 본다.
+   */
+  await expect(page.locator(CARET)).toHaveText("1행 4열", { timeout: 100 });
 });
 
 test("CP4: 큰 문서(10만 자)에서도 캐럿을 옮기는 동안 멈추지 않는다", async ({ page }) => {
