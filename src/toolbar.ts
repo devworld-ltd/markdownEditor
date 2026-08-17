@@ -360,6 +360,17 @@ export function overflowActions(): ToolbarAction[] {
  * `editsText` 재발행을 팝오버가 빠뜨리면 서식은 들어가는데 프리뷰가 안 따라온다 —
  * 그래서 실행 경로를 하나로 둔다.
  */
+/**
+ * 이름으로 툴바 액션을 찾는다 (#155).
+ *
+ * 좁은 화면의 서식 바가 **툴바와 같은 액션을 그대로 실행**하기 위한 통로다.
+ * 서식 계산을 다시 구현하면 두 경로가 갈라지고, 한쪽만 고치는 순간 좁은 화면에서만
+ * 다른 결과가 나온다.
+ */
+export function toolbarActionByLabel(label: string): ToolbarAction | undefined {
+  return actions.find((a) => a.label === label);
+}
+
 export function runToolbarAction(action: ToolbarAction, textarea: HTMLTextAreaElement): void {
   action.action(textarea);
   if (action.editsText) {

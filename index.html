@@ -131,6 +131,10 @@
       <!-- `id="status-bar"` 는 랜드마크(contentinfo)이자 인쇄 숨김·CSS 의 기준이므로
            그대로 둔다. 통계 텍스트만 안쪽 `#status-stats` 로 옮겼다 — 통계 갱신이
            `textContent` 대입이라, 같은 요소에 버튼을 두면 매 입력마다 지워진다. -->
+      <!-- #155 좁은 화면 서식 바. 편집 중일 때만 보이고, 가상 키보드가 올라오면
+           그 위로 올라간다. 버튼은 툴바와 **같은 액션**을 실행한다. -->
+      <div id="format-bar" class="format-bar" role="toolbar" aria-label="서식 넣기"></div>
+
       <footer id="status-bar" class="status-bar">
         <!-- #148 저장 상태. **색만으로 알리지 않는다** — 아이콘과 글자를 함께 둔다.
              `aria-live` 는 붙이지 않는다(트랩 #56): 글자를 칠 때마다 스크린리더가
