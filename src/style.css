@@ -1772,3 +1772,60 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* #151 사용 설명서 차례. 왼쪽 차례 + 오른쪽 본문, 스크롤은 본문만 한다. */
+.manual-layout {
+  display: flex;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.manual-toc {
+  flex: 0 0 200px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-strong);
+  background: var(--surface-tabbar);
+  padding: 12px 0;
+}
+
+.manual-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.manual-toc-link {
+  display: block;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.manual-toc-link:hover {
+  color: var(--text);
+  background: var(--surface-editor);
+}
+
+.manual-toc-link[aria-current="true"] {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* 좁은 화면에서는 위아래로 쌓는다. 옆으로 두면 본문이 읽을 수 없게 좁아진다. */
+@media (max-width: 720px) {
+  .manual-layout {
+    flex-direction: column;
+  }
+
+  .manual-toc {
+    flex: 0 0 auto;
+    max-height: 30%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-strong);
+  }
+}

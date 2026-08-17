@@ -21,9 +21,13 @@
  * 주입형 리프다.
  */
 
+import { activeIndexAtScroll, buildToc } from "./manualToc";
+
 export interface ManualHost {
   dialogEl: HTMLDialogElement;
   bodyEl: HTMLElement;
+  /** 차례가 들어갈 곳 (#151). 없으면 차례 없이 예전처럼 동작한다. */
+  tocEl?: HTMLElement | null;
   closeEl: HTMLElement;
   /** `docs/manual.md` 원문 (빌드 시각 주입). */
   markdown: string;
@@ -76,7 +80,74 @@ export function initManual(host: ManualHost): ManualController {
       }
       // 정화 경로는 하나뿐이다 (F-18). 직접 조립하지 말 것.
       bodyEl.innerHTML = host.render(markdown);
+      buildTocFromBody();
       rendered = true;
+    }
+
+    /** 차례 항목 ↔ 본문 제목. 강조를 갱신할 때 쓴다. */
+    let links: HTMLAnchorElement[] = [];
+    let headings: HTMLElement[] = [];
+
+    /**
+     * **그려진 본문에서** 차례를 만든다.
+     *
+     * 원문을 다시 파싱하지 않는다 — 두 번째 경로가 생기면 정화 정책이 갈라지고,
+     * 차례와 본문의 절 목록이 서로 다를 수 있게 된다.
+     */
+    function buildTocFromBody(): void {
+      const tocEl = host.tocEl;
+      if (!tocEl) return;
+
+      headings = [...bodyEl.querySelectorAll<HTMLElement>("h2")];
+      const entries = buildToc(headings.map((h) => h.textContent ?? ""));
+
+      tocEl.textContent = "";
+      const list = tocEl.ownerDocument.createElement("ul");
+      list.className = "manual-toc-list";
+
+      links = entries.map((entry, i) => {
+        headings[i].id = entry.id;
+
+        const item = tocEl.ownerDocument.createElement("li");
+        const link = tocEl.ownerDocument.createElement("a");
+        link.className = "manual-toc-link";
+        link.href = `#${entry.id}`;
+        link.textContent = entry.title;
+        link.addEventListener("click", (event) => {
+          // 기본 동작은 **주소를 바꾸고 페이지 전체를 움직인다** — 대화상자
+          // 안에서는 스크롤 컨테이너만 움직여야 한다.
+          event.preventDefault();
+          bodyEl.scrollTop = headings[i].offsetTop - bodyEl.offsetTop;
+          markActive(i);
+        });
+        item.appendChild(link);
+        list.appendChild(item);
+        return link;
+      });
+
+      tocEl.appendChild(list);
+      markActive(0);
+    }
+
+    function markActive(index: number): void {
+      links.forEach((link, i) => {
+        // `aria-current` 는 색과 달리 스크린리더에도 전달된다.
+        if (i === index) link.setAttribute("aria-current", "true");
+        else link.removeAttribute("aria-current");
+      });
+    }
+
+    function syncActive(): void {
+      if (links.length === 0) return;
+      const tops = headings.map((h) => h.offsetTop - bodyEl.offsetTop);
+      markActive(
+        activeIndexAtScroll(
+          tops,
+          bodyEl.scrollTop,
+          bodyEl.clientHeight,
+          bodyEl.scrollHeight,
+        ),
+      );
     }
 
     const controller: ManualController = {
@@ -97,6 +168,9 @@ export function initManual(host: ManualHost): ManualController {
         dialogEl.close();
       },
     };
+
+    // 스크롤 컨테이너에 **직접·비캡처**로 붙인다 — `scroll` 은 버블링하지 않는다.
+    bodyEl.addEventListener("scroll", syncActive);
 
     host.closeEl.addEventListener("click", () => controller.close());
 

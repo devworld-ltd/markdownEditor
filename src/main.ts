@@ -626,12 +626,15 @@ if (editorEl && previewEl) {
   const manualDialogEl = document.querySelector<HTMLDialogElement>("#manual");
   const manualBodyEl = document.querySelector<HTMLElement>("#manual-body");
   const manualCloseEl = document.querySelector<HTMLElement>("#manual-close");
+  // #151 차례. 없으면 차례 없이 예전처럼 뜬다.
+  const manualTocEl = document.querySelector<HTMLElement>("#manual-toc");
 
   const manualView =
     manualDialogEl && manualBodyEl && manualCloseEl
       ? initManual({
           dialogEl: manualDialogEl,
           bodyEl: manualBodyEl,
+          tocEl: manualTocEl,
           closeEl: manualCloseEl,
           markdown: manualMarkdown,
           // **정화 경로는 하나뿐이다** (F-18) — 프리뷰와 같은 함수를 넘긴다.

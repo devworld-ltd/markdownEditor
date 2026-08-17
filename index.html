@@ -207,9 +207,14 @@
             &times;
           </button>
         </div>
-        <!-- 본문이 길어 스크롤된다. `tabindex="0"` 이 없으면 키보드만으로는
-             내려 읽을 방법이 없다. -->
-        <div id="manual-body" class="shortcut-help-list manual-body" tabindex="0"></div>
+        <!-- #151: 왼쪽 차례 + 오른쪽 본문. **스크롤은 본문만** 한다 —
+             대화상자가 통째로 스크롤되면 제목과 닫기 버튼이 밀려 올라간다. -->
+        <div class="manual-layout">
+          <nav id="manual-toc" class="manual-toc" aria-label="차례"></nav>
+          <!-- 본문이 길어 스크롤된다. `tabindex="0"` 이 없으면 키보드만으로는
+               내려 읽을 방법이 없다. -->
+          <div id="manual-body" class="shortcut-help-list manual-body" tabindex="0"></div>
+        </div>
       </dialog>
 
       <!-- #131 새 소식 (릴리스 노트) -->
