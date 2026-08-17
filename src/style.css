@@ -160,6 +160,79 @@ body {
   background: var(--border-strong);
 }
 
+/* #149 더보기 팝오버. **모달이 아니다** — 뒤를 어둡게 하지 않고 문서도 가리지
+   않는다. 툴바 오른쪽 끝에 붙는다. */
+.menu-popover {
+  position: absolute;
+  top: 46px;
+  right: 12px;
+  z-index: 40;
+  min-width: 232px;
+  padding: 6px;
+  border: 1px solid var(--border-split);
+  border-radius: 8px;
+  background: var(--surface-preview);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+}
+
+.menu-popover[hidden] {
+  display: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--accent-soft);
+}
+
+.menu-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.menu-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-hint {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--border-split);
+}
+
+/* 팝오버가 툴바를 기준으로 놓이려면 툴바가 위치 기준이어야 한다. */
+.toolbar {
+  position: relative;
+}
+
 /* #147: 묶음. 버튼 사이 간격은 좁게, 묶음 사이는 구분선이 벌린다. */
 .toolbar-group {
   display: flex;
@@ -702,8 +775,10 @@ body {
   display: none;
 }
 
+/* #152 이후 남는 공간은 **커서 위치**가 먹는다 — 저장 상태(왼쪽) · 커서(가운데) ·
+   통계(오른쪽) · 버전(끝) 순서다. */
 .status-stats {
-  flex: 1;
+  flex: 0 0 auto;
   text-align: right;
   min-width: 0;
 }
@@ -752,8 +827,8 @@ body {
 
 /* #141 사용 설명서.
    본문이 길어 대화상자를 넓게 잡는다 — 표가 많아 좁으면 가로 스크롤만 생긴다. */
+/* 폭은 `dialog-lg`(760) 가 정한다 — #153 의 폭 3종 체계. */
 .manual-dialog {
-  max-width: min(760px, 92vw);
   overflow: hidden;
 }
 
@@ -1642,4 +1717,267 @@ body {
     color: #555555;
     word-break: break-all;
   }
+}
+
+/* #150 표 미리보기. 넣기 전에 모양을 본다. */
+.table-preview {
+  margin: 12px 0 4px;
+  overflow-x: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-editor);
+  padding: 8px;
+}
+
+.table-preview-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.table-preview-table th,
+.table-preview-table td {
+  border: 1px solid var(--border-strong);
+  padding: 4px 8px;
+  /* 빈 칸이라도 격자가 보여야 행·열 수를 셀 수 있다. */
+  min-width: 40px;
+  height: 22px;
+}
+
+/* 머리 행은 배경으로 구분한다 — 굵기만으로는 빈 표에서 구별되지 않는다. */
+.table-preview-table th {
+  background: var(--surface-tabbar);
+  font-weight: 600;
+}
+
+/* 세그먼트 컨트롤: 서로 붙은 한 벌로 보여야 "셋 중 하나" 로 읽힌다. */
+.segmented {
+  display: inline-flex;
+}
+
+.segmented .segmented-btn {
+  border-radius: 0;
+  margin: 0;
+}
+
+.segmented .segmented-btn:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.segmented .segmented-btn:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.segmented .segmented-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* #151 사용 설명서 차례. 왼쪽 차례 + 오른쪽 본문, 스크롤은 본문만 한다. */
+.manual-layout {
+  display: flex;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.manual-toc {
+  flex: 0 0 200px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-strong);
+  background: var(--surface-tabbar);
+  padding: 12px 0;
+}
+
+.manual-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.manual-toc-link {
+  display: block;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.manual-toc-link:hover {
+  color: var(--text);
+  background: var(--surface-editor);
+}
+
+.manual-toc-link[aria-current="true"] {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* 좁은 화면에서는 위아래로 쌓는다. 옆으로 두면 본문이 읽을 수 없게 좁아진다. */
+@media (max-width: 720px) {
+  .manual-layout {
+    flex-direction: column;
+  }
+
+  .manual-toc {
+    flex: 0 0 auto;
+    max-height: 30%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-strong);
+  }
+}
+
+/* #152 커서 위치. 통계와 같은 무게로 두되 가운데에 놓는다. */
+.status-caret {
+  flex: 1;
+  text-align: center;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== #153 알림·설정·검색 바 시각 정리 =====
+   전부 마크업·CSS 다. `notice.ts` 는 이미 `kind` 를 `data-kind` 로 내보내므로
+   상태 막대 색은 **CSS 만으로** 갈린다 — JS 를 고치지 않는다. */
+
+/* 알림 폭을 340 으로 고정한다. 제각각이면 여러 개가 쌓였을 때 어긋나 보인다. */
+.notice-stack {
+  width: 340px;
+  max-width: calc(100% - 32px);
+}
+
+/* 왼쪽 상태 막대 3px. `border-left` 라 안쪽 여백 계산이 한 곳에서 끝난다. */
+.notice {
+  border-left: 3px solid var(--accent);
+}
+
+.notice[data-kind="error"] {
+  border-left-color: var(--status-danger);
+}
+
+/* 저장 방식 안내는 **주의**다 — 오류는 아니지만 결과가 기대와 다르다. */
+.fs-limit-notice {
+  border-left-color: var(--status-warn);
+}
+
+/* 새 버전 준비 완료는 좋은 소식이다. */
+.sw-update {
+  border-left-color: var(--status-ok);
+}
+
+/* 대화상자의 바닥(액션 줄). 머리 / 본문 / 바닥 3단을 눈으로 구분한다. */
+.sw-update-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 오프라인 배지는 알림이 아니라 **상태**다 — 알약 모양으로 구분한다. */
+.offline-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  border-left: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: #1f2126;
+  color: #ffffff;
+}
+
+.offline-indicator[hidden] {
+  display: none;
+}
+
+.offline-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* 검색 도크: 찾기와 바꾸기를 한 줄에. 좁아지면 접힌다 — 한 줄을 고집하면
+   입력칸이 글자 몇 개도 못 담을 만큼 좁아진다. */
+.search-dock {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.search-dock > .search-bar {
+  flex: 1 1 340px;
+}
+
+/* 한 줄로 붙었을 때 가운데 경계선이 두 줄로 겹치지 않게. */
+.search-dock > .search-replace-row {
+  border-top: none;
+  border-left: 1px solid var(--border-split);
+}
+
+/* 일치 수는 입력 바로 옆에 둔다 — 오른쪽 끝에 있으면 눈이 두 번 움직인다. */
+.search-count {
+  min-width: 44px;
+  text-align: left;
+}
+
+/* 설정 스위치. **요소는 `<input type="checkbox">` 그대로** 두고 겉모습만 바꾼다 —
+   키보드(Space)·포커스·스크린리더 전달이 공짜로 따라온다. */
+.setting-check {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-tabbar);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.setting-check::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.setting-check:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.setting-check:checked::after {
+  background: #ffffff;
+  transform: translateX(16px);
+}
+
+.setting-check:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setting-check,
+  .setting-check::after {
+    transition: none;
+  }
+}
+
+/* 대화상자 폭 3종. 기본은 중(480)이고, 필요할 때만 소·대를 붙인다. */
+.shortcut-help.dialog-sm {
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.shortcut-help.dialog-lg {
+  max-width: min(760px, calc(100vw - 32px));
 }

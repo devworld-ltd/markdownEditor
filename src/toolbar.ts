@@ -331,18 +331,55 @@ const actions: ToolbarAction[] = [
     icon: `<svg ${SVG_ATTRS}><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6.01" y2="10"/><line x1="10" y1="10" x2="10.01" y2="10"/><line x1="14" y1="10" x2="14.01" y2="10"/><line x1="18" y1="10" x2="18.01" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>`,
     action: () => fileActions?.showShortcuts?.(),
   },
+  {
+    // #149: 더보기. 여는 동작은 `menuPopover` 가 배선하므로 여기 action 은 비운다.
+    label: "More",
+    group: "보기·도움",
+    id: "toolbar-more",
+    icon: `<svg ${SVG_ATTRS}><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>`,
+    action: () => {},
+  },
 ];
+
+/**
+ * #149: "더보기" 팝오버로 옮겨지는 묶음.
+ *
+ * 툴바와 팝오버가 **같은 정의를 공유한다** — 아이콘·동작·`editsText` 를 두 벌로
+ * 두면 한쪽만 고쳐지는 날이 온다.
+ */
+export const OVERFLOW_GROUP = "부가";
+
+/** 오버플로 묶음의 액션들. 팝오버가 이것으로 항목을 만든다. */
+export function overflowActions(): ToolbarAction[] {
+  return actions.filter((a) => a.group === OVERFLOW_GROUP);
+}
+
+/**
+ * 툴바 버튼과 **똑같이** 실행한다.
+ *
+ * `editsText` 재발행을 팝오버가 빠뜨리면 서식은 들어가는데 프리뷰가 안 따라온다 —
+ * 그래서 실행 경로를 하나로 둔다.
+ */
+export function runToolbarAction(action: ToolbarAction, textarea: HTMLTextAreaElement): void {
+  action.action(textarea);
+  if (action.editsText) {
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+}
 
 export function initToolbar(
   container: HTMLElement,
   textarea: HTMLTextAreaElement,
+  options?: { excludeGroups?: readonly string[] },
 ): void {
+  const excluded = new Set(options?.excludeGroups ?? []);
   // 묶음 순서로 안정 정렬한다 — 배열 선언 순서는 화면 순서가 아니다.
   const rank = (g?: string) => {
     const i = GROUP_ORDER.indexOf((g ?? "") as (typeof GROUP_ORDER)[number]);
     return i < 0 ? GROUP_ORDER.length : i;
   };
   const ordered = actions
+    .filter((a) => !excluded.has(a.group ?? ""))
     .map((a, i) => ({ a, i }))
     .sort((x, y) => rank(x.a.group) - rank(y.a.group) || x.i - y.i)
     .map(({ a }) => a);

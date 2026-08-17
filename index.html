@@ -23,10 +23,17 @@
         <h1>Markdown Editor</h1>
         <div id="toolbar-actions" class="toolbar-actions"></div>
       </header>
+      <!-- #149 더보기 팝오버. `<dialog>` 가 아니므로 포커스·Esc·바깥 클릭을
+           `menuPopover.ts` 가 직접 다룬다. 문서를 가리지 않도록 모달이 아니다. -->
+      <div id="toolbar-more-menu" class="menu-popover" hidden></div>
+
       <nav id="tab-bar" class="tab-bar" aria-label="열린 문서"></nav>
 
       <!-- F-22 문서 내 검색. 모달이 아니라 상단 바인 이유: 찾은 위치를 보면서
-           이동해야 하므로 본문을 가리면 안 된다. -->
+           이동해야 하므로 본문을 가리면 안 된다.
+           #153: 찾기와 바꾸기를 **한 줄**에 놓는다. 요소는 그대로 두고 도크로
+           감싸기만 한다 — 토글 JS(`aria-controls`)를 건드리지 않기 위해서다. -->
+      <div class="search-dock">
       <div id="search-bar" class="search-bar" role="search" aria-label="문서에서 찾기" data-state="ok" hidden>
         <input
           type="text"
@@ -66,6 +73,7 @@
         />
         <button type="button" id="search-replace-one" class="search-text-btn">바꾸기</button>
         <button type="button" id="search-replace-all" class="search-text-btn">모두 바꾸기</button>
+      </div>
       </div>
       <main class="editor-container" data-mode="split">
         <!-- F-24 줄 번호. textarea 바깥이라 선택·복사에 섞이지 않는다.
@@ -121,6 +129,8 @@
           <span id="save-state-text" class="save-state-text"></span>
           <span id="save-state-name" class="save-state-name" hidden></span>
         </span>
+        <!-- #152 커서 위치. 통계와 달리 **디바운스 없이** 즉시 갱신된다. -->
+        <span id="status-caret" class="status-caret"></span>
         <span id="status-stats" class="status-stats"></span>
         <!-- #131: 현재 버전이자 "새 소식" 진입점. 툴바에 버튼을 하나 더 늘리는
              대신 여기 둔다 — 버전 표시와 진입점이 같은 자리인 편이 자연스럽고,
@@ -196,16 +206,21 @@
       </dialog>
 
       <!-- #141 사용 설명서 -->
-      <dialog id="manual" class="shortcut-help manual-dialog" aria-labelledby="manual-title">
+      <dialog id="manual" class="shortcut-help dialog-lg manual-dialog" aria-labelledby="manual-title">
         <div class="shortcut-help-header">
           <h2 id="manual-title">사용 설명서</h2>
           <button type="button" id="manual-close" class="shortcut-help-close" aria-label="닫기">
             &times;
           </button>
         </div>
-        <!-- 본문이 길어 스크롤된다. `tabindex="0"` 이 없으면 키보드만으로는
-             내려 읽을 방법이 없다. -->
-        <div id="manual-body" class="shortcut-help-list manual-body" tabindex="0"></div>
+        <!-- #151: 왼쪽 차례 + 오른쪽 본문. **스크롤은 본문만** 한다 —
+             대화상자가 통째로 스크롤되면 제목과 닫기 버튼이 밀려 올라간다. -->
+        <div class="manual-layout">
+          <nav id="manual-toc" class="manual-toc" aria-label="차례"></nav>
+          <!-- 본문이 길어 스크롤된다. `tabindex="0"` 이 없으면 키보드만으로는
+               내려 읽을 방법이 없다. -->
+          <div id="manual-body" class="shortcut-help-list manual-body" tabindex="0"></div>
+        </div>
       </dialog>
 
       <!-- #131 새 소식 (릴리스 노트) -->
@@ -243,6 +258,15 @@
               <label for="table-columns">열</label>
               <input type="number" id="table-columns" class="setting-number" min="1" max="20" value="3" />
             </div>
+            <div class="setting-row">
+              <span id="table-insert-align-label">정렬</span>
+              <div
+                id="table-insert-align"
+                class="segmented"
+                role="group"
+                aria-labelledby="table-insert-align-label"
+              ></div>
+            </div>
           </div>
           <div id="table-edit" hidden>
             <div id="table-align"></div>
@@ -250,6 +274,8 @@
               정렬을 맞추면 한글·이모지의 표시 폭을 고려해 파이프를 정렬합니다.
             </p>
           </div>
+          <!-- #150: 넣기 전에 모양을 본다. 마크다운이 아니라 <table> 로 그린다. -->
+          <div id="table-preview" class="table-preview"></div>
           <div class="sw-update-actions">
             <button type="button" id="table-submit" class="search-text-btn">표 삽입</button>
           </div>
@@ -319,7 +345,8 @@
           aria-live="polite"
           hidden
         >
-          오프라인 상태입니다. 편집·저장은 이 기기에서 계속 동작합니다.
+          <span class="offline-icon" aria-hidden="true">⚡</span>
+          <span>오프라인 상태입니다. 편집·저장은 이 기기에서 계속 동작합니다.</span>
         </div>
       </div>
     </div>

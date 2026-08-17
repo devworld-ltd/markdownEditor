@@ -80,6 +80,11 @@
 | F-78 | 디자인 토큰 — 툴바·탭바 테마 대응 (#146) | `src/style.css` | E2E 11 |
 | F-79 | 툴바 7묶음 그룹화 (#147) | `src/toolbar.ts` | E2E 5 |
 | F-80 | 상태 표시줄 저장 상태·파일명 (#148) | `src/saveState.ts` | 단위 9 + E2E 8 |
+| F-81 | 툴바 더보기 팝오버 (#149) | `src/menuPopover.ts` | 단위 15 + E2E 11 |
+| F-82 | 표 대화상자 미리보기 (#150) | `src/tablePreview.ts` | 단위 13 + E2E 6 |
+| F-83 | 사용 설명서 차례 사이드바 (#151) | `src/manualToc.ts` | 단위 14 + E2E 7 |
+| F-84 | 상태 표시줄 커서 위치 (#152) | `src/caretPosition.ts` | 단위 17 + E2E 6 |
+| F-85 | 알림·설정·검색 바 시각 정리 (#153) | `src/style.css`·`index.html` | E2E 10 |
 | F-40 | 렌더된 HTML 클립보드 복사 | `src/clipboardExport.ts` | 단위 10 + E2E 7 |
 | F-60 | 공유 링크 (Cloudflare R2) | `worker/index.ts`, `src/shareId.ts`, `src/share.ts` | 단위 42 + E2E 10 |
 | F-67 | dev 환경 커스텀 도메인 | `wrangler.jsonc` | 배포 헬스체크 |

@@ -420,3 +420,20 @@ export async function setRealMockOpenName(page: Page, name: string): Promise<voi
     (window as unknown as { __realMock: { openName: string } }).__realMock.openName = n;
   }, name);
 }
+
+/**
+ * 툴바 액션을 **어디에 있든** 실행한다 (#149).
+ *
+ * 툴바에 버튼이 남아 있으면 그것을 누르고, 더보기 팝오버로 옮겨 갔으면 팝오버를 열어
+ * 같은 이름(`data-action`)의 항목을 누른다. 기능이 옮겨 다닐 때마다 시나리오 스무 개를
+ * 함께 고치지 않으려고 둔 경계다 — **없어진 것은 여전히 실패한다.**
+ */
+export async function clickToolbarAction(page: Page, title: string): Promise<void> {
+  const button = page.locator(`.toolbar-btn[title="${title}"]`);
+  if ((await button.count()) > 0) {
+    await button.click();
+    return;
+  }
+  await page.locator("#toolbar-more").click();
+  await page.locator(`#toolbar-more-menu .menu-item[data-action="${title}"]`).click();
+}

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { installFallbackMode, installFsMock, setFsMock } from "./fixtures";
+import { clickToolbarAction, installFallbackMode, installFsMock, setFsMock } from "./fixtures";
 
 /**
  * F-36 최근 파일 목록 (이슈 #64).
@@ -174,7 +174,7 @@ test.describe("폴백 브라우저", () => {
   }) => {
     await page.locator("#editor").fill("내용");
     const download = page.waitForEvent("download");
-    await page.locator('.toolbar-btn[title="Save As"]').click();
+    await clickToolbarAction(page, "Save As");
     await download;
 
     await page.locator(BTN).click();

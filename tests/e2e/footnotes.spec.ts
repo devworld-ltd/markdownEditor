@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { getWrites, installFsMock, setFsMock } from "./fixtures";
+import { clickToolbarAction, getWrites, installFsMock, setFsMock } from "./fixtures";
 
 /** 각주 · 정의 목록 (이슈 #111). */
 
@@ -81,7 +81,7 @@ test("FN7: 내보낸 HTML 에도 각주 목록이 들어간다", async ({ page }
   await page.locator("#editor").fill(DOC);
   await expect(page.locator("#preview .footnotes")).toBeVisible();
 
-  await page.locator('.toolbar-btn[title="Export HTML"]').click();
+  await clickToolbarAction(page, "Export HTML");
 
   const writes = await getWrites(page);
   expect(writes).toHaveLength(1);

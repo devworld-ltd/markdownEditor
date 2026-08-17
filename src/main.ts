@@ -1,6 +1,6 @@
 import { createEditor } from "./editor";
 import { sanitizeHtml } from "./parser";
-import { initToolbar, setFileActions } from "./toolbar";
+import { OVERFLOW_GROUP, initToolbar, overflowActions, runToolbarAction, setFileActions } from "./toolbar";
 import {
   exportFile,
   initFileOps,
@@ -62,6 +62,7 @@ import { initLineNumbers } from "./lineNumbers";
 import { initEditorOverlay } from "./editorOverlay";
 import { initMermaidView, type MermaidLike } from "./mermaidView";
 import { initStatusBar } from "./statusBar";
+import { initCaretStatus } from "./caretStatus";
 import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
@@ -73,6 +74,7 @@ import { manual as manualMarkdown } from "virtual:manual";
 
 import { initManual } from "./manualView";
 import { initSaveState } from "./saveState";
+import { initMenuPopover } from "./menuPopover";
 import { initLaunchFiles, type LaunchQueueLike } from "./launchFiles";
 import { initReleaseNotes } from "./releaseNotesUi";
 import { parseChangelog } from "./releaseNotes";
@@ -88,6 +90,28 @@ import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htm
 import { copyRenderedHtml } from "./clipboardExport";
 import { createShareLink, loadSharedDocument, type ShareHost } from "./share";
 import { shareIdFromPath } from "./shareId";
+
+/**
+ * #149: 더보기 메뉴의 한국어 이름과 단축키 표시.
+ *
+ * 툴바 버튼의 `title` 은 영어(`Save As`)다 — 아이콘 옆 툴팁으로는 짧아서 좋지만,
+ * 메뉴는 **글자가 본체**라 읽을 말이어야 한다. 단축키는 `shortcutDefs.ts` 에
+ * 정의된 것만 적는다 — 없는 것을 적으면 안내가 거짓말을 한다.
+ */
+const MORE_LABELS: Record<string, string> = {
+  "Save As": "다른 이름으로 저장",
+  "Code Block": "코드 블록",
+  "Horizontal Rule": "구분선",
+  "Export HTML": "HTML 로 내보내기",
+  "Copy HTML": "HTML 복사",
+  "Print / PDF": "인쇄 / PDF",
+};
+
+const MORE_HINTS: Record<string, string | undefined> = {
+  "Save As": "⌘⇧S",
+  "Print / PDF": "⌘P",
+};
+
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -240,6 +264,11 @@ if (editorEl && previewEl) {
         saveEnabled: saveDocStats,
       })
     : null;
+
+  // #152 커서 위치. 통계와 달리 **디바운스 없이** 갱신한다 — 즉시성이 값어치라
+  // 150ms 뒤에 따라오면 고장 난 것처럼 보인다. 비용은 이진 탐색뿐이다.
+  const caretBarEl = document.querySelector<HTMLElement>("#status-caret");
+  if (caretBarEl) initCaretStatus({ barEl: caretBarEl, editorEl });
 
   // #148 저장 상태. 통계와 **다른 경로**로 갱신한다 — 통계는 매 글자마다 전체를
   // 훑어야 해서 150ms 디바운스에 얹혀 있지만, 저장 상태는 dirty 가 바뀔 때만
@@ -432,7 +461,31 @@ if (editorEl && previewEl) {
   // 순서가 뒤집히면 클릭은 동작하지만 aria-pressed/aria-label 이 비어 있어
   // 스크린리더에게는 상태 없는 버튼이 된다 — 눈으로는 드러나지 않는다.
   if (toolbarEl) {
-    initToolbar(toolbarEl, editorEl);
+    // #149: `부가` 묶음은 툴바에서 빼고 더보기 팝오버로 옮긴다. 두 곳이 **같은
+    // 액션 정의**를 공유하므로 아이콘·동작·editsText 가 갈라질 수 없다.
+    initToolbar(toolbarEl, editorEl, { excludeGroups: [OVERFLOW_GROUP] });
+
+    const moreBtnEl = document.querySelector<HTMLElement>("#toolbar-more");
+    const morePanelEl = document.querySelector<HTMLElement>("#toolbar-more-menu");
+    if (moreBtnEl && morePanelEl) {
+      const overflow = overflowActions();
+      initMenuPopover({
+        triggerEl: moreBtnEl,
+        panelEl: morePanelEl,
+        // 파일 저장 계열과 내보내기 계열 사이에 구분선을 하나 둔다.
+        entries: overflow.flatMap((a, i) => {
+          const item = {
+            // 툴바에 있던 이름을 그대로 들고 온다 — 옮긴 것과 없앤 것을 구별하려면
+            // 부르는 이름이 남아 있어야 한다.
+            id: a.label,
+            label: MORE_LABELS[a.label] ?? a.label,
+            hint: MORE_HINTS[a.label],
+            action: () => runToolbarAction(a, editorEl),
+          };
+          return i === 3 ? [null, item] : [item];
+        }),
+      });
+    }
   }
 
   // 모드는 분할 비율과 독립이다 — 모드를 되돌리면 맞춰 둔 비율이 그대로 돌아온다.
@@ -579,12 +632,15 @@ if (editorEl && previewEl) {
   const manualDialogEl = document.querySelector<HTMLDialogElement>("#manual");
   const manualBodyEl = document.querySelector<HTMLElement>("#manual-body");
   const manualCloseEl = document.querySelector<HTMLElement>("#manual-close");
+  // #151 차례. 없으면 차례 없이 예전처럼 뜬다.
+  const manualTocEl = document.querySelector<HTMLElement>("#manual-toc");
 
   const manualView =
     manualDialogEl && manualBodyEl && manualCloseEl
       ? initManual({
           dialogEl: manualDialogEl,
           bodyEl: manualBodyEl,
+          tocEl: manualTocEl,
           closeEl: manualCloseEl,
           markdown: manualMarkdown,
           // **정화 경로는 하나뿐이다** (F-18) — 프리뷰와 같은 함수를 넘긴다.
@@ -602,6 +658,9 @@ if (editorEl && previewEl) {
   const tableAlignEl = document.querySelector<HTMLElement>("#table-align");
   const tableSubmitEl = document.querySelector<HTMLButtonElement>("#table-submit");
   const tableCloseEl = document.querySelector<HTMLElement>("#table-close");
+  // #150 미리보기·삽입 정렬. 없으면 미리보기만 빠지고 표 기능은 그대로 돈다.
+  const tablePreviewEl = document.querySelector<HTMLElement>("#table-preview");
+  const tableInsertAlignEl = document.querySelector<HTMLElement>("#table-insert-align");
 
   const tableUi =
     tableDialogEl &&
@@ -619,6 +678,8 @@ if (editorEl && previewEl) {
           columnsEl: tableColumnsEl,
           editEl: tableEditEl,
           alignEl: tableAlignEl,
+          insertAlignEl: tableInsertAlignEl,
+          previewEl: tablePreviewEl,
           submitEl: tableSubmitEl,
           closeEl: tableCloseEl,
           editorEl,

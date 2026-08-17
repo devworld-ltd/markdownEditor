@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { clickToolbarAction } from "./fixtures";
 
 /**
  * F-40 렌더된 HTML 클립보드 복사 (이슈 #65).
@@ -11,7 +12,6 @@ import { expect, test } from "@playwright/test";
  * (F-69 의 서비스 워커 스텁과 같은 전략).
  */
 
-const BTN = '.toolbar-btn[title="Copy HTML"]';
 
 /** 클립보드 API 를 기록용 스텁으로 바꾼다. */
 async function installClipboardSpy(page: import("@playwright/test").Page, rich = true) {
@@ -69,7 +69,7 @@ test("C1: 서식 있는 복사에 HTML 과 마크다운 원문이 함께 들어�
   await page.locator("#editor").fill("# 제목\n\n본문 **굵게**");
   await expect(page.locator("#preview h1")).toBeVisible();
 
-  await page.locator(BTN).click();
+  await clickToolbarAction(page, "Copy HTML");
 
   const writes = await waitForClipWrite(page);
   expect(writes).toHaveLength(1);
@@ -86,7 +86,7 @@ test("C2: 정화된 HTML 만 나간다 (F-18)", async ({ page }) => {
   await page.locator("#editor").fill('<script>alert(1)</script>\n\n<img src=x onerror="alert(1)">');
   await page.waitForTimeout(220);
 
-  await page.locator(BTN).click();
+  await clickToolbarAction(page, "Copy HTML");
 
   const html = (await waitForClipWrite(page))[0].data["text/html"];
   expect(html).not.toContain("<script>alert(1)</script>");
@@ -99,7 +99,7 @@ test("C3: 성공을 사용자에게 알린다", async ({ page }) => {
   await page.locator("#editor").fill("# x");
   await expect(page.locator("#preview h1")).toBeVisible();
 
-  await page.locator(BTN).click();
+  await clickToolbarAction(page, "Copy HTML");
   await expect(page.locator("#notice")).toBeVisible();
   await expect(page.locator("#notice")).toContainText("서식");
 });
@@ -110,7 +110,7 @@ test("C4: ClipboardItem 이 없으면 원문만 복사하고 그 사실을 알�
   await page.locator("#editor").fill("# 제목");
   await expect(page.locator("#preview h1")).toBeVisible();
 
-  await page.locator(BTN).click();
+  await clickToolbarAction(page, "Copy HTML");
 
   const writes = await waitForClipWrite(page);
   expect(writes).toHaveLength(1);
@@ -130,7 +130,7 @@ test("C5: 편집 중인 최신 내용을 복사한다", async ({ page }) => {
   await editor.fill("# 나중");
   await expect(page.locator("#preview h1")).toHaveText("나중");
 
-  await page.locator(BTN).click();
+  await clickToolbarAction(page, "Copy HTML");
 
   const writes = await waitForClipWrite(page);
   expect(writes[0].data["text/html"]).toContain("나중");
@@ -147,7 +147,7 @@ test("C6: 미리보기 전용 모드에서도 동작한다", async ({ page }) =>
   await page.locator("#view-mode").click();
   await expect(page.locator(".editor-container")).toHaveAttribute("data-mode", "preview");
 
-  await page.locator(BTN).click();
+  await clickToolbarAction(page, "Copy HTML");
   const writes = await waitForClipWrite(page);
   expect(writes[0].data["text/html"]).toContain("<h1>제목</h1>");
 });
@@ -168,7 +168,7 @@ test("C7: 클립보드 쓰기가 실패하면 오류로 알린다", async ({ pag
   await page.locator("#editor").fill("# x");
   await expect(page.locator("#preview h1")).toBeVisible();
 
-  await page.locator(BTN).click();
+  await clickToolbarAction(page, "Copy HTML");
 
   await expect(page.locator("#notice")).toBeVisible();
   await expect(page.locator("#notice")).toHaveAttribute("data-kind", "error");

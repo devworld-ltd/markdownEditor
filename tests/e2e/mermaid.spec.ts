@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { getWrites, installFsMock, setFsMock } from "./fixtures";
+import { clickToolbarAction, getWrites, installFsMock, setFsMock } from "./fixtures";
 
 /** 이슈 #118 — 프리뷰에서 mermaid 코드블록을 다이어그램으로 렌더. */
 
@@ -69,7 +69,7 @@ test("MD4: 내보낸 HTML 에도 그림이 들어간다", async ({ page }) => {
   await page.locator("#editor").fill(SAMPLE);
   await waitForDiagram(page);
 
-  await page.locator('.toolbar-btn[title="Export HTML"]').click();
+  await clickToolbarAction(page, "Export HTML");
 
   const writes = await getWrites(page);
   expect(writes).toHaveLength(1);

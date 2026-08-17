@@ -106,3 +106,93 @@ test("MA8: 설명서를 열어도 편집 중인 문서가 바뀌지 않는다", 
   await expect(page.locator("#tab-bar .tab")).toHaveCount(tabsBefore);
   await expect(page.locator("#editor")).toHaveValue("# 내 문서");
 });
+
+/** #151 차례 사이드바. */
+
+async function openManual(page: import("@playwright/test").Page) {
+  await page.locator(BTN).click();
+  await expect(page.locator(DIALOG)).toBeVisible();
+}
+
+const TOC = "#manual-toc .manual-toc-link";
+
+test("MT1: 차례 항목 수가 본문 절 개수와 같다 — 손으로 적은 목록이 아니다", async ({
+  page,
+}) => {
+  await openManual(page);
+  const sections = await page.locator("#manual-body h2").count();
+  expect(sections).toBeGreaterThan(5);
+  await expect(page.locator(TOC)).toHaveCount(sections);
+});
+
+test("MT2: 차례를 누르면 본문이 그 절로 이동한다", async ({ page }) => {
+  await openManual(page);
+  const body = page.locator("#manual-body");
+  expect(await body.evaluate((el) => el.scrollTop)).toBe(0);
+
+  await page.locator(TOC).nth(4).click();
+
+  expect(await body.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await expect(page.locator(TOC).nth(4)).toHaveAttribute("aria-current", "true");
+  // 이동은 **대화상자 안에서만** 일어나야 한다. 기본 동작을 막지 않으면 주소에
+  // `#manual-…` 이 남고, 그 주소를 새로고침하면 앱이 엉뚱한 자리에서 뜬다.
+  expect(page.url()).not.toContain("#");
+});
+
+test("MT3: 본문을 스크롤하면 강조가 따라온다", async ({ page }) => {
+  await openManual(page);
+  await expect(page.locator(TOC).first()).toHaveAttribute("aria-current", "true");
+
+  await page.locator("#manual-body").evaluate((el) => {
+    el.scrollTop = el.scrollHeight / 2;
+  });
+
+  await expect(page.locator(`${TOC}[aria-current="true"]`)).toHaveCount(1);
+  await expect(page.locator(TOC).first()).not.toHaveAttribute("aria-current", "true");
+});
+
+test("MT4: 끝까지 내리면 마지막 절이 강조된다", async ({ page }) => {
+  await openManual(page);
+  await page.locator("#manual-body").evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await expect(page.locator(TOC).last()).toHaveAttribute("aria-current", "true");
+});
+
+test("MT5: 끝까지 내려도 닫기 버튼이 화면에 남는다 — 스크롤하는 것은 본문뿐", async ({
+  page,
+}) => {
+  await openManual(page);
+  await page.locator("#manual-body").evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+
+  const close = page.locator("#manual-close");
+  await expect(close).toBeVisible();
+  const box = await close.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box).not.toBeNull();
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height);
+});
+
+test("MT6: 다시 열면 처음 절로 돌아온다", async ({ page }) => {
+  await openManual(page);
+  await page.locator(TOC).nth(4).click();
+  await page.locator("#manual-close").click();
+  await openManual(page);
+
+  expect(await page.locator("#manual-body").evaluate((el) => el.scrollTop)).toBe(0);
+  await expect(page.locator(TOC).first()).toHaveAttribute("aria-current", "true");
+});
+
+test("MT7: 좁은 화면에서도 본문이 읽을 수 있는 폭을 갖는다", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 800 });
+  await openManual(page);
+
+  const tocBox = await page.locator("#manual-toc").boundingBox();
+  const bodyBox = await page.locator("#manual-body").boundingBox();
+  // 옆으로 두면 본문이 절반 이하로 좁아진다 — 위아래로 쌓여야 한다.
+  expect(bodyBox!.y).toBeGreaterThan(tocBox!.y);
+  expect(bodyBox!.width).toBeGreaterThan(300);
+});
