@@ -71,6 +71,22 @@ export function pickLatestTag(tags) {
   return parsed[0].tag;
 }
 
+/**
+ * 버전 비교. 음수면 `a < b`.
+ *
+ * **자리별 숫자로 비교한다** — 사전순이면 `2.10.0 < 2.9.0` 이 되어 큰 갱신에서만
+ * 조용히 틀린다.
+ */
+export function compareVersions(a, b) {
+  const pa = String(a).split(".").map(Number);
+  const pb = String(b).split(".").map(Number);
+  for (let i = 0; i < 3; i += 1) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
 /** 가장 높은 `v*` 태그. 없으면 `null` — 첫 릴리스다. */
 function lastTag() {
   // `--sort` 에 기대지 않고 직접 고른다 — git 버전에 따라 `v:refname` 지원이 다르다.
@@ -171,6 +187,23 @@ function main() {
         "          이미 릴리스한 적이 있다면 `git fetch --tags` 후 다시 실행하세요.",
     );
   }
+  /**
+   * **기준 태그가 지금 버전보다 낮으면 태그를 덜 받아온 것이다.**
+   *
+   * 태그는 `main` 의 머지 커밋에 붙고 릴리스 계산은 `dev` 에서 하므로, 승격
+   * 직후에 `git fetch --tags` 를 하지 않으면 로컬에 최신 태그가 없다. 그러면
+   * **이미 릴리스한 항목이 CHANGELOG 에 다시 실린다**(실측: v2.5.0 이 있는데
+   * 기준이 v2.4.0 으로 잡혀 5건이 두 번 나왔다). 조용히 틀리는 종류라 막는다.
+   */
+  if (tag && compareVersions(tag.replace(/^v/, ""), pkg.version) < 0) {
+    console.error(
+      `[release] 중단: 기준 태그(${tag})가 현재 버전(v${pkg.version})보다 낮습니다.\n` +
+        "          태그를 덜 받아온 상태입니다 — `git fetch --tags` 후 다시 실행하세요.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const commits = commitsSince(tag);
   const bump = decideBump(commits);
 
