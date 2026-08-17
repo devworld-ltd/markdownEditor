@@ -30,7 +30,10 @@
       <nav id="tab-bar" class="tab-bar" aria-label="열린 문서"></nav>
 
       <!-- F-22 문서 내 검색. 모달이 아니라 상단 바인 이유: 찾은 위치를 보면서
-           이동해야 하므로 본문을 가리면 안 된다. -->
+           이동해야 하므로 본문을 가리면 안 된다.
+           #153: 찾기와 바꾸기를 **한 줄**에 놓는다. 요소는 그대로 두고 도크로
+           감싸기만 한다 — 토글 JS(`aria-controls`)를 건드리지 않기 위해서다. -->
+      <div class="search-dock">
       <div id="search-bar" class="search-bar" role="search" aria-label="문서에서 찾기" data-state="ok" hidden>
         <input
           type="text"
@@ -70,6 +73,7 @@
         />
         <button type="button" id="search-replace-one" class="search-text-btn">바꾸기</button>
         <button type="button" id="search-replace-all" class="search-text-btn">모두 바꾸기</button>
+      </div>
       </div>
       <main class="editor-container" data-mode="split">
         <!-- F-24 줄 번호. textarea 바깥이라 선택·복사에 섞이지 않는다.
@@ -202,7 +206,7 @@
       </dialog>
 
       <!-- #141 사용 설명서 -->
-      <dialog id="manual" class="shortcut-help manual-dialog" aria-labelledby="manual-title">
+      <dialog id="manual" class="shortcut-help dialog-lg manual-dialog" aria-labelledby="manual-title">
         <div class="shortcut-help-header">
           <h2 id="manual-title">사용 설명서</h2>
           <button type="button" id="manual-close" class="shortcut-help-close" aria-label="닫기">
@@ -341,7 +345,8 @@
           aria-live="polite"
           hidden
         >
-          오프라인 상태입니다. 편집·저장은 이 기기에서 계속 동작합니다.
+          <span class="offline-icon" aria-hidden="true">⚡</span>
+          <span>오프라인 상태입니다. 편집·저장은 이 기기에서 계속 동작합니다.</span>
         </div>
       </div>
     </div>
