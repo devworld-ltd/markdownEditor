@@ -94,8 +94,9 @@ export function initFormatBar(host: FormatBarHost): FormatBarController {
       btn.dataset.action = item.label;
       btn.textContent = item.text;
       btn.setAttribute("aria-label", item.text);
-      // **누르는 순간 편집기가 포커스를 잃으면 안 된다.** 잃으면 선택이 사라져
-      // 서식이 엉뚱한 곳에 들어가고, 모바일에서는 키보드까지 내려간다.
+      // **누르는 순간 편집기가 포커스를 잃으면 안 된다** — 실기기에서 가상
+      // 키보드가 내려간다. (선택 자체는 포커스를 잃어도 남으므로 그것까지
+      // 이유로 적지 않는다 — 근거 없는 이유를 적으면 다음 사람이 믿는다.)
       btn.addEventListener("pointerdown", (event) => event.preventDefault());
       btn.addEventListener("click", () => {
         // **여기서 `editorEl.focus()` 를 부르지 않는다.** 서식 액션들이
