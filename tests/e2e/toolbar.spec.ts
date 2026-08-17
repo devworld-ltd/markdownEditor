@@ -5,15 +5,16 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#editor")).toBeVisible();
 });
 
-test("툴바 버튼이 26개 렌더링된다", async ({ page }) => {
+test("툴바 버튼이 21개 렌더링된다 — `부가` 6개는 더보기 팝오버로 갔다 (#149)", async ({ page }) => {
   // 파일 4 + 최근 1 (F-36) + 서식 12 + 표 1 (F-30) + 내보내기 1 (F-38) + 복사 1 (F-40) + 공유 1 (F-60) + 인쇄 1 (F-39) + 보기 모드 1 (F-33)
   // + 설정 1 (F-35) + 단축키 안내 1 (F-58).
   // 이 숫자는 의도적인 감시선이다 — 버튼이 늘거나 줄면 여기서 먼저 걸린다.
-  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(26);
+  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(21);
 });
 
 test("#147: 묶음 7개가 구분선 6개로 나뉜다 — 구분선은 경계에서 자동 생성된다", async ({ page }) => {
-  const groups = ["파일", "강조", "블록", "삽입", "부가", "공유", "보기·도움"];
+  // `부가` 는 #149 에서 팝오버로 옮겨져 툴바에 렌더되지 않는다.
+  const groups = ["파일", "강조", "블록", "삽입", "공유", "보기·도움"];
   await expect(page.locator("#toolbar-actions .toolbar-group")).toHaveCount(groups.length);
   // 구분선은 묶음 사이에만 — 마지막 묶음 뒤에는 없다.
   await expect(page.locator("#toolbar-actions .toolbar-separator")).toHaveCount(groups.length - 1);
@@ -31,7 +32,7 @@ test("#147: 묶음 순서가 화면 순서와 같다", async ({ page }) => {
       g.getAttribute("aria-label"),
     ),
   );
-  expect(order).toEqual(["파일", "강조", "블록", "삽입", "부가", "공유", "보기·도움"]);
+  expect(order).toEqual(["파일", "강조", "블록", "삽입", "공유", "보기·도움"]);
 });
 
 test("#147: 모든 버튼이 어느 묶음엔가 들어 있다 — 묶음 밖에 떨어진 버튼이 없다", async ({
@@ -42,13 +43,12 @@ test("#147: 모든 버튼이 어느 묶음엔가 들어 있다 — 묶음 밖에
   expect(inGroups).toBe(total);
 });
 
-test("#147: 단축키가 없는 기능이 툴바에 남아 있다 — 더보기(#149) 전까지 닿을 곳이 여기뿐이다", async ({
-  page,
-}) => {
+test("#149: 단축키가 없는 기능이 더보기 팝오버에서 닿는다", async ({ page }) => {
   // 코드 블록·구분선·HTML 내보내기·HTML 복사는 `shortcutDefs.ts` 에 정의가 없다.
-  // 팝오버가 생기기 전에 툴바에서 빼면 마우스로도 키보드로도 실행할 방법이 사라진다.
-  for (const title of ["Code Block", "Horizontal Rule", "Export HTML", "Copy HTML"]) {
-    await expect(page.locator(`.toolbar-btn[title="${title}"]`)).toHaveCount(1);
+  // 툴바에서 뺀 대신 팝오버가 유일한 진입점이 되므로, 여기서 끊기면 기능이 고립된다.
+  await page.locator("#toolbar-more").click();
+  for (const label of ["코드 블록", "구분선", "HTML 로 내보내기", "HTML 복사"]) {
+    await expect(page.locator(`#toolbar-more-menu .menu-label:text-is("${label}")`)).toHaveCount(1);
   }
 });
 
@@ -96,13 +96,15 @@ test("Image 버튼이 마크다운 이미지 문법을 삽입한다", async ({ p
 
 test("Code Block 버튼이 펜스 코드 블록을 삽입한다", async ({ page }) => {
   await page.locator("#editor").click();
-  await page.locator('.toolbar-btn[title="Code Block"]').click();
+  await page.locator("#toolbar-more").click();
+  await page.locator('#toolbar-more-menu .menu-label:text-is("코드 블록")').click();
   await expect(page.locator("#editor")).toHaveValue("```\n코드\n```");
 });
 
 test("Horizontal Rule 버튼이 구분선을 삽입한다", async ({ page }) => {
   await page.locator("#editor").click();
-  await page.locator('.toolbar-btn[title="Horizontal Rule"]').click();
+  await page.locator("#toolbar-more").click();
+  await page.locator('#toolbar-more-menu .menu-label:text-is("구분선")').click();
   await expect(page.locator("#editor")).toHaveValue("---\n");
   await expect(page.locator("#preview hr")).toBeVisible();
 });

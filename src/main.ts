@@ -1,6 +1,6 @@
 import { createEditor } from "./editor";
 import { sanitizeHtml } from "./parser";
-import { initToolbar, setFileActions } from "./toolbar";
+import { OVERFLOW_GROUP, initToolbar, overflowActions, runToolbarAction, setFileActions } from "./toolbar";
 import {
   exportFile,
   initFileOps,
@@ -73,6 +73,7 @@ import { manual as manualMarkdown } from "virtual:manual";
 
 import { initManual } from "./manualView";
 import { initSaveState } from "./saveState";
+import { initMenuPopover } from "./menuPopover";
 import { initLaunchFiles, type LaunchQueueLike } from "./launchFiles";
 import { initReleaseNotes } from "./releaseNotesUi";
 import { parseChangelog } from "./releaseNotes";
@@ -88,6 +89,28 @@ import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htm
 import { copyRenderedHtml } from "./clipboardExport";
 import { createShareLink, loadSharedDocument, type ShareHost } from "./share";
 import { shareIdFromPath } from "./shareId";
+
+/**
+ * #149: 더보기 메뉴의 한국어 이름과 단축키 표시.
+ *
+ * 툴바 버튼의 `title` 은 영어(`Save As`)다 — 아이콘 옆 툴팁으로는 짧아서 좋지만,
+ * 메뉴는 **글자가 본체**라 읽을 말이어야 한다. 단축키는 `shortcutDefs.ts` 에
+ * 정의된 것만 적는다 — 없는 것을 적으면 안내가 거짓말을 한다.
+ */
+const MORE_LABELS: Record<string, string> = {
+  "Save As": "다른 이름으로 저장",
+  "Code Block": "코드 블록",
+  "Horizontal Rule": "구분선",
+  "Export HTML": "HTML 로 내보내기",
+  "Copy HTML": "HTML 복사",
+  "Print / PDF": "인쇄 / PDF",
+};
+
+const MORE_HINTS: Record<string, string | undefined> = {
+  "Save As": "⌘⇧S",
+  "Print / PDF": "⌘P",
+};
+
 
 const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
 const previewEl = document.querySelector<HTMLElement>("#preview");
@@ -432,7 +455,31 @@ if (editorEl && previewEl) {
   // 순서가 뒤집히면 클릭은 동작하지만 aria-pressed/aria-label 이 비어 있어
   // 스크린리더에게는 상태 없는 버튼이 된다 — 눈으로는 드러나지 않는다.
   if (toolbarEl) {
-    initToolbar(toolbarEl, editorEl);
+    // #149: `부가` 묶음은 툴바에서 빼고 더보기 팝오버로 옮긴다. 두 곳이 **같은
+    // 액션 정의**를 공유하므로 아이콘·동작·editsText 가 갈라질 수 없다.
+    initToolbar(toolbarEl, editorEl, { excludeGroups: [OVERFLOW_GROUP] });
+
+    const moreBtnEl = document.querySelector<HTMLElement>("#toolbar-more");
+    const morePanelEl = document.querySelector<HTMLElement>("#toolbar-more-menu");
+    if (moreBtnEl && morePanelEl) {
+      const overflow = overflowActions();
+      initMenuPopover({
+        triggerEl: moreBtnEl,
+        panelEl: morePanelEl,
+        // 파일 저장 계열과 내보내기 계열 사이에 구분선을 하나 둔다.
+        entries: overflow.flatMap((a, i) => {
+          const item = {
+            // 툴바에 있던 이름을 그대로 들고 온다 — 옮긴 것과 없앤 것을 구별하려면
+            // 부르는 이름이 남아 있어야 한다.
+            id: a.label,
+            label: MORE_LABELS[a.label] ?? a.label,
+            hint: MORE_HINTS[a.label],
+            action: () => runToolbarAction(a, editorEl),
+          };
+          return i === 3 ? [null, item] : [item];
+        }),
+      });
+    }
   }
 
   // 모드는 분할 비율과 독립이다 — 모드를 되돌리면 맞춰 둔 비율이 그대로 돌아온다.

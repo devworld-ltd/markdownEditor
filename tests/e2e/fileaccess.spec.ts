@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { getWrites, installFallbackMode, installFsMock, setFsMock } from "./fixtures";
+import { clickToolbarAction, getWrites, installFallbackMode, installFsMock, setFsMock } from "./fixtures";
 
 test.describe("File System Access API 경로 (Chrome·Edge)", () => {
   test.beforeEach(async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe("File System Access API 경로 (Chrome·Edge)", () => {
     await page.locator('.toolbar-btn[title="Open"]').click();
 
     await setFsMock(page, { saveName: "사본.md" });
-    await page.locator('.toolbar-btn[title="Save As"]').click();
+    await clickToolbarAction(page, "Save As");
 
     await expect.poll(() => getWrites(page)).toEqual([
       { name: "사본.md", content: "본문" },
