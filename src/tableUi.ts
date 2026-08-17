@@ -19,14 +19,15 @@
  */
 
 import {
-  buildTable,
   findTableAt,
   formatTable,
   lineRangeToOffsets,
+  makeTableBlock,
   withAlignment,
   type ColumnAlign,
   type TableBlock,
 } from "./tableFormat";
+import { renderTablePreview } from "./tablePreview";
 
 export interface TableUiHost {
   dialogEl: HTMLDialogElement;
@@ -36,8 +37,12 @@ export interface TableUiHost {
   columnsEl: HTMLInputElement;
   /** 편집 모드 영역 */
   editEl: HTMLElement;
-  /** 열별 정렬 버튼이 들어갈 곳 */
+  /** 열별 정렬 버튼이 들어갈 곳 (편집 모드) */
   alignEl: HTMLElement;
+  /** 새 표의 정렬 세그먼트가 들어갈 곳 (삽입 모드, #150) */
+  insertAlignEl?: HTMLElement | null;
+  /** 미리보기가 들어갈 곳 (#150) */
+  previewEl?: HTMLElement | null;
   /** 확인 버튼 (모드에 따라 이름이 바뀐다) */
   submitEl: HTMLButtonElement;
   closeEl: HTMLElement;
@@ -80,6 +85,8 @@ export function initTableUi(host: TableUiHost): TableUiController {
 
     /** 편집 모드일 때 다루는 표. 열 때 한 번 정해진다. */
     let block: TableBlock | null = null;
+    /** 삽입 모드의 정렬. 대화상자를 닫아도 남는다 — 같은 선택을 반복하지 않게. */
+    let insertAlign: ColumnAlign = "left";
 
     /**
      * 텍스트를 바꾼다. `execCommand` 로만 — 되돌리기를 지키기 위해서다.
@@ -127,6 +134,7 @@ export function initTableUi(host: TableUiHost): TableUiController {
           btn.addEventListener("click", () => {
             block = withAlignment(block!, column, choice.value);
             renderAlignButtons();
+            renderPreview();
           });
           group.appendChild(btn);
         }
@@ -134,6 +142,50 @@ export function initTableUi(host: TableUiHost): TableUiController {
         row.appendChild(group);
         host.alignEl.appendChild(row);
       });
+    }
+
+    /**
+     * 지금 화면이 뜻하는 표.
+     *
+     * **삽입 결과와 미리보기가 같은 곳에서 나온다** — 편집 모드면 다루고 있는
+     * 표 그대로, 삽입 모드면 `makeTableBlock()` 이 만든 것 그대로다. 미리보기가
+     * 자기만의 계산을 하면 "보이는 것과 넣은 것이 같다" 가 우연이 된다.
+     */
+    function currentBlock(): TableBlock {
+      if (block) return block;
+      return makeTableBlock(
+        Number(host.rowsEl.value),
+        Number(host.columnsEl.value),
+        insertAlign,
+      );
+    }
+
+    function renderPreview(): void {
+      if (!host.previewEl) return;
+      renderTablePreview(host.previewEl, currentBlock());
+    }
+
+    function renderInsertAlign(): void {
+      const container = host.insertAlignEl;
+      if (!container) return;
+      container.textContent = "";
+
+      for (const choice of ALIGN_LABELS) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "search-text-btn segmented-btn";
+        btn.textContent = choice.symbol;
+        btn.dataset.align = choice.value;
+        btn.setAttribute("aria-label", choice.label);
+        // 색만으로 알리면 스크린리더에는 아무 정보도 아니다.
+        btn.setAttribute("aria-pressed", String(insertAlign === choice.value));
+        btn.addEventListener("click", () => {
+          insertAlign = choice.value;
+          renderInsertAlign();
+          renderPreview();
+        });
+        container.appendChild(btn);
+      }
     }
 
     function currentMode(): "insert" | "edit" {
@@ -146,6 +198,8 @@ export function initTableUi(host: TableUiHost): TableUiController {
       host.insertEl.hidden = edit;
       host.submitEl.textContent = edit ? "정렬 맞추기" : "표 삽입";
       if (edit) renderAlignButtons();
+      else renderInsertAlign();
+      renderPreview();
     }
 
     /**
@@ -169,9 +223,8 @@ export function initTableUi(host: TableUiHost): TableUiController {
         replaceRange(start, end, formatTable(block));
         host.notify?.("표 정렬을 맞췄습니다.");
       } else {
-        const rows = Number(host.rowsEl.value);
-        const columns = Number(host.columnsEl.value);
-        const table = buildTable(rows, columns);
+        // 미리보기가 보여 준 바로 그 표를 넣는다.
+        const table = formatTable(currentBlock());
         const { selectionStart, selectionEnd, value } = editorEl;
         // 표는 블록 요소다 — 앞줄이 비어 있지 않으면 빈 줄을 넣어야 마크다운이
         // 표로 읽는다.
@@ -198,6 +251,11 @@ export function initTableUi(host: TableUiHost): TableUiController {
         dialogEl.close();
       },
     };
+
+    // 행·열을 바꾸면 미리보기가 곧바로 따라온다. `input` 이라 숫자를 치는 중에도
+    // 반영된다 — `change` 는 포커스를 잃어야 오므로 "즉시" 가 아니다.
+    host.rowsEl.addEventListener("input", renderPreview);
+    host.columnsEl.addEventListener("input", renderPreview);
 
     host.submitEl.addEventListener("click", submit);
     host.closeEl.addEventListener("click", () => controller.close());

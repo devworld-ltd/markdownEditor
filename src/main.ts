@@ -649,6 +649,9 @@ if (editorEl && previewEl) {
   const tableAlignEl = document.querySelector<HTMLElement>("#table-align");
   const tableSubmitEl = document.querySelector<HTMLButtonElement>("#table-submit");
   const tableCloseEl = document.querySelector<HTMLElement>("#table-close");
+  // #150 미리보기·삽입 정렬. 없으면 미리보기만 빠지고 표 기능은 그대로 돈다.
+  const tablePreviewEl = document.querySelector<HTMLElement>("#table-preview");
+  const tableInsertAlignEl = document.querySelector<HTMLElement>("#table-insert-align");
 
   const tableUi =
     tableDialogEl &&
@@ -666,6 +669,8 @@ if (editorEl && previewEl) {
           columnsEl: tableColumnsEl,
           editEl: tableEditEl,
           alignEl: tableAlignEl,
+          insertAlignEl: tableInsertAlignEl,
+          previewEl: tablePreviewEl,
           submitEl: tableSubmitEl,
           closeEl: tableCloseEl,
           editorEl,

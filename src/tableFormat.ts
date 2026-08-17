@@ -284,16 +284,22 @@ export function formatTable(block: TableBlock): string {
   ].join("\n");
 }
 
-/** 빈 표를 만든다. 헤더 1행 + 본문 `rows` 행. */
-export function buildTable(
+/**
+ * 새 표의 **모양**을 만든다. 헤더 1행 + 본문 `rows` 행.
+ *
+ * `buildTable()` 과 미리보기(#150)가 **같은 함수에서 나온다** — 두 곳이 각자
+ * 만들면 "미리보기와 삽입 결과가 같다" 가 우연이 되고, 한쪽만 고치는 순간
+ * 조용히 갈라진다.
+ */
+export function makeTableBlock(
   rows: number,
   columns: number,
   align: ColumnAlign = "left",
-): string {
-  const safeRows = Math.max(1, Math.min(50, Math.floor(rows)));
-  const safeCols = Math.max(1, Math.min(20, Math.floor(columns)));
+): TableBlock {
+  const safeRows = Math.max(1, Math.min(50, Math.floor(rows) || 1));
+  const safeCols = Math.max(1, Math.min(20, Math.floor(columns) || 1));
 
-  return formatTable({
+  return {
     startLine: 0,
     endLine: 0,
     header: Array.from({ length: safeCols }, (_, i) => `제목 ${i + 1}`),
@@ -301,7 +307,16 @@ export function buildTable(
       Array.from({ length: safeCols }, () => ""),
     ),
     align: Array.from({ length: safeCols }, () => align),
-  });
+  };
+}
+
+/** 빈 표를 만든다. 헤더 1행 + 본문 `rows` 행. */
+export function buildTable(
+  rows: number,
+  columns: number,
+  align: ColumnAlign = "left",
+): string {
+  return formatTable(makeTableBlock(rows, columns, align));
 }
 
 /** 열 정렬을 바꾼 새 블록. 원본은 건드리지 않는다. */
