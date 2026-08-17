@@ -775,8 +775,10 @@ body {
   display: none;
 }
 
+/* #152 이후 남는 공간은 **커서 위치**가 먹는다 — 저장 상태(왼쪽) · 커서(가운데) ·
+   통계(오른쪽) · 버전(끝) 순서다. */
 .status-stats {
-  flex: 1;
+  flex: 0 0 auto;
   text-align: right;
   min-width: 0;
 }
@@ -1828,4 +1830,15 @@ body {
     border-right: none;
     border-bottom: 1px solid var(--border-strong);
   }
+}
+
+/* #152 커서 위치. 통계와 같은 무게로 두되 가운데에 놓는다. */
+.status-caret {
+  flex: 1;
+  text-align: center;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

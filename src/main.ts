@@ -62,6 +62,7 @@ import { initLineNumbers } from "./lineNumbers";
 import { initEditorOverlay } from "./editorOverlay";
 import { initMermaidView, type MermaidLike } from "./mermaidView";
 import { initStatusBar } from "./statusBar";
+import { initCaretStatus } from "./caretStatus";
 import { initEditorBehavior } from "./editorBehavior";
 import { initEditorDrop } from "./editorDrop";
 import { initRecentFiles } from "./recentFilesUi";
@@ -263,6 +264,11 @@ if (editorEl && previewEl) {
         saveEnabled: saveDocStats,
       })
     : null;
+
+  // #152 커서 위치. 통계와 달리 **디바운스 없이** 갱신한다 — 즉시성이 값어치라
+  // 150ms 뒤에 따라오면 고장 난 것처럼 보인다. 비용은 이진 탐색뿐이다.
+  const caretBarEl = document.querySelector<HTMLElement>("#status-caret");
+  if (caretBarEl) initCaretStatus({ barEl: caretBarEl, editorEl });
 
   // #148 저장 상태. 통계와 **다른 경로**로 갱신한다 — 통계는 매 글자마다 전체를
   // 훑어야 해서 150ms 디바운스에 얹혀 있지만, 저장 상태는 dirty 가 바뀔 때만
