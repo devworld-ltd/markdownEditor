@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // @ts-expect-error — 스크립트는 .mjs 라 타입 선언이 없다. 검증 대상은 순수 함수뿐이다.
-import { decideBump, insertSection, nextVersion, pickLatestTag } from "../scripts/release.mjs";
+import { decideBump, insertSection, nextVersion, pickLatestTag, compareVersions } from "../scripts/release.mjs";
 
 /**
  * #131 버전 계산.
@@ -112,5 +112,17 @@ describe("pickLatestTag", () => {
 
   it("공백이 섞여도 읽는다 (git 출력 그대로)", () => {
     expect(pickLatestTag([" v1.0.0 ", "v0.9.0"])).toBe("v1.0.0");
+  });
+});
+
+describe("compareVersions (#155 승격 중 발견)", () => {
+  it("자리별 숫자로 비교한다 — 사전순이면 2.10.0 < 2.9.0 이 된다", () => {
+    expect(compareVersions("2.10.0", "2.9.0")).toBeGreaterThan(0);
+    expect(compareVersions("2.4.0", "2.5.0")).toBeLessThan(0);
+    expect(compareVersions("2.5.0", "2.5.0")).toBe(0);
+  });
+
+  it("자리가 모자라도 0 으로 채워 비교한다", () => {
+    expect(compareVersions("3", "2.9.9")).toBeGreaterThan(0);
   });
 });
