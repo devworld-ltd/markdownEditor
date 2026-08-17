@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { getWrites, installFallbackMode, installFsMock, setFsMock } from "./fixtures";
+import { clickToolbarAction, getWrites, installFallbackMode, installFsMock, setFsMock } from "./fixtures";
 
 /**
  * F-38 HTML 내보내기 (이슈 #51).
@@ -15,14 +15,13 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#editor")).toBeVisible();
 });
 
-const EXPORT_BTN = '.toolbar-btn[title="Export HTML"]';
 
 test("H1: 렌더된 본문이 담긴 독립 HTML 을 내보낸다", async ({ page }) => {
   await setFsMock(page, { saveName: "note.html" });
   await page.locator("#editor").fill("# 제목\n\n본문 **굵게**");
   await expect(page.locator("#preview h1")).toBeVisible();
 
-  await page.locator(EXPORT_BTN).click();
+  await clickToolbarAction(page, "Export HTML");
 
   const writes = await getWrites(page);
   expect(writes).toHaveLength(1);
@@ -42,7 +41,7 @@ test("H2: 내보낸 HTML 에는 정화된 본문만 담긴다 (F-18)", async ({ 
   await page.locator("#editor").fill('<script>alert(1)</script>\n\n<img src=x onerror="alert(1)">');
   await page.waitForTimeout(200);
 
-  await page.locator(EXPORT_BTN).click();
+  await clickToolbarAction(page, "Export HTML");
 
   const html = (await getWrites(page))[0].content;
   expect(html).not.toContain("<script>alert(1)</script>");
@@ -55,7 +54,7 @@ test("H3: 내보내기가 탭 상태를 바꾸지 않는다", async ({ page }) =
   await page.locator("#editor").fill("내용");
   await expect(page.locator("#tab-bar .tab-name")).toHaveText("Untitled *");
 
-  await page.locator(EXPORT_BTN).click();
+  await clickToolbarAction(page, "Export HTML");
   await page.waitForTimeout(150);
 
   // 파일명도 dirty 표시도 그대로여야 한다 — 내보내기는 저장이 아니다.
@@ -79,7 +78,7 @@ test("H4: 파일명이 .md → .html 로 제안된다", async ({ page }) => {
   });
   expect(suggested).toBe(true);
 
-  await page.locator(EXPORT_BTN).click();
+  await clickToolbarAction(page, "Export HTML");
   await page.waitForTimeout(150);
   expect(
     await page.evaluate(() => (window as unknown as { __captured: () => string }).__captured()),
@@ -90,7 +89,7 @@ test("H5: 취소해도 오류가 뜨지 않는다", async ({ page }) => {
   await setFsMock(page, { cancel: true });
   await page.locator("#editor").fill("내용");
 
-  await page.locator(EXPORT_BTN).click();
+  await clickToolbarAction(page, "Export HTML");
   await page.waitForTimeout(200);
 
   await expect(page.locator("#notice")).toBeHidden();
@@ -101,7 +100,7 @@ test("H6: 쓰기가 실패하면 오류 알림이 뜬다", async ({ page }) => {
   await setFsMock(page, { failWrite: true, saveName: "x.html" });
   await page.locator("#editor").fill("내용");
 
-  await page.locator(EXPORT_BTN).click();
+  await clickToolbarAction(page, "Export HTML");
 
   await expect(page.locator("#notice")).toBeVisible();
   await expect(page.locator("#notice")).toHaveAttribute("data-kind", "error");
@@ -119,7 +118,7 @@ test.describe("폴백 브라우저", () => {
     await expect(page.locator("#preview h1")).toBeVisible();
 
     const download = page.waitForEvent("download");
-    await page.locator(EXPORT_BTN).click();
+    await clickToolbarAction(page, "Export HTML");
     const file = await download;
 
     expect(file.suggestedFilename()).toBe("Untitled.html");

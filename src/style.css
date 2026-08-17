@@ -160,6 +160,79 @@ body {
   background: var(--border-strong);
 }
 
+/* #149 더보기 팝오버. **모달이 아니다** — 뒤를 어둡게 하지 않고 문서도 가리지
+   않는다. 툴바 오른쪽 끝에 붙는다. */
+.menu-popover {
+  position: absolute;
+  top: 46px;
+  right: 12px;
+  z-index: 40;
+  min-width: 232px;
+  padding: 6px;
+  border: 1px solid var(--border-split);
+  border-radius: 8px;
+  background: var(--surface-preview);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+}
+
+.menu-popover[hidden] {
+  display: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--accent-soft);
+}
+
+.menu-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.menu-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-hint {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--border-split);
+}
+
+/* 팝오버가 툴바를 기준으로 놓이려면 툴바가 위치 기준이어야 한다. */
+.toolbar {
+  position: relative;
+}
+
 /* #147: 묶음. 버튼 사이 간격은 좁게, 묶음 사이는 구분선이 벌린다. */
 .toolbar-group {
   display: flex;

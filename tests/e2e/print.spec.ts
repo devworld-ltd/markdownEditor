@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { clickToolbarAction } from "./fixtures";
 
 /**
  * F-39 인쇄 / PDF (이슈 #52).
@@ -150,7 +151,7 @@ test("PR8: 인쇄 버튼이 브라우저 인쇄를 호출한다", async ({ page 
     };
   });
 
-  await page.locator('.toolbar-btn[title="Print / PDF"]').click();
+  await clickToolbarAction(page, "Print / PDF");
 
   expect(await page.evaluate(() => (window as unknown as { __printed: number }).__printed)).toBe(1);
 });
