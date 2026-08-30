@@ -1,6 +1,6 @@
 # 데이터 모델
 
-> 최종 갱신: 2026-08-12 · 대상: 웹 전환 (v2.0.0)
+> 최종 갱신: 2026-08-31 · 대상: v2.6.1 (F-88·F-89, #187)
 
 ## 0. 레이아웃 설정 (F-32)
 
@@ -57,6 +57,8 @@
 | `scrollTop` | `number` | `0` | textarea 스크롤 위치 |
 | `selectionStart` | `number` | `0` | 커서/선택 시작 |
 | `selectionEnd` | `number` | `0` | 커서/선택 끝 |
+| `diskStamp` | `DiskStamp \| null` | `null` | F-88(#187): 이 탭이 핸들로 마지막 읽기·쓰기를 한 시점의 디스크 기준값(`lastModified`+`size`). **메모리 전용** — 세션에 저장하지 않는다(§3 참고) |
+| `diskChanged` | `boolean` | `false` | F-88: 디스크에서 변경됐음이 확인된 상태. 탭 배지 `⚠` 와 변경 배너의 단일 출처. 메모리 전용 |
 
 ### 2.3 `filePath` → `handle` 로의 변경
 
@@ -112,6 +114,8 @@ erDiagram
     number scrollTop
     number selectionStart
     number selectionEnd
+    object diskStamp "nullable, 메모리 전용 (F-88)"
+    boolean diskChanged "메모리 전용 (F-88)"
   }
   SESSION {
     number version
@@ -154,6 +158,7 @@ interface PersistedTab {
 |------|------|
 | `handle` | 구조적 복제 불가. 재방문 시 권한도 초기화된다 |
 | `scrollTop` / `selection*` | 복원 가치 대비 비용이 낮아 0 으로 초기화 |
+| `diskStamp` / `diskChanged` (F-88, #187) | 세션 복원 탭은 정의상 핸들이 없어(위 표) 기준값을 비교할 방법이 없다. 쓰지 않는 값을 저장하면 localStorage 용량을 본문과 다투게 되고, 그러면 자동 저장이 먼저 죽는다(§3.1 과 같은 이유). **필드를 아예 추가하지 않는 쪽으로 확정했다** — `SCHEMA_VERSION` 은 그대로 `1` 이고 기존 세션 폐기 위험이 0 이다 |
 
 ### 3.1 방어 로직 (`storage.ts`)
 

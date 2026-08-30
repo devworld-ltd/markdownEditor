@@ -1075,6 +1075,84 @@ body {
 }
 
 /*
+ * F-88 파일 변경 감지 새로고침 — 더티 탭 변경 배너 (이슈 #187).
+ *
+ * 편집·프리뷰 **위 한 줄**을 차지해 레이아웃을 밀어낸다(덮지 않는다) — 가려진
+ * 글자를 만들지 않기 위해서다. `--status-warn` 은 이미 저장 상태(#148)에서
+ * 검증된 AA 대비 토큰이라 새 색을 만들지 않는다(트랩 #21).
+ */
+.reload-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-split);
+  background: var(--surface-tabbar);
+  color: var(--status-warn);
+  font-size: 13px;
+}
+
+.reload-banner[hidden] {
+  display: none;
+}
+
+.reload-banner-text {
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+
+.reload-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.reload-banner-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.reload-banner-close:hover {
+  background: var(--code-bg);
+  color: var(--text);
+}
+
+.reload-banner-close:focus-visible,
+.reload-banner-actions .search-text-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* #187 §2.8: 좁은 화면에서는 버튼이 아래 줄로 내려간다. */
+@media (max-width: 520px) {
+  .reload-banner-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* F-88: 핸들 없는 탭에서는 다시 읽기 버튼을 흐리게 — disabled 대신
+   aria-disabled 를 쓰므로(포커스를 받아야 스크린리더에 이유가 전달된다,
+   M-9) 시각적으로는 여기서 낮춘다. */
+#toolbar-reload[aria-disabled="true"] {
+  opacity: 0.45;
+}
+
+/*
  * F-33 보기 모드. DOM 을 지우지 않고 표시만 바꾼다 — 요소를 없애면 에디터의
  * 스크롤 위치·선택·포커스가 날아가고 탭 상태와도 어긋난다.
  *

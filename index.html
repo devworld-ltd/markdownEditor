@@ -86,6 +86,19 @@
         <button type="button" id="search-replace-all" class="search-text-btn">모두 바꾸기</button>
       </div>
       </div>
+      <!-- F-88 파일 변경 감지 새로고침 — 더티 탭 변경 배너. `<dialog>` 가 아니라
+           정적 배너다(D-2): 선택을 요구하지만 편집을 막으면 안 된다(A-1). 편집·
+           프리뷰 위 한 줄을 차지해 레이아웃을 밀어낸다(덮지 않는다). -->
+      <div id="reload-banner" class="reload-banner" role="group" aria-label="디스크 변경 알림" hidden>
+        <span id="reload-banner-text" class="reload-banner-text"></span>
+        <div class="reload-banner-actions">
+          <button type="button" id="reload-banner-reload" class="search-text-btn">다시 읽기</button>
+          <button type="button" id="reload-banner-keep" class="search-text-btn">내 내용 유지</button>
+          <button type="button" id="reload-banner-close" class="reload-banner-close" aria-label="배너 닫기">
+            &times;
+          </button>
+        </div>
+      </div>
       <main class="editor-container" data-mode="split">
         <!-- F-24 줄 번호. textarea 바깥이라 선택·복사에 섞이지 않는다.
              스크린리더에는 숨긴다 — 번호를 한 줄씩 읽는 건 소음이다. -->
@@ -293,6 +306,41 @@
           <div id="table-preview" class="table-preview"></div>
           <div class="sw-update-actions">
             <button type="button" id="table-submit" class="search-text-btn">표 삽입</button>
+          </div>
+        </div>
+      </dialog>
+
+      <!-- F-88: 더티 탭 재읽기 확인. 파괴적 동작이므로 <dialog> + showModal() —
+           기본 포커스는 취소(D-6). -->
+      <dialog id="reload-dialog" class="shortcut-help" aria-labelledby="reload-dialog-title">
+        <div class="shortcut-help-header">
+          <h2 id="reload-dialog-title">디스크에서 다시 읽을까요?</h2>
+        </div>
+        <div class="shortcut-help-list settings-body">
+          <p id="reload-dialog-text" class="setting-note"></p>
+          <p class="setting-note">
+            편집 중인 내용이 디스크 내용으로 바뀝니다. 이 작업은 되돌릴 수 없습니다.
+          </p>
+          <p id="reload-dialog-meta" class="setting-note"></p>
+          <div class="sw-update-actions">
+            <button type="button" id="reload-dialog-cancel" class="sw-update-btn">취소</button>
+            <button type="button" id="reload-dialog-ok" class="sw-update-btn primary">다시 읽기</button>
+          </div>
+        </div>
+      </dialog>
+
+      <!-- F-88 S-1: 저장 충돌 확인. 모르는 사이 디스크를 덮어쓰지 않는다.
+           기본 포커스는 취소(D-6). -->
+      <dialog id="save-conflict-dialog" class="shortcut-help" aria-labelledby="save-conflict-title">
+        <div class="shortcut-help-header">
+          <h2 id="save-conflict-title">파일이 디스크에서 변경되었습니다</h2>
+        </div>
+        <div class="shortcut-help-list settings-body">
+          <p id="save-conflict-text" class="setting-note"></p>
+          <div class="sw-update-actions">
+            <button type="button" id="save-conflict-cancel" class="sw-update-btn">취소</button>
+            <button type="button" id="save-conflict-reload" class="sw-update-btn">다시 읽기</button>
+            <button type="button" id="save-conflict-overwrite" class="sw-update-btn primary">덮어쓰기</button>
           </div>
         </div>
       </dialog>

@@ -1,15 +1,21 @@
 # 테스트 실행 결과
 
-> 실행일: 2026-08-17 · 대상: v2.6.0
+> 실행일: 2026-08-31 · 대상: v2.6.1 (F-88·F-89, #187)
 > 환경: macOS 25.5.0 / Node v26.7.0 / Chromium (Playwright 1.62.1) / Vite dev server `http://127.0.0.1:5173`
+>
+> 아래 §2·§3 이후 절은 v2.0.0 웹 전환 당시(2026-08-12)의 최초 결과를 그대로 보존한 **역사 기록**이다.
+> 이번 갱신(#187)은 §1 종합 수치만 현재 값으로 반영한다 — 이후 기능(F-2x~F-89)의 개별 스위트
+> 결과는 [기능 현황](../features/feature-status.md)의 "검증" 열과 각 이슈 히스토리를 참고할 것.
 
 ## 1. 종합
 
 | 스위트 | 도구 | 통과 | 실패 | skip | 총계 |
 |--------|------|------|------|------|------|
-| 단위 | Vitest 4.1.10 (jsdom) | **995** | 0 | 0 | 995 |
-| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **439** | **0** | 15 ※ | 454 |
-| **합계 (dev 기준)** | | **1434** | **0** | 15 | 1449 |
+| 단위 | Vitest 4.1.10 (jsdom) | **1147** | 0 | 0 | 1147 |
+| E2E (dev 서버) | Playwright 1.62.1 (chromium) | **518** | **0** | 15 ※ | 533 |
+| **합계 (dev 기준)** | | **1665** | **0** | 15 | 1680 |
+
+F-88·F-89(#187) 신규분: 단위 55건(`diskStamp.test.ts` 20 · `fileReload.test.ts` 27 · `reloadUi.test.ts` 8) + E2E 15건(`fileReload.spec.ts` 13 · `launchHandler.spec.ts` 2). `npm run typecheck` · `npm run build` 모두 오류 0건.
 
 단위 테스트 파일 10개: `parser` 13 · `storage` 9 · `swUpdate` 20 · `tabs` 34 · `textEdit` 13 · `fileOps` 9 · `shortcuts` 11 · `notice` 7 · `editor` 4 · `offline` 7.
 

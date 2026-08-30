@@ -1,6 +1,6 @@
 # API 명세 — 브라우저 플랫폼 API
 
-> 최종 갱신: 2026-08-12 · 대상: 웹 전환 (v2.0.0)
+> 최종 갱신: 2026-08-31 · 대상: v2.6.1 (F-88·F-89, #187)
 > 이전 문서(`bridge-api.md`, JS↔Swift 브리지)는 네이티브 앱 제거와 함께 이 문서로 대체됐다.
 
 ## 0. HTTP API 현황
@@ -221,6 +221,43 @@ const url = URL.createObjectURL(blob);
 
 확장자는 `.md`·`.markdown`·`.mdown`·`.mkd` 를 `text/markdown` 과 `text/plain` **양쪽에** 건다 — `.md` 의 MIME 은 환경마다 다르고 빈 문자열로 오는 경우도 흔하다(트랩 #61).
 
+## 3.13 파일 변경 감지 새로고침 (F-88, #187)
+
+디스크에서 파일이 바뀌었는지 확인하는 유일한 근거는 **핸들에서 다시 읽은 `File` 객체**다 — 별도 파일 감시 API 는 쓰지 않는다.
+
+| 항목 | 값 |
+|------|-----|
+| 기준값 | `File.lastModified` + `File.size` (`src/diskStamp.ts` `DiskStamp`) |
+| 1단 판정 | `compareStamp()` — mtime·크기만 비교 |
+| 2단 판정 | `isRealChange()` — 1단이 "changed" 일 때만 `file.text()` 로 내용까지 비교(S-3, mtime 만 바뀐 경우를 걸러낸다) |
+| 확인 시점 | `window` `focus` 이벤트, `visibilitychange`(`visible`), 탭 전환(`switchTab()`), 수동 클릭(툴바 `Reload` / `Alt+R`) |
+| 확인 방식 | **폴링 없음** — `setInterval`/`setTimeout` 을 쓰지 않는다 |
+| 권한 | `handle.queryPermission({mode:"readwrite"})` — 조용한 경로는 `"granted"` 가 아니면 그 자리에서 물러난다. 수동 경로만 `requestPermission()` 을 호출할 수 있다(제스처 필요) |
+
+`FileSystemFileHandle.queryPermission`/`requestPermission` 은 표준 타입에 아직 없는 브라우저가 있어 `"unsupported"` 로 관대하게 취급한다 — `handleStore.ts` 의 `ensurePermission()` 과 같은 원칙.
+
+**감지가 만드는 UI 는 세 갈래다** (`src/reloadUi.ts`):
+
+| 상황 | UI | DOM |
+|------|-----|-----|
+| 깨끗한 탭 자동 반영 | 기존 `#notice` 토스트 | `notice.ts` |
+| 더티 탭 변경 감지 | 정적 배너 — 모달 아님, 타이핑을 막지 않는다 | `#reload-banner` |
+| 재읽기 확정 / 저장 충돌 | `<dialog>` + `showModal()`, 기본 포커스 = 취소 | `#reload-dialog`, `#save-conflict-dialog` |
+
+저장(`fileOps.saveFile()`)은 쓰기 전에 `fileReload.confirmBeforeSave()` 를 거친다(S-1) — 디스크 기준값이 바뀌어 있으면 취소/다시 읽기/덮어쓰기 세 갈래로 묻는다.
+
+핸들이 없는 탭(폴백·세션 복원·업로드)은 감지 대상이 아니다 — `Reload` 버튼은 `aria-disabled` 로 낮추되 `disabled` 는 쓰지 않는다(포커스를 유지해야 스크린리더에 이유가 전달된다).
+
+## 3.14 `launch_handler` — 앱 중복 실행 방지 (F-89, #187)
+
+| 항목 | 값 |
+|------|-----|
+| 선언 | `public/manifest.webmanifest` 의 `launch_handler.client_mode = "focus-existing"` |
+| 효과 | PWA 창이 이미 떠 있으면 새 창을 띄우지 않고 기존 창을 앞으로 가져온다(문서 상태 보존) |
+| 배제한 값 | `"navigate-existing"` — 기존 창을 다시 로드시켜 편집 중인 미저장 내용을 잃는다 |
+| 파일 수신 | **변경 없음** — 이미 있는 `window.launchQueue` → `src/launchFiles.ts` → `fileOps.openFileFromHandle()` 경로를 그대로 쓴다(§3.10) |
+| 실기기 검증 | 헤드리스 Chromium 에는 Launch Services·창 관리자가 없어 "새 창이 안 뜨는가" 자체는 E2E 로 확인 불가(트랩 #82). PWA 설치 후 실기기에서 확인한다 |
+
 ## 4.1 Service Worker / Cache Storage
 
 | 항목 | 값 |
@@ -273,7 +310,7 @@ const url = URL.createObjectURL(blob);
 
 ## 4.2 Web App Manifest
 
-`/manifest.webmanifest` — `display: standalone`, `start_url: /`, `theme_color: #1e1e1e`, 아이콘은 `/icon.svg`(`any` + `maskable`).
+`/manifest.webmanifest` — `display: standalone`, `start_url: /`, `theme_color: #1e1e1e`, 아이콘은 `/icon.svg`(`any` + `maskable`). `launch_handler: { client_mode: "focus-existing" }` (F-89, §3.14) — 미지원 브라우저는 알 수 없는 필드를 무시할 뿐 아무것도 깨지지 않는다.
 
 ---
 
@@ -286,6 +323,7 @@ const url = URL.createObjectURL(blob);
 | `Cmd/Ctrl + Shift + S` | 다른 이름으로 저장 | 웹 전환에서 신설 |
 | `Alt + N` | 새 문서 | `Cmd/Ctrl+N` 은 브라우저가 선점 |
 | `Alt + W` | 탭 닫기 | `Cmd/Ctrl+W` 는 브라우저가 선점하며 차단 불가 |
+| `Alt + R` | 디스크에서 다시 읽기 (F-88, #187) | `Cmd/Ctrl+R` 은 브라우저 새로고침이라 쓸 수 없다 |
 
 Alt 조합은 macOS 에서 `e.key` 가 특수문자로 바뀌므로 **`e.code`(`KeyN`/`KeyW`)로 판별**한다. `Cmd`/`Ctrl` 조합은 `e.key.toLowerCase()` 로 판별한다.
 

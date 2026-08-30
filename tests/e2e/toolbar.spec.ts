@@ -5,11 +5,12 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#editor")).toBeVisible();
 });
 
-test("툴바 버튼이 21개 렌더링된다 — `부가` 6개는 더보기 팝오버로 갔다 (#149)", async ({ page }) => {
-  // 파일 4 + 최근 1 (F-36) + 서식 12 + 표 1 (F-30) + 내보내기 1 (F-38) + 복사 1 (F-40) + 공유 1 (F-60) + 인쇄 1 (F-39) + 보기 모드 1 (F-33)
-  // + 설정 1 (F-35) + 단축키 안내 1 (F-58).
+test("툴바 버튼이 22개 렌더링된다 — `부가` 6개는 더보기 팝오버로 갔다 (#149), 다시 읽기 1개 추가 (F-88, #187)", async ({ page }) => {
+  // 파일 4 + 다시 읽기 1 (F-88) + 최근 1 (F-36) + 서식 12 + 표 1 (F-30) + 내보내기 1 (F-38)
+  // + 복사 1 (F-40) + 공유 1 (F-60) + 인쇄 1 (F-39) + 보기 모드 1 (F-33) + 설정 1 (F-35)
+  // + 단축키 안내 1 (F-58).
   // 이 숫자는 의도적인 감시선이다 — 버튼이 늘거나 줄면 여기서 먼저 걸린다.
-  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(21);
+  await expect(page.locator("#toolbar-actions .toolbar-btn")).toHaveCount(22);
 });
 
 test("#147: 묶음 7개가 구분선 6개로 나뉜다 — 구분선은 경계에서 자동 생성된다", async ({ page }) => {

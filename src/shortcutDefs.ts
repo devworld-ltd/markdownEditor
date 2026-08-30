@@ -32,7 +32,8 @@ export type ShortcutId =
   | "cycleView"
   | "moveTabLeft"
   | "moveTabRight"
-  | "help";
+  | "help"
+  | "reloadFile";
 
 export interface ShortcutDef {
   id: ShortcutId;
@@ -81,6 +82,16 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     label: "다른 이름으로 저장",
     keys: { apple: ["⌘", "⇧", "S"], other: ["Ctrl", "Shift", "S"] },
     match: (e) => isModOnly(e) && e.shiftKey && e.key.toLowerCase() === "s",
+  },
+  {
+    // F-88 (D-3): ⌘/Ctrl+R 은 브라우저 새로고침이라 쓸 수 없다(트랩 #4).
+    // 현재 쓰는 Alt 조합은 M·N·W·/·Shift+←/→ 뿐이라 R 이 비어 있다.
+    id: "reloadFile",
+    group: "파일",
+    label: "디스크에서 다시 읽기",
+    keys: { apple: ["⌥", "R"], other: ["Alt", "R"] },
+    note: "⌘/Ctrl+R 은 브라우저 새로고침이라 쓸 수 없습니다.",
+    match: (e) => isAltOnly(e) && e.code === "KeyR",
   },
   {
     id: "cycleView",
