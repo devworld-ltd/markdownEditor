@@ -1,6 +1,6 @@
 # 기능 개발 현황
 
-> 최종 갱신: 2026-08-17 · 대상: v2.6.0
+> 최종 갱신: 2026-08-31 · 대상: v2.6.1 (F-88·F-89, #187)
 > 범례: ✅ 구현 완료 · ⚠️ 부분 구현(제약 있음) · ❌ 미구현 · 🗑 제거됨
 
 ## 1. 웹 전환으로 해결된 항목
@@ -103,6 +103,8 @@
 | F-29 | 문서 통계 (어절·글자·읽기 시간) | `src/docStats.ts`, `src/statusBar.ts` | 단위 31 + E2E 8 |
 | F-30 | 표 편집 보조 (삽입·정렬·파이프 맞춤) | `src/tableFormat.ts`, `src/tableUi.ts` | 단위 52 + E2E 9 |
 | F-56 | 마크다운 파일 드래그앤드롭으로 열기 | `src/dropFiles.ts`, `src/editorDrop.ts`, `src/fileOps.ts` | 단위 39 + E2E 10 |
+| F-88 | 파일 변경 감지 새로고침 — 조용한 감지(포커스·탭 전환) + 수동 재읽기 + 더티 탭 보호(배너·확인 대화상자) + 저장 충돌 경고 (#187) | `src/diskStamp.ts`, `src/fileReload.ts`, `src/reloadUi.ts` | 단위 55 + E2E 13(`fileReload.spec.ts`) |
+| F-89 | 앱 중복 실행 방지 — `manifest.webmanifest` `launch_handler: focus-existing`, 기존 `launchQueue` 소비자 재사용 (#187) | `public/manifest.webmanifest` | E2E 2(`launchHandler.spec.ts`) + **실기기 확인 필요**(AC-20, 자동 테스트 불가) |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -113,6 +115,7 @@
 | F-19 | 자동 저장 | 500ms 디바운스 저장 + 용량 초과 시 알림·**자동 회수**(F-54) | 회수 대상은 깨끗하고·활성이 아니고·파일 이름이 있는 탭의 **저장된 사본**뿐이다. 더티 탭만 남으면 여전히 저장이 멈춘다 | 낮 |
 | F-20 | 세션 복원 | 탭·본문·dirty·활성 탭 복원 | 파일 핸들·커서·스크롤은 복원 불가 (구조적 한계) | 낮 |
 | F-06 | 커서·스크롤 보존 | 탭 전환 시 복원, E2E 로 커서 검증 | `scrollTop` 복원은 미검증 (textarea 높이 의존) | 낮 |
+| F-88 | 파일 변경 감지 새로고침 | FS Access 핸들이 있는 탭에서 전부 동작 | **폴백 브라우저(Safari·Firefox)에서는 불가** — 핸들이 없어 디스크를 다시 읽을 방법이 없다. `Reload` 버튼은 `aria-disabled` + 클릭 시 이유 안내 | 중 |
 
 ## 4. 미구현 (❌)
 
