@@ -22,6 +22,8 @@ export interface ShortcutHandlers {
   toggleFind?: () => void;
   /** 보기 모드 순환 (F-33). */
   cycleView?: () => void;
+  /** F-88 디스크에서 다시 읽기. */
+  reloadFile?: () => void;
 }
 
 export function initShortcuts(handlers: ShortcutHandlers = {}): void {
@@ -41,6 +43,7 @@ export function initShortcuts(handlers: ShortcutHandlers = {}): void {
     find: () => handlers.toggleFind?.(),
     cycleView: () => handlers.cycleView?.(),
     help: () => handlers.toggleHelp?.(),
+    reloadFile: () => handlers.reloadFile?.(),
   };
 
   document.addEventListener("keydown", (e) => {

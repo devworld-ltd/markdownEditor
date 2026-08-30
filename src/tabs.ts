@@ -13,6 +13,7 @@ import {
   restoredEmptyMessage,
   saveWithReclaim,
 } from "./sessionReclaim";
+import { clampCaret, clampScroll, type DiskStamp } from "./diskStamp";
 
 export const APP_NAME = "Markdown Editor";
 export const UNTITLED = "Untitled";
@@ -31,6 +32,18 @@ export interface TabState {
   scrollTop: number;
   selectionStart: number;
   selectionEnd: number;
+  /**
+   * F-88: 이 탭이 핸들로 마지막 읽기·쓰기를 한 시점의 디스크 기준값.
+   * 핸들이 없으면(폴백·세션 복원·업로드) 항상 null. **메모리 전용** —
+   * `persistNow()` 의 직렬화 대상에서 명시적으로 제외한다(세션 스키마 불변,
+   * 기술 스펙 §3.1).
+   */
+  diskStamp: DiskStamp | null;
+  /**
+   * F-88: 디스크에서 변경됐음이 확인된 상태. 탭 배지 ⚠ 와 배너의 단일 출처.
+   * 세션에 저장하지 않는다 — 새로고침하면 다시 확인하면 그만이다.
+   */
+  diskChanged: boolean;
 }
 
 const tabs = new Map<string, TabState>();
@@ -93,6 +106,17 @@ export function setTabStateListener(listener: (() => void) | null): void {
   tabStateListener = listener;
 }
 
+/**
+ * F-88: 탭 전환(I-2)을 알린다 — `fileReload.ts` 의 `checkTab()` 을 부르기 위한
+ * 훅이다. `setScrollSyncHooks()`/`setTabRenderListener()` 와 같은 주입 패턴이다 —
+ * tabs.ts 는 fileReload.ts 를 import 하지 않는다(D-1, 순환 의존 방지).
+ */
+let tabSwitchListener: ((id: string) => void) | null = null;
+
+export function setTabSwitchListener(listener: ((id: string) => void) | null): void {
+  tabSwitchListener = listener;
+}
+
 /** main.ts 가 주입한다. 주입하지 않으면 전 경로가 무동작이다(기존 동작 그대로). */
 export function setScrollSyncHooks(hooks: TabScrollSyncHooks): void {
   scrollSyncHooks = hooks;
@@ -144,6 +168,9 @@ function restoreSession(): boolean {
       scrollTop: 0,
       selectionStart: 0,
       selectionEnd: 0,
+      // F-88: 복원 탭은 정의상 핸들이 없다(트랩 #6) — 기준값은 무의미하므로 null.
+      diskStamp: null,
+      diskChanged: false,
     };
     tabs.set(tab.id, tab);
     if (tab.id === session.activeTabId) restoredActiveId = tab.id;
@@ -183,6 +210,8 @@ export function createTab(
     scrollTop: 0,
     selectionStart: 0,
     selectionEnd: 0,
+    diskStamp: null,
+    diskChanged: false,
   };
   tabs.set(id, tab);
   switchTab(id);
@@ -238,6 +267,8 @@ export function switchTab(id: string): void {
     schedulePersist();
     // 렌더 디바운스를 타지 않는 경로이므로 여기서 직접 알린다.
     tabRenderListener?.();
+    // F-88 I-2: 탭 전환마다 그 탭의 디스크 변경 여부를 조용히 확인한다.
+    tabSwitchListener?.(id);
   } finally {
     scrollSyncHooks?.resumeAndSync(); // M11 — 억제 해제는 항상 나중. 예외가 나도 억제가 영구히 남지 않게 한다
   }
@@ -260,6 +291,11 @@ export function syncActiveTab(): void {
 
 export function getActiveTab(): TabState | undefined {
   return tabs.get(activeTabId);
+}
+
+/** F-88: `fileReload.ts` 가 `tabs.ts` 를 import 하지 않고도 활성 탭 id 를 알 수 있게 한다. */
+export function getActiveTabId(): string {
+  return activeTabId;
 }
 
 export function getAllTabs(): TabState[] {
@@ -307,6 +343,63 @@ export function updateActiveTab(
   const tab = tabs.get(activeTabId);
   if (!tab) return;
   Object.assign(tab, updates);
+  renderTabs();
+  updateTitle();
+  schedulePersist();
+}
+
+// --- F-88 파일 변경 감지 새로고침 --------------------------------------------
+
+/** 탭의 텍스트. 활성 탭은 편집기의 실시간 값(stale 하지 않다), 그 외는 저장된 content. */
+export function getTabText(tabId: string): string {
+  if (tabId === activeTabId) return editorEl.value;
+  return tabs.get(tabId)?.content ?? "";
+}
+
+/** M-1: 열기·저장 직후 디스크 기준값을 기록한다. */
+export function setTabDiskStamp(tabId: string, stamp: DiskStamp | null): void {
+  const tab = tabs.get(tabId);
+  if (!tab) return;
+  tab.diskStamp = stamp;
+}
+
+/** 탭 배지 ⚠ 의 단일 출처. 바뀔 때만 다시 그린다. */
+export function setTabDiskChanged(tabId: string, changed: boolean): void {
+  const tab = tabs.get(tabId);
+  if (!tab || tab.diskChanged === changed) return;
+  tab.diskChanged = changed;
+  renderTabs();
+}
+
+/**
+ * M-6/D-7: 디스크에서 다시 읽은 내용을 적용한다. 활성 탭이면 편집기 값을 바로
+ * 교체하고 캐럿·스크롤을 클램프하며 프리뷰를 재렌더한다. 비활성 탭이면 저장된
+ * content 만 바꾼다 — 다음에 그 탭으로 전환하면 switchTab() 이 반영한다.
+ */
+export function applyTabReload(tabId: string, text: string, stamp: DiskStamp): void {
+  const tab = tabs.get(tabId);
+  if (!tab) return;
+
+  if (tabId === activeTabId) {
+    const newLength = text.length;
+    const start = clampCaret(editorEl.selectionStart, newLength);
+    const end = clampCaret(editorEl.selectionEnd, newLength);
+    editorEl.value = text;
+    editorEl.setSelectionRange(start, end);
+    // scrollHeight는 값 대입(리플로) 이후에 새 내용 기준으로 갱신되어 있다.
+    editorEl.scrollTop = clampScroll(
+      editorEl.scrollTop,
+      editorEl.scrollHeight,
+      editorEl.clientHeight,
+    );
+    renderPreview(previewEl, text);
+    tabRenderListener?.();
+  }
+
+  tab.content = text;
+  tab.isDirty = false;
+  tab.diskStamp = stamp;
+  tab.diskChanged = false;
   renderTabs();
   updateTitle();
   schedulePersist();
@@ -380,8 +473,17 @@ function renderTabs(): void {
     const nameSpan = document.createElement("button");
     nameSpan.type = "button";
     nameSpan.className = "tab-name";
-    nameSpan.textContent = tab.isDirty ? `${tab.fileName} *` : tab.fileName;
+    const dirtyMark = tab.isDirty ? " *" : "";
+    const diskMark = tab.diskChanged ? " ⚠" : "";
+    nameSpan.textContent = `${tab.fileName}${dirtyMark}${diskMark}`;
     if (tab.id === activeTabId) nameSpan.setAttribute("aria-current", "true");
+    // A-3: ⚠ 는 기호만 두지 않는다 — 접근 이름에 상태 문구를 포함시켜야
+    // 스크린리더 사용자도 "디스크에서 변경됨"을 알 수 있다.
+    if (tab.diskChanged) {
+      nameSpan.setAttribute("aria-label", `${tab.fileName} 탭, 디스크에서 변경됨`);
+    } else {
+      nameSpan.removeAttribute("aria-label");
+    }
     el.appendChild(nameSpan);
 
     const closeBtn = document.createElement("button");

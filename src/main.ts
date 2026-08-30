@@ -7,6 +7,7 @@ import {
   openDroppedFile,
   openFileFromHandle,
   setFileTouchListener,
+  setSaveConflictGuard,
   isFileSystemAccessSupported,
   openFile,
   saveFile,
@@ -15,18 +16,28 @@ import {
 import { initShortcuts } from "./shortcuts";
 import {
   UNTITLED,
+  applyTabReload,
   createTab,
   getActiveContent,
   getActiveTab,
+  getActiveTabId,
+  getAllTabs,
+  getTabText,
   syncActiveTab,
   hasDirtyTabs,
   initTabs,
   persistNow,
   setCloseConfirm,
   setScrollSyncHooks,
+  setTabDiskChanged,
+  setTabDiskStamp,
   setTabRenderListener,
   setTabStateListener,
+  setTabSwitchListener,
 } from "./tabs";
+import { initFileReload, type ReloadController } from "./fileReload";
+import { initReloadUi } from "./reloadUi";
+import type { DiskStamp } from "./diskStamp";
 import { initNotice, showNotice } from "./notice";
 import {
   isStorageAvailable,
@@ -140,6 +151,23 @@ const searchReplaceAllEl = document.querySelector<HTMLElement>("#search-replace-
 const editorContainerEl = document.querySelector<HTMLElement>(".editor-container");
 const splitResizerEl = document.querySelector<HTMLElement>("#split-resizer");
 const editorPaneEl = document.querySelector<HTMLElement>("#editor-pane");
+
+// F-88 파일 변경 감지 새로고침 (이슈 #187)
+const reloadBannerEl = document.querySelector<HTMLElement>("#reload-banner");
+const reloadBannerTextEl = document.querySelector<HTMLElement>("#reload-banner-text");
+const reloadBannerReloadEl = document.querySelector<HTMLElement>("#reload-banner-reload");
+const reloadBannerKeepEl = document.querySelector<HTMLElement>("#reload-banner-keep");
+const reloadBannerCloseEl = document.querySelector<HTMLElement>("#reload-banner-close");
+const reloadDialogEl = document.querySelector<HTMLDialogElement>("#reload-dialog");
+const reloadDialogTextEl = document.querySelector<HTMLElement>("#reload-dialog-text");
+const reloadDialogMetaEl = document.querySelector<HTMLElement>("#reload-dialog-meta");
+const reloadDialogCancelEl = document.querySelector<HTMLElement>("#reload-dialog-cancel");
+const reloadDialogOkEl = document.querySelector<HTMLElement>("#reload-dialog-ok");
+const saveConflictDialogEl = document.querySelector<HTMLDialogElement>("#save-conflict-dialog");
+const saveConflictTextEl = document.querySelector<HTMLElement>("#save-conflict-text");
+const saveConflictCancelEl = document.querySelector<HTMLElement>("#save-conflict-cancel");
+const saveConflictReloadEl = document.querySelector<HTMLElement>("#save-conflict-reload");
+const saveConflictOverwriteEl = document.querySelector<HTMLElement>("#save-conflict-overwrite");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -440,9 +468,135 @@ if (editorEl && previewEl) {
       // 탭이 바뀌면 문서가 통째로 바뀐다 (이슈 #114).
       invalidateAnchors();
       mermaidView.render();
+      // F-88 I-12: 재읽기도 문서를 통째로 바꾼다 — 옛 오프셋을 들고 있으면
+      // 검색이 엉뚱한 곳을 선택한다.
+      search?.refresh();
     });
 
     initTabs(tabBarEl, editorEl, previewEl, titleEl);
+  }
+
+  // F-88 파일 변경 감지 새로고침 (이슈 #187).
+  //
+  // 핵심 위험은 하나다 — 사용자가 편집 중인 글을 앱이 지우는 것. 더티 탭은
+  // 절대 자동으로 다시 읽지 않는다(M-4). `fileReload.ts`/`reloadUi.ts` 는
+  // `tabs.ts` 를 import 하지 않는 주입형 리프이므로 여기서 콜백으로 뒤집는다.
+  let reloadController: ReloadController | null = null;
+
+  type HandleWithPermission = FileSystemFileHandle & {
+    queryPermission?: (options: { mode: "read" | "readwrite" }) => Promise<PermissionState>;
+    requestPermission?: (options: { mode: "read" | "readwrite" }) => Promise<PermissionState>;
+  };
+
+  async function queryHandlePermission(
+    handle: FileSystemFileHandle,
+  ): Promise<PermissionState | "unsupported"> {
+    const h = handle as HandleWithPermission;
+    if (typeof h.queryPermission !== "function") return "unsupported";
+    try {
+      return await h.queryPermission({ mode: "readwrite" });
+    } catch {
+      return "unsupported";
+    }
+  }
+
+  async function requestHandlePermission(handle: FileSystemFileHandle): Promise<PermissionState> {
+    const h = handle as HandleWithPermission;
+    if (typeof h.requestPermission !== "function") return "granted";
+    try {
+      return await h.requestPermission({ mode: "readwrite" });
+    } catch {
+      return "denied";
+    }
+  }
+
+  async function readHandleStamp(handle: FileSystemFileHandle): Promise<DiskStamp | null> {
+    try {
+      const file = await handle.getFile();
+      return { lastModified: file.lastModified, size: file.size };
+    } catch {
+      return null;
+    }
+  }
+
+  async function readHandleText(handle: FileSystemFileHandle): Promise<string> {
+    const file = await handle.getFile();
+    return file.text();
+  }
+
+  const reloadUi =
+    reloadBannerEl &&
+    reloadBannerTextEl &&
+    reloadBannerReloadEl &&
+    reloadBannerKeepEl &&
+    reloadBannerCloseEl &&
+    reloadDialogEl &&
+    reloadDialogTextEl &&
+    reloadDialogMetaEl &&
+    reloadDialogCancelEl &&
+    reloadDialogOkEl &&
+    saveConflictDialogEl &&
+    saveConflictTextEl &&
+    saveConflictCancelEl &&
+    saveConflictReloadEl &&
+    saveConflictOverwriteEl
+      ? initReloadUi({
+          bannerEl: reloadBannerEl,
+          bannerTextEl: reloadBannerTextEl,
+          bannerReloadEl: reloadBannerReloadEl,
+          bannerKeepEl: reloadBannerKeepEl,
+          bannerCloseEl: reloadBannerCloseEl,
+          confirmDialogEl: reloadDialogEl,
+          confirmTextEl: reloadDialogTextEl,
+          confirmMetaEl: reloadDialogMetaEl,
+          confirmCancelEl: reloadDialogCancelEl,
+          confirmOkEl: reloadDialogOkEl,
+          conflictDialogEl: saveConflictDialogEl,
+          conflictTextEl: saveConflictTextEl,
+          conflictCancelEl: saveConflictCancelEl,
+          conflictReloadEl: saveConflictReloadEl,
+          conflictOverwriteEl: saveConflictOverwriteEl,
+          onReloadClick: () => void reloadController?.reloadActive(),
+          onKeepMineClick: () => reloadController?.keepMine(),
+        })
+      : null;
+
+  if (reloadUi) {
+    reloadController = initFileReload({
+      readStamp: readHandleStamp,
+      readText: readHandleText,
+      queryPermission: queryHandlePermission,
+      requestPermission: requestHandlePermission,
+      getTabs: () =>
+        getAllTabs().map((t) => ({
+          id: t.id,
+          fileName: t.fileName,
+          handle: t.handle,
+          isDirty: t.isDirty,
+          diskStamp: t.diskStamp,
+        })),
+      getActiveTabId,
+      getTabText,
+      applyReload: applyTabReload,
+      setStamp: setTabDiskStamp,
+      setChanged: setTabDiskChanged,
+      notify: (message, kind) => showNotice(message, kind ?? "info", 6000),
+      showBanner: (_tabId, fileName) => reloadUi.showBanner(fileName),
+      hideBanner: () => reloadUi.hideBanner(),
+      confirmReload: (info) => reloadUi.confirmReload(info),
+      confirmSaveConflict: (info) => reloadUi.confirmSaveConflict(info),
+      // E-11(트랩 #57): 모달 뒤 요소는 inert 다 — 열려 있는 동안은 배너를 미룬다.
+      isModalOpen: () => document.querySelector("dialog[open]") !== null,
+    });
+
+    setSaveConflictGuard((tabId) => reloadController!.confirmBeforeSave(tabId));
+    // I-2: 탭 전환마다 그 탭만 조용히 확인한다. tabs.ts 는 fileReload.ts 를 모른다.
+    setTabSwitchListener((id) => void reloadController?.checkTab(id));
+    // I-1: 창 포커스 복귀 / visible 전환 — 핸들 있는 모든 탭을 조용히 확인.
+    window.addEventListener("focus", () => void reloadController?.checkAll());
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void reloadController?.checkAll();
+    });
   }
 
   // F-58: 안내 UI 는 툴바 버튼과 단축키 양쪽에서 열린다. 초기화에 실패하면
@@ -487,6 +641,25 @@ if (editorEl && previewEl) {
         }),
       });
     }
+  }
+
+  // F-88 M-9/D-4: 활성 탭에 핸들이 없으면 `Reload` 버튼을 aria-disabled 로
+  // 낮춘다. `disabled` 를 쓰지 않는 이유는 그러면 포커스를 받지 못해
+  // 스크린리더 사용자에게 이유가 전달되지 않기 때문이다(F-58 패턴과 동일) —
+  // 클릭은 여전히 되고, 실제 안내는 `reloadController.reloadActive()` 가 준다.
+  const toolbarReloadEl = document.querySelector<HTMLElement>("#toolbar-reload");
+  function syncReloadButton(): void {
+    if (!toolbarReloadEl) return;
+    const hasHandle = !!getActiveTab()?.handle;
+    toolbarReloadEl.setAttribute("aria-disabled", hasHandle ? "false" : "true");
+  }
+  syncReloadButton();
+  if (reloadController) {
+    // I-2 감지와 같은 신호에 얹는다 — 탭이 바뀌면 버튼 상태도 함께 바뀐다.
+    setTabSwitchListener((id) => {
+      void reloadController?.checkTab(id);
+      syncReloadButton();
+    });
   }
 
   // 모드는 분할 비율과 독립이다 — 모드를 되돌리면 맞춰 둔 비율이 그대로 돌아온다.
@@ -749,7 +922,11 @@ if (editorEl && previewEl) {
     newDoc: () => createTab("", null, UNTITLED),
     open: () => void openFile(),
     save: () => void saveFile(),
-    saveAs: () => void saveFileAs(),
+    // Save As 는 switchTab() 을 거치지 않아 F-88 버튼 상태 동기화 신호(I-2)를
+    // 못 탄다 — 핸들 없는 탭이 이 동작으로 핸들을 얻으면 직접 다시 잰다.
+    saveAs: () => void saveFileAs().then(() => syncReloadButton()),
+    // F-88 M-11: 다시 읽기 진입점 중 하나 — 배너·단축키(Alt+R)와 같은 함수를 쓴다.
+    reload: () => void reloadController?.reloadActive(),
     showShortcuts: shortcutHelp ? () => shortcutHelp.open() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
     showSettings: editorSettings ? () => editorSettings.open() : undefined,
@@ -809,6 +986,7 @@ if (editorEl && previewEl) {
     toggleHelp: shortcutHelp ? () => shortcutHelp.toggle() : undefined,
     toggleFind: search ? () => search.toggle() : undefined,
     cycleView: viewMode ? () => viewMode.cycle() : undefined,
+    reloadFile: () => void reloadController?.reloadActive(),
   });
 
   // 새로고침·탭 닫기로 인한 유실 방지. 브라우저는 문구를 무시하고 기본 경고를 띄운다.
@@ -862,7 +1040,13 @@ if (editorEl && previewEl) {
   // (사용자는 앱이 빈 문서로 뜨는 것만 본다).
   initLaunchFiles({
     queue: (window as unknown as { launchQueue?: LaunchQueueLike }).launchQueue,
-    openHandle: openFileFromHandle,
+    // F-89 S-1(S-4): 기존 창에 파일이 도착했을 때 사용자가 눈치챌 수 있게 한다.
+    // 탭 전환은 openFileFromHandle → switchTab 이 이미 하므로 알림만 더한다 —
+    // 새 경로를 만들지 않고 기존 경로를 그대로 감싼다(M-14 원칙).
+    openHandle: async (handle) => {
+      await openFileFromHandle(handle);
+      showNotice(`"${handle.name}" 을(를) 열었습니다.`, "info", 6000);
+    },
     notify: (message, kind) => showNotice(message, kind ?? "info", 6000),
   });
 
