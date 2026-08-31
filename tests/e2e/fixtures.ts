@@ -104,7 +104,15 @@ export async function installFallbackMode(page: Page): Promise<void> {
   });
 }
 
-/** 목 상태를 갱신한다. */
+/**
+ * 목 상태를 갱신한다.
+ *
+ * `contents` 는 **병합**한다 — 통째로 갈아끼우면 이전에 연 파일의 내용이 목
+ * 디스크에서 사라지는데, 실제 디스크는 b.md 를 연다고 a.md 가 비워지지 않는다.
+ * F-88 이후 이 차이가 실제 실패로 드러났다: a.md 의 내용이 `""` 가 되면 크기가
+ * 달라져 "디스크에서 변경됨" 판정이 나고, 깨끗한 탭이라 빈 내용이 자동
+ * 반영된다 — 기준값 재기록과 경합해 **간헐적으로만** 실패했다(recent R3).
+ */
 export async function setFsMock(
   page: Page,
   patch: Partial<{
@@ -115,7 +123,11 @@ export async function setFsMock(
     failWrite: boolean;
   }>,
 ): Promise<void> {
-  await page.evaluate((p) => Object.assign(window.__fsMock!, p), patch);
+  await page.evaluate((p) => {
+    const { contents, ...rest } = p;
+    Object.assign(window.__fsMock!, rest);
+    if (contents) Object.assign(window.__fsMock!.contents, contents);
+  }, patch);
 }
 
 /** 목 디스크에 기록된 쓰기 이력을 반환한다. */
