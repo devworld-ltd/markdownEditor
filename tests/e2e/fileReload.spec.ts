@@ -25,11 +25,20 @@ async function writeDisk(page: Page, name: string, content: string): Promise<voi
   );
 }
 
-async function readDisk(page: Page, name: string): Promise<string> {
+/**
+ * 트랩 #79: 쓰기는 스왑 파일을 거쳐 커밋되므로, 교체되는 찰나에 읽으면
+ * `NotFoundError` 가 난다. 던지면 `expect.poll` 이 재시도하지 못하고 즉사하므로
+ * null 로 바꿔 폴링이 다음 회차를 돌게 한다 (CI 에서 간헐 실패로 실측).
+ */
+async function readDisk(page: Page, name: string): Promise<string | null> {
   return page.evaluate(async (name) => {
-    const dir = await navigator.storage.getDirectory();
-    const handle = await dir.getFileHandle(name);
-    return (await handle.getFile()).text();
+    try {
+      const dir = await navigator.storage.getDirectory();
+      const handle = await dir.getFileHandle(name);
+      return await (await handle.getFile()).text();
+    } catch {
+      return null;
+    }
   }, name);
 }
 
