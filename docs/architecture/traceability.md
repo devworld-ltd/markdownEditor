@@ -1,6 +1,6 @@
 # 상호 관계 매트릭스 — 기능 ↔ 모듈 ↔ 상태 ↔ API ↔ 테스트
 
-> 최종 갱신: 2026-08-17 · 대상: v2.6.0
+> 최종 갱신: 2026-08-31 · 대상: v2.6.1 (F-88·F-89, #187)
 
 "어떤 기능이 어떤 코드·상태·API·테스트에 연결되는가" 를 한 장으로 추적한다. 코드를 변경할 때 **영향 범위 파악**과 **갱신할 문서 식별**의 기준점이다.
 
@@ -65,6 +65,8 @@ DB/HTTP API 가 없으므로 축은 **인메모리 상태 ↔ 브라우저 API �
 | F-58 | 브라우저 한계 안내 | 폴백 경로 첫 저장 | `fileOps.saveFileAs()` → `fsLimitNotice.ts` | (세션 1회 플래그) | — | `fileaccess.spec.ts` |
 | F-70 | 오프라인 상태 표시 | `online`/`offline` 이벤트 | `main.ts` → `offline.ts` | (배지 표시 상태) | `navigator.onLine`, `window` 이벤트 | `offline.spec.ts` |
 | F-69 | 서비스 워커 갱신 알림 | `updatefound` / 로드 시 `waiting` | `main.ts` → `swUpdate.ts` → `public/sw.js` | `reloadPending`, `dismissedWorker` | Service Worker `postMessage`, `controllerchange` | `swupdate.spec.ts`(프리뷰), `swUpdate.test.ts` |
+| F-88 | 파일 변경 감지 새로고침 (#187) | `focus`/`visibilitychange`/탭 전환/`Reload`·`Alt+R` | `diskStamp.ts` → `fileReload.ts` → `reloadUi.ts`/`tabs.ts`/`fileOps.ts` | `diskStamp`, `diskChanged` (메모리 전용) | `handle.getFile()`, `queryPermission`/`requestPermission` | `fileReload.spec.ts`, `diskStamp.test.ts`, `fileReload.test.ts`, `reloadUi.test.ts` |
+| F-89 | 앱 중복 실행 방지 (#187) | Finder "다음으로 열기" · 아이콘 재클릭 | `public/manifest.webmanifest`(`launch_handler`) → 기존 `launchFiles.ts` | — (코드 변경 0) | `launch_handler.client_mode` | `launchHandler.spec.ts` (+ 실기기 AC-20) |
 
 ## 2. 모듈 의존 그래프
 
@@ -253,6 +255,8 @@ graph LR
 | `src/style.css` `@media print` | [서비스 아키텍처 §7.4](./service-architecture.md), `tests/e2e/print.spec.ts` — 보기 모드·다크 모드와의 상호작용을 함께 확인 |
 | `src/style.css` (색 토큰) | [서비스 아키텍처 §7.4](./service-architecture.md) — 다크 대응 토큰을 함께 정의해야 한다 |
 | `src/toolbar.ts` (버튼 증감) | [기능 현황](../features/feature-status.md), `tests/e2e/toolbar.spec.ts` 버튼 개수 단언 |
+| `src/diskStamp.ts`/`src/fileReload.ts`/`src/reloadUi.ts` (F-88, #187) | [데이터 모델 §2.2](./data-model.md), [API 명세 §3.13](../api/browser-apis.md#313-파일-변경-감지-새로고침-f-88-187), 본 문서 §1 — `fileReload.ts` 는 `tabs.ts` 를 import 하지 않는다(D-1) |
+| `public/manifest.webmanifest` `launch_handler` (F-89, #187) | [API 명세 §3.14·§4.2](../api/browser-apis.md#42-web-app-manifest), `tests/e2e/launchHandler.spec.ts` |
 | `src/toolbar.ts` (`OVERFLOW_GROUP` 이동) | `tests/e2e/menuPopover.spec.ts` 이름 목록, `tests/e2e/fixtures.ts` `clickToolbarAction()` |
 | `src/tableFormat.ts` (`makeTableBlock`) | `src/tablePreview.ts`, `tests/tableBlock.test.ts` 단일 출처 단언 |
 | `docs/manual.md` (`##` 절 증감) | 차례가 자동 생성된다 — `tests/e2e/manual.spec.ts` MT1 이 개수 일치를 단언 |

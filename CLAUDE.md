@@ -92,7 +92,10 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 - **`recentFilesUi.ts`** — 최근 파일 `<dialog>`(F-36). 주입형 리프.
 - **`manualToc.ts`** — 설명서 차례 계산(#151). 순수. **차례는 그려진 본문의 `h2` 에서 만든다** — 손으로 적으면 절을 더할 때 조용히 낡는다. 끝까지 내리면 마지막 절로 친다.
 - **`manualView.ts`** — 사용 설명서 `<dialog>`(#141). 주입형 리프. 본문은 **`parseMarkdown()` 을 거친다**(F-18). 원문은 `docs/manual.md` — 빌드 시각 번들.
-- **`launchFiles.ts`** — OS 파일 연결로 실행됐을 때(#135). 주입형 리프. **핸들을 그대로 `openFileFromHandle` 에 넘긴다** — 직접 읽으면 중복 탭 방지·최근 목록·핸들 보관을 다시 구현하게 된다.
+- **`launchFiles.ts`** — OS 파일 연결로 실행됐을 때(#135). 주입형 리프. **핸들을 그대로 `openFileFromHandle` 에 넘긴다** — 직접 읽으면 중복 탭 방지·최근 목록·핸들 보관을 다시 구현하게 된다. F-89(#187)는 이 파일을 손대지 않는다 — `manifest.webmanifest` 의 `launch_handler` 한 줄이 기존 창을 앞으로 가져오고, 파일은 이미 있는 이 소비자가 그대로 받는다.
+- **`diskStamp.ts`** — 파일 변경 감지 새로고침(F-88, #187). 순수. 의존 0. 디스크 기준값(mtime+크기) 비교·캐럿/스크롤 클램프만 계산한다. `clampScroll` 은 **`> 0` 비교**로 `0/0=NaN` 대입을 피한다(트랩 #18).
+- **`fileReload.ts`** — F-88 감지·재읽기 배선. 주입형 배선 리프. **`tabs.ts` 를 import 하지 않는다** — 권한 조회·파일 읽기·탭 상태 갱신을 전부 `ReloadHost` 로 주입받아, 권한 3상태 × 더티 2상태 × 판정 4결과를 평범한 객체로 단위 테스트한다. **폴링 없음**(`setInterval`/`setTimeout` 0줄) — 확인은 포커스 복귀·탭 전환·수동 클릭 신호에서만.
+- **`reloadUi.ts`** — F-88 배너 + 대화상자. 주입형 리프. 더티 탭 변경은 **모달 아닌 정적 배너**(`#reload-banner`, `.shortcut-help` 재사용 아님)로 알린다 — 타이핑을 막으면 안 된다(A-1). 재읽기 확인·저장 충돌은 `<dialog>` + `showModal()`, 기본 포커스는 **취소**(D-6).
 - **`releaseNotes.ts`** — 릴리스 노트 계산(#131). 순수. **버전 비교는 자리별 숫자로** — 사전순이면 `2.10.0 < 2.9.0` 이 되어 큰 갱신에서만 틀린다.
 - **`releaseNotesUi.ts`** — 새 소식 `<dialog>`(#131). 주입형 리프. 본문은 **`parseMarkdown()` 을 거친다**(F-18).
 - **`editorPrefs.ts`** — 편집 글꼴·크기 계산만 담당하는 순수 리프(F-35). **웹폰트 금지** — 네트워크 요청이 없는 앱이고 CSP 가 `font-src 'self' data:` 다.
@@ -217,13 +220,15 @@ main.ts → editor.ts → preview.ts → parser.ts → marked → DOMPurify
 102. **"즉시 갱신" 단언은 한 번 읽기로 하지 말 것(#152 → prod 검증에서 발견).** `selectionchange` 는 작업(task)으로 큐에 들어가므로 입력 직후의 단 한 번 읽기는 도착 전일 수 있다 — 로컬에서 통과하고 **prod 검증에서만** 실패했다. 그렇다고 여유를 넉넉히 주면 디바운스에 얹어도 통과해 지키려던 것이 사라진다(트랩 #68). **디바운스보다 짧은 시한**(여기서는 100ms)을 주고 재시도하게 하라 — 안정성과 구별력을 함께 얻는다.
 103. **v8 커버리지 텍스트 표는 100%/100% 인 파일을 아예 빼고 찍는다(#177).** 그래서 완전히 덮인 모듈은 **테스트가 없는 것처럼 보이지 않고 그냥 사라진다** — 목록에 없다고 0% 로 읽으면 이미 있는 테스트를 다시 쓴다. 정확한 값은 `coverage/coverage-summary.json` 에 있다.
 104. **`code` 스타일을 `#preview code` 에만 걸지 말 것(#180).** `<code>` 는 인라인 상자라 좌우 `padding` 이 **첫 줄 앞과 마지막 줄 뒤에만** 나타난다 — 코드 블록이 한 칸 들여쓴 것처럼 보이고, 사용자는 "파서가 공백을 넣는다" 고 읽는다(실제로 그렇게 보고됐다). `#preview pre code { padding: 0; background: none }` 이 짝이다. 그리고 **코드 표면 규칙은 네 곳(미리보기·설명서·내보내기·인쇄)에 흩어져 있다** — 이 버그는 파생 두 곳에는 규칙이 있는데 **본체에만 없어서** 생겼다. 하나를 고치면 넷을 다 확인하라(트랩 #48 의 여백 버전).
+105. **`installFsMock()` 의 목 핸들 `getFile()` 은 `new File(...)` 을 매번 새로 만든다 — `lastModified` 를 명시하지 않으면 호출할 때마다 다른 값이 나온다(#187).** 디스크 기준값(mtime+크기)을 비교하는 기능(F-88)을 이 목으로 검증하면, 실제로는 안 바뀐 파일도 매 호출마다 "바뀐 것"으로 보여 저장·재읽기 흐름이 영원히 충돌 대화상자에서 멈춘다(실측: `saveFile()` 이 `getWrites()` 를 채우지 못한 채 타임아웃). `fixtures.ts` 의 `getFile()` 은 이제 `mock.mtimes[name]` 을 **쓰기(`close()`) 때만** 갱신하고 그 사이엔 안정된 값을 준다 — 실제 파일시스템 mtime 과 같은 성격으로 맞췄다.
+106. **Playwright 는 `aria-disabled="true"` 인 요소를 "비활성"으로 보고 기본 `.click()` 을 거부한다(#187).** `disabled` 속성이 아니라 `aria-disabled` 를 쓰는 이유(트랩 #9 의 F-58 패턴 — 포커스를 유지해 스크린리더에 이유를 전달하기 위해)는 그대로 유효하지만, 실제 사용자는 여전히 클릭할 수 있다는 전제를 E2E 로 확인하려면 `.click({ force: true })` 를 써야 한다(`swupdate.spec.ts` 에 선례가 있다) — 그렇지 않으면 "클릭은 되는데 이유를 안내한다" 는 동작 자체를 검증하지 못하고 타임아웃만 난다.
 
 ## 테스트
 
-- **단위**: `tests/*.test.ts` (Vitest + jsdom) 63개 파일 · 1092건. 전체 커버리지 **84%**(구문). 자세한 표는 `npm run test:coverage`.
+- **단위**: `tests/*.test.ts` (Vitest + jsdom) 66개 파일 · 1147건. 전체 커버리지 **83%**(구문). 자세한 표는 `npm run test:coverage`.
   - **0% 인 것**: `main.ts`(배선이라 E2E 가 맡는다). `toolbar.ts` 는 15%(액션 정의는 E2E 담당).
   - 커버리지를 올리려면 테스트를 더 쓰지 말고 **의존 방향을 정리하라**(트랩 #15).
-- **E2E**: `tests/e2e/*.spec.ts` (Playwright, Chromium) 49개 파일 · 512건. 로컬 dev 서버에서 약 15건이 skip 된다(`_headers`·서비스 워커는 원격에서만 검증).
+- **E2E**: `tests/e2e/*.spec.ts` (Playwright, Chromium) 52개 파일 · 533건. 로컬 dev 서버에서 약 15건이 skip 된다(`_headers`·서비스 워커는 원격에서만 검증).
 - `vitest.config.ts` 가 `tests/e2e/**` 를 제외한다. **새 E2E 는 `.spec.ts`, 단위는 `.test.ts`.**
 - `tests/setup.ts` 는 Node 22+ 의 `localStorage` 전역 예약 때문에 필요한 Storage 셰임이다. 지우면 `storage.test.ts` 가 깨진다.
 - **`localStorage` 메서드를 스텁할 때는 `window.localStorage` 속성 자체를 `Object.defineProperty` 로 갈아끼워야 한다.** jsdom 의 Storage 는 Proxy 라 `localStorage.setItem = fn` 이 메서드 교체가 아니라 `"setItem"` 이라는 이름의 **항목 저장**으로 처리된다. 로컬(셰임=일반 객체)에서는 통과하고 CI(jsdom 실물=Proxy)에서만 깨지는 함정이다.
@@ -292,4 +297,11 @@ RUN=$(gh run list --branch main --limit 5 --json databaseId,headSha \
 자동 테스트로는 여전히 닿지 않으므로 **`formatBar.ts`·`virtualKeyboard.ts` 를 고치면 다시
 실기기에서 봐야 한다**(트랩 #100).
 
-지금 남은 것: **없다.**
+**F-89(#187) 는 실기기 확인이 아직 남아 있다.** `manifest.webmanifest` 의
+`launch_handler: { client_mode: "focus-existing" }` 와 `launchQueue` 배선(E6)은 자동
+E2E 로 확인됐지만, "Finder 에서 다시 열었을 때 새 창이 안 뜨고 기존 창이 앞으로
+나오는가"(AC-20)는 헤드리스 Chromium 에 Launch Services·창 관리자가 없어 검증 불가다
+(트랩 #82, F-87 과 같은 성격). PWA 를 설치한 실기기에서 확인하고 결과를 이슈 #187
+댓글에 기록하는 것을 완료 조건으로 남긴다.
+
+지금 남은 것: **F-89 AC-20 실기기 확인.**

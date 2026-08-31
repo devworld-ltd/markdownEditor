@@ -5,6 +5,8 @@ import {
   getActiveContent,
   getActiveTab,
   markActiveTabDirty,
+  setTabDiskChanged,
+  setTabDiskStamp,
   switchTab,
   syncActiveTab,
   updateActiveTab,
@@ -135,6 +137,32 @@ function notifyFileTouched(name: string, handle: FileSystemFileHandle | null): v
   }
 }
 
+/**
+ * F-88 S-1: 저장 직전 디스크 충돌을 확인하는 훅. `main.ts` 가
+ * `fileReload.confirmBeforeSave` 를 주입한다 — `fileOps.ts` 는 `fileReload.ts` 를
+ * import 하지 않는다(`setFileActions` 와 같은 콜백 역전 패턴).
+ *
+ * 주입하지 않으면(테스트 등) 항상 저장을 허용해 기존 동작 그대로다.
+ */
+type SaveConflictGuard = (tabId: string) => Promise<boolean>;
+let saveConflictGuard: SaveConflictGuard | null = null;
+
+export function setSaveConflictGuard(guard: SaveConflictGuard | null): void {
+  saveConflictGuard = guard;
+}
+
+/** F-88 M-1: 핸들에서 현재 디스크 기준값을 읽는다. 실패하면 null. */
+async function currentStamp(
+  handle: FileSystemFileHandle,
+): Promise<{ lastModified: number; size: number } | null> {
+  try {
+    const file = await handle.getFile();
+    return { lastModified: file.lastModified, size: file.size };
+  } catch {
+    return null;
+  }
+}
+
 export function isFileSystemAccessSupported(): boolean {
   return host.isSupported();
 }
@@ -195,12 +223,17 @@ async function openHandle(handle: FileSystemFileHandle): Promise<void> {
     // 이미 열려 있어도 "방금 쓴 파일" 이다 — 최근 목록에서 뒤로 밀리면
     // 자주 쓰는 문서일수록 목록에서 사라지는 이상한 동작이 된다 (F-36).
     notifyFileTouched(existing.fileName, handle);
+    // F-88 M-1: 다시 연 시점의 디스크 기준값으로 갱신한다.
+    setTabDiskStamp(existing.id, await currentStamp(handle));
+    setTabDiskChanged(existing.id, false);
     return;
   }
 
   const file = await handle.getFile();
-  createTab(await file.text(), handle, file.name);
+  const id = createTab(await file.text(), handle, file.name);
   notifyFileTouched(file.name, handle); // F-36
+  // F-88 M-1: 열기 직후 디스크 기준값을 기록한다.
+  setTabDiskStamp(id, { lastModified: file.lastModified, size: file.size });
 }
 
 /**
@@ -240,6 +273,12 @@ export async function saveFile(): Promise<void> {
   syncActiveTab();
 
   if (tab.handle) {
+    // F-88 S-1: 저장 직전 디스크 충돌을 확인한다. 가드가 없으면(테스트 등)
+    // 항상 통과해 기존 동작 그대로다.
+    if (saveConflictGuard) {
+      const proceed = await saveConflictGuard(tab.id);
+      if (!proceed) return;
+    }
     await writeToHandle(tab.handle, getActiveContent(), tab.fileName);
     return;
   }
@@ -288,6 +327,13 @@ async function writeToHandle(
     await writable.close();
     updateActiveTab({ handle, fileName, isDirty: false });
     notifyFileTouched(fileName, handle); // F-36
+    // F-88 M-1/E-6: 쓴 직후의 디스크 기준값을 기록하고, 저장으로 충돌을
+    // 해소했으니 배지·배너를 지운다.
+    const tab = getActiveTab();
+    if (tab) {
+      setTabDiskStamp(tab.id, await currentStamp(handle));
+      setTabDiskChanged(tab.id, false);
+    }
     showNotice(`${fileName} 에 저장했습니다.`);
   } catch (error) {
     if (isAbort(error)) return;

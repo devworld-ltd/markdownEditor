@@ -93,6 +93,8 @@ export interface FileActions {
   showManual?: () => void;
   /** F-30 표 대화상자 열기. */
   showTable?: () => void;
+  /** F-88 디스크에서 다시 읽기. */
+  reload?: () => void;
 }
 
 let fileActions: FileActions | null = null;
@@ -139,6 +141,17 @@ const actions: ToolbarAction[] = [
     group: "파일",
     icon: `<svg ${SVG_ATTRS}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
     action: () => fileActions?.save(),
+  },
+  {
+    // F-88: 활성 탭에 핸들이 있을 때만 의미가 있다. main.ts 가 `id` 로 이
+    // 버튼을 찾아 aria-disabled 를 동적으로 토글한다(D-4/M-9, 트랩 #32 와
+    // 같은 이유로 initToolbar() 뒤에서만 가능하다).
+    label: "Reload",
+    group: "파일",
+    id: "toolbar-reload",
+    icon: `<svg ${SVG_ATTRS}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
+    action: () => fileActions?.reload?.(),
+    // editsText 없음 — 파일 액션이다(트랩 #3).
   },
   {
     label: "Save As",

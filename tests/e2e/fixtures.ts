@@ -19,6 +19,14 @@ export async function installFsMock(page: Page): Promise<void> {
       saveName: "saved.md",
       /** 파일명 → 내용 */
       contents: {} as Record<string, string>,
+      /**
+       * 파일명 → 마지막 수정 시각. `getFile()` 을 부를 때마다 `new File()` 이
+       * 매번 다른 `lastModified`(기본값 `Date.now()`)를 주면 F-88 의 디스크
+       * 기준값 비교가 **실제로는 안 바뀐 파일도 바뀐 것처럼** 본다 — 그래서
+       * 쓰기(`createWritable().close()`) 때만 갱신하고, 그 전에는 안정된 값을
+       * 유지한다(실제 파일시스템 mtime 과 같은 성격).
+       */
+      mtimes: {} as Record<string, number>,
       /** 디스크에 기록된 순서대로 누적 */
       writes: [] as Array<{ name: string; content: string }>,
       /** true 면 다음 대화상자가 취소된 것처럼 동작 */
@@ -40,8 +48,10 @@ export async function installFsMock(page: Page): Promise<void> {
         kind: "file" as const,
         name,
         async getFile() {
+          if (mock.mtimes[name] === undefined) mock.mtimes[name] = Date.now();
           return new File([mock.contents[name] ?? ""], name, {
             type: "text/markdown",
+            lastModified: mock.mtimes[name],
           });
         },
         async isSameEntry(other: FileSystemHandle) {
@@ -58,6 +68,10 @@ export async function installFsMock(page: Page): Promise<void> {
             },
             async close() {
               mock.contents[name] = buffer;
+              // 실제 mtime 은 밀리초 해상도라 같은 밀리초 안에서 여러 번 쓰면
+              // 값이 겹칠 수 있다 — 그래도 최소 1ms 는 전진시켜 "달라졌다" 는
+              // 사실만은 항상 보장한다.
+              mock.mtimes[name] = Math.max(Date.now(), (mock.mtimes[name] ?? 0) + 1);
               mock.writes.push({ name, content: buffer });
             },
           };
@@ -90,7 +104,15 @@ export async function installFallbackMode(page: Page): Promise<void> {
   });
 }
 
-/** 목 상태를 갱신한다. */
+/**
+ * 목 상태를 갱신한다.
+ *
+ * `contents` 는 **병합**한다 — 통째로 갈아끼우면 이전에 연 파일의 내용이 목
+ * 디스크에서 사라지는데, 실제 디스크는 b.md 를 연다고 a.md 가 비워지지 않는다.
+ * F-88 이후 이 차이가 실제 실패로 드러났다: a.md 의 내용이 `""` 가 되면 크기가
+ * 달라져 "디스크에서 변경됨" 판정이 나고, 깨끗한 탭이라 빈 내용이 자동
+ * 반영된다 — 기준값 재기록과 경합해 **간헐적으로만** 실패했다(recent R3).
+ */
 export async function setFsMock(
   page: Page,
   patch: Partial<{
@@ -101,7 +123,11 @@ export async function setFsMock(
     failWrite: boolean;
   }>,
 ): Promise<void> {
-  await page.evaluate((p) => Object.assign(window.__fsMock!, p), patch);
+  await page.evaluate((p) => {
+    const { contents, ...rest } = p;
+    Object.assign(window.__fsMock!, rest);
+    if (contents) Object.assign(window.__fsMock!.contents, contents);
+  }, patch);
 }
 
 /** 목 디스크에 기록된 쓰기 이력을 반환한다. */
