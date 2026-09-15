@@ -12,6 +12,7 @@
 
 | 일자 | 작업 | 문서 |
 |------|------|------|
+| 2026-09-16 | **원격 URL 열기 + 로컬 열기 파라미터 (F-90·F-91, #195)** — `?url=`/`?open=local`, 확인 대화상자, CORS/네트워크/HTTP/용량 4갈래 오류 구별, `connect-src https:` 완화. `launchQueue` 단일 소비자 유지, F-91 은 실기기 검증 잔여 | [2026-09-16-open-url-param.md](./2026-09-16-open-url-param.md) |
 | 2026-08-31 | **파일 변경 감지 새로고침 + 앱 중복 실행 방지 (F-88·F-89, #187)** — diskStamp 기준값 비교, 더티 탭 확인·저장 충돌 경고, `launch_handler: focus-existing`. 리뷰 P2 1건은 #189 로 분리, F-89 AC-20 은 실기기 검증 잔여 | [2026-08-31-file-reload-single-instance.md](./2026-08-31-file-reload-single-instance.md) |
 | 2026-08-17 | **디자인 리뉴얼 3단계 (#154·#155)** — 좁은 화면 세그먼트·키보드 위 서식 바. 경계를 520px 로 잡은 이유와 승격 중 발견 2건 | [2026-08-17-design-renewal-phase3.md](./2026-08-17-design-renewal-phase3.md) |
 | 2026-08-17 | **디자인 리뉴얼 2단계 (#149~#153)** — 더보기 팝오버·표 미리보기·설명서 차례·커서 위치·시각 정리. 구별되지 않는 코드 3건을 삭제 | [2026-08-17-design-renewal-phase2.md](./2026-08-17-design-renewal-phase2.md) |

@@ -210,6 +210,7 @@ Playwright 의 `context.setOffline(true/false)` 로 **실제 오프라인을 재
 - [ ] Open → 업로드 동작
 - [ ] Cmd+S → 다운로드 발생, 파일명 정확
 - [ ] `data-fs-access="false"` 확인
+- [ ] (#195) `?open=local` 링크 진입 → 확인 대화상자 → "파일 선택" 클릭 → `<input type=file>` 폴백이 실제로 열리는지(제스처 요구가 Chromium 보다 느슨할 근거가 없어 설계는 동일하지만 미측정)
 
 ### 모바일
 - [ ] 720px 이하에서 상하 분할
