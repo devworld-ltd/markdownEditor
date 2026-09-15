@@ -78,6 +78,10 @@
      링크는 본문 안에서, accent 는 UI 상태(활성 탭·포커스·선택)에서 쓴다. */
   --accent: #1f5fd0;
   --accent-soft: #e4edfc; /* 선택 배경 — accent 글자가 그 위에서 AA 이상 */
+  /* accent 배경 위 글자. 라이트는 accent 가 짙은 파랑이라 밝은 글자,
+     다크는 accent(#7fb2ff)가 밝은 파랑이라 **어두운** 글자여야 AA 를 넘는다
+     (트랩 #48 — 표면이 바뀌면 값을 다시 잰다. 흰 글자는 2.16:1 로 미달). */
+  --accent-ink: #ffffff;
 
   /* 상태. **색만으로 알리지 않는다** — 항상 글자를 동반한다(#148). */
   --status-ok: #1f6f43;
@@ -1075,6 +1079,23 @@ body {
 }
 
 /*
+ * `.sw-update-btn` 은 원래 `.notice`(항상 어두운 표면) 전용이라 글자색을 `#fff` 로
+ * 고정했다. F-90/91(#195) 이후 `.shortcut-help`(테마를 따르는 표면) 대화상자
+ * (#reload-dialog·#save-conflict-dialog·#open-url-dialog)가 같은 클래스를 재사용
+ * 하면서, 라이트 모드 대화상자(흰 배경)에서 흰 글자가 안 보이게 됐다(PR #196 리뷰
+ * P1). `.notice` 쪽 `#fff` 는 그대로 두고 `.shortcut-help` 맥락만 토큰으로 되돌린다.
+ */
+.shortcut-help .sw-update-btn {
+  color: var(--text);
+}
+
+.shortcut-help .sw-update-btn.primary {
+  /* accent 배경 위 글자 — 다크 모드에서는 accent 가 밝은 파랑이라 흰 글자로는
+     AA 를 넘지 못한다(트랩 #48). `--accent-ink` 가 표면별로 맞는 값을 준다. */
+  color: var(--accent-ink);
+}
+
+/*
  * F-88 파일 변경 감지 새로고침 — 더티 탭 변경 배너 (이슈 #187).
  *
  * 편집·프리뷰 **위 한 줄**을 차지해 레이아웃을 밀어낸다(덮지 않는다) — 가려진
@@ -1699,6 +1720,7 @@ body {
     --text-faint: #8a91a0;
     --accent: #7fb2ff;
     --accent-soft: #25334c;
+    --accent-ink: #14213d; /* 다크 accent(밝은 파랑) 위 어두운 글자 — AA 확보 */
     --status-ok: #79d3a0;
     --status-warn: #e8b45c;
     --status-danger: #f2938c;
