@@ -107,6 +107,9 @@ graph TB
 | 통계 표시 | `src/statusBar.ts` | 상태 바 배선 (F-29) | `docStats` (**리프**, host 주입) |
 | 드롭·붙여넣기 | `src/editorDrop.ts` | 파일 분기·업로드 (F-28) | `imageUpload` (**리프**, host 주입) |
 | 텍스트 계산 | `src/textEdit.ts` | 감싸기·줄머리·블록 삽입 문자열 계산 | — (**리프**, DOM 없음) |
+| 원격/로컬 열기 파라미터 | `src/openParams.ts` | `?url=`/`?open=local`/`?file=` 판정, 탭 이름 도출, 실패 문구 생성 (F-90·F-91, #195) | `dropFiles`, `shareId`, `imageUpload`(상수만) (**순수**) |
+| 원격 문서 가져오기 | `src/remoteDoc.ts` | fetch·2단 용량 상한·`no-cors` 탐침 오류 분류 (F-90, #195) | `openParams` (**리프**, host 주입) |
+| 원격/로컬 확인 대화상자 | `src/openUrlUi.ts` | `#open-url-dialog` 2모드 배선 (F-90·F-91, #195) | — (**리프**, host 주입) |
 
 ## 4. 초기화 순서 (`main.ts`)
 

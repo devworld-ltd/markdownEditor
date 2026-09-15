@@ -258,6 +258,30 @@ const url = URL.createObjectURL(blob);
 | 파일 수신 | **변경 없음** — 이미 있는 `window.launchQueue` → `src/launchFiles.ts` → `fileOps.openFileFromHandle()` 경로를 그대로 쓴다(§3.10) |
 | 실기기 검증 | 헤드리스 Chromium 에는 Launch Services·창 관리자가 없어 "새 창이 안 뜨는가" 자체는 E2E 로 확인 불가(트랩 #82). PWA 설치 후 실기기에서 확인한다 |
 
+**`targetURL` 분기 (F-90/F-91, 이슈 #195).** `LaunchParams` 에는 `files` 외에 **`targetURL`** 도 실려 온다(Chromium 실측) — PWA 가 이미 떠 있는 상태에서 `?url=`/`?open=local` 링크를 클릭하면 페이지는 이동하지 않고 이 값으로 주소가 도착한다. `launchQueue.setConsumer()` 는 **두 번 부르면 예외 없이 조용히 교체된다**(실측) — 그래서 F-90/F-91 은 별도 소비자를 등록하지 않고 `src/launchFiles.ts` 의 기존 소비자 **한 곳**에 분기를 더한다:
+
+1. `files.length > 0` 이면 F-89 경로(위 §3.10)를 타고 **즉시 `return`** 한다 — 파일 연결 실행에도 `targetURL` 이 매니페스트 `action`(`"/"`)으로 항상 채워져 오므로, 먼저 보면 파일 열기와 경쟁한다.
+2. 그 다음에만 `targetURL` 을 `LaunchFilesHost.openTargetUrl` 콜백(`main.ts` 의 `handleIntent`)에 넘긴다.
+
+순서를 지키지 않으면 F-89 가 **오류 없이 조용히 죽는다** — 이 저장소가 가장 경계하는 실패 유형이다.
+
+## 3.15 원격 URL 열기 · 로컬 열기 파라미터 (F-90/F-91, 이슈 #195)
+
+`?url=<https 주소>` 로 앱에 진입하면 확인 대화상자 뒤 그 주소의 마크다운을 내려받아 새 탭으로 연다. `?open=local` 은 확인 대화상자 뒤 기존 `openFile()`(§2) 을 촉발한다.
+
+| 항목 | 값 |
+|------|-----|
+| 파라미터 판정 | `src/openParams.ts` `readOpenIntent()` — 순수 함수. `location.href` 와 PWA `targetURL`(위 §3.14) 이 **같은 함수**를 탄다 |
+| 허용 스킴 | `https:`. `http:` 는 호스트가 `localhost`·`127.0.0.1`·`[::1]` 일 때만(로컬 개발) |
+| 요청 | `fetch(url, { mode:"cors", credentials:"omit", redirect:"follow", cache:"no-store", referrerPolicy:"no-referrer" })` — **사용자가 확인 대화상자에서 "열기" 를 누르기 전에는 나가지 않는다** |
+| `accept` 헤더 | `text/markdown, text/plain;q=0.9, */*;q=0.8` — CORS **안전목록**(simple request 헤더) 안에서만 값을 늘려야 한다. 벗어나면 `OPTIONS` preflight 가 발생해 GitHub raw 같은 정적 호스트 대부분이 실패한다(새 함정 후보) |
+| 용량 상한 | 2MB(`MAX_REMOTE_BYTES` = `imageUpload.ts` 의 `MAX_IMAGE_BYTES`). `Content-Length` 사전검사 + `Response.body.getReader()` 본문 누적검사 **두 지점 모두** — 헤더가 없거나 거짓일 수 있다 |
+| 오류 4분류 | `http`(상태 코드) · `cors` · `network` · `offline` — CORS 거부와 네트워크 실패는 1차 요청만으로는 같은 `TypeError` 라 구별이 안 되어, 실패 경로에서만 `mode:"no-cors"` **탐침**을 추가로 보내 가른다(`src/remoteDoc.ts`) |
+| 정화 | 받아온 마크다운도 기존 `parseMarkdown()`(marked → DOMPurify) 만 탄다 — 두 번째 정화 경로 없음(F-18) |
+| CSP | `public/_headers` `connect-src` 를 `'self' https:` 로 완화(§5 아래). `script-src` 는 불변 |
+| UI | `src/openUrlUi.ts` — `<dialog id="open-url-dialog">`, 기본 포커스 = 취소. 원격/로컬 두 모드가 같은 마크업을 공유한다 |
+| 로컬 파일 선택 | **주소만으로는 파일 선택창을 열 수 없다**(실측 — `showOpenFilePicker()`/`<input>.click()` 모두 사용자 제스처가 필요하고, `<input>` 폴백은 제스처가 없으면 **예외조차 없이** 조용히 열리지 않는다). 그래서 확인 대화상자의 "파일 선택" 클릭이 제스처를 공급한다 |
+
 ## 4.1 Service Worker / Cache Storage
 
 | 항목 | 값 |
