@@ -7,7 +7,11 @@
       name="description"
       content="설치 없이 브라우저에서 바로 쓰는 마크다운 에디터. 실시간 프리뷰, 멀티 탭, 로컬 파일 열기/저장을 지원합니다."
     />
-    <meta name="theme-color" content="#1e1e1e" />
+    <!-- PWA 상태 표시줄·스플래시 색. **아이콘 바탕(`public/icon.svg` 의 rect fill)과
+         같은 값이어야 한다** — 다르면 설치한 앱에서 아이콘과 창 테두리가 서로 다른
+         색으로 보인다. manifest 의 `theme_color` 와도 함께 바꿔야 하며,
+         `hardening.spec.ts` 가 둘이 같은지 단언한다. -->
+    <meta name="theme-color" content="#17324d" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <!-- iOS 홈 화면. SVG 를 지원하지 않아 PNG 가 없으면 페이지 스크린샷으로
          대체된다. 알파도 지원하지 않으므로 이 PNG 는 모서리가 둥글지 않은

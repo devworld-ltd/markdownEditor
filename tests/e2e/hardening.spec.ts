@@ -64,10 +64,38 @@ test.describe("F-61 PWA", () => {
     expect(manifest.name).toBe("Markdown Editor");
     expect(manifest.start_url).toBe("/");
     expect(manifest.display).toBe("standalone");
-    expect(manifest.theme_color).toBe("#1e1e1e");
+    expect(manifest.theme_color).toBe("#17324d");
     expect(Array.isArray(manifest.icons)).toBe(true);
     expect(manifest.icons.length).toBeGreaterThan(0);
     expect(manifest.icons.some((i: { purpose?: string }) => i.purpose === "maskable")).toBe(true);
+  });
+
+  /*
+   * theme_color 는 두 곳에 적혀 있다 — manifest(설치된 앱)와 index.html 의
+   * <meta name="theme-color">(브라우저 탭). **한쪽만 고치면 같은 앱이 두 색을
+   * 쓴다.** 실제로 아이콘 바탕을 #1e1e1e → #17324d 로 바꾸면서 이 둘이 옛 값에
+   * 그대로 남아 있었다. 값 자체가 아니라 **둘이 같은지**를 단언해야 다음에
+   * 색을 바꿀 때도 짝이 유지된다.
+   */
+  test("manifest 와 index.html 의 테마 색이 같다", async ({ page, request }) => {
+    const manifest = await (await request.get("/manifest.webmanifest")).json();
+    await page.goto("/");
+    const meta = await page.locator('meta[name="theme-color"]').getAttribute("content");
+    expect(meta).toBe(manifest.theme_color);
+  });
+
+  /*
+   * 그리고 그 색은 **아이콘 바탕과도 같아야 한다**(사용자 요청). 아이콘을 다시
+   * 그리면서 테마 색을 잊으면 설치한 앱에서 아이콘과 창 테두리가 서로 다른
+   * 색으로 보인다 — 트랩 #22 의 테마 색 버전이다.
+   */
+  test("테마 색이 아이콘 바탕색과 같다", async ({ request }) => {
+    const svg = await (await request.get("/icon.svg")).text();
+    const fill = svg.match(/<rect[^>]*fill="(#[0-9a-fA-F]{3,8})"/)?.[1];
+    expect(fill).toBeTruthy();
+
+    const manifest = await (await request.get("/manifest.webmanifest")).json();
+    expect(manifest.theme_color.toLowerCase()).toBe(fill!.toLowerCase());
   });
 
   test("아이콘과 서비스 워커 스크립트가 서빙된다", async ({ request }) => {
