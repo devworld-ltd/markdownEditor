@@ -345,6 +345,23 @@
         </div>
       </dialog>
 
+      <!-- F-90/F-91: 원격 URL 열기(?url=) · 로컬 열기 파라미터(?open=local) 확인
+           (이슈 #195). 파괴적/제스처 필요 동작이므로 <dialog> + showModal() —
+           기본 포커스는 취소(D-6). 주소는 textContent 로만 넣는다(#open-url-target). -->
+      <dialog id="open-url-dialog" class="shortcut-help" aria-labelledby="open-url-title">
+        <div class="shortcut-help-header">
+          <h2 id="open-url-title">이 주소의 문서를 열까요?</h2>
+        </div>
+        <div class="shortcut-help-list settings-body">
+          <p id="open-url-body" class="setting-note"></p>
+          <p id="open-url-target" class="open-url-target"></p>
+          <div class="sw-update-actions">
+            <button type="button" id="open-url-cancel" class="sw-update-btn">취소</button>
+            <button type="button" id="open-url-confirm" class="sw-update-btn primary">열기</button>
+          </div>
+        </div>
+      </dialog>
+
       <!-- F-58: 단축키 안내. 네이티브 <dialog> 를 쓰면 포커스 트랩·Esc 닫기·
            백드롭·바깥 요소 inert 처리를 브라우저가 정확히 해 준다. -->
       <dialog id="shortcut-help" class="shortcut-help" aria-labelledby="shortcut-help-title">

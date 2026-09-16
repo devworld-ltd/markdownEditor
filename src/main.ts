@@ -102,6 +102,16 @@ import { buildHtmlDocument, suggestHtmlFileName, titleFromFileName } from "./htm
 import { copyRenderedHtml } from "./clipboardExport";
 import { createShareLink, loadSharedDocument, type ShareHost } from "./share";
 import { shareIdFromPath } from "./shareId";
+import {
+  fetchErrorMessage,
+  fileNameFromUrl,
+  looksLikeWebPage,
+  openedMessage,
+  readOpenIntent,
+  rejectMessage,
+} from "./openParams";
+import { fetchRemoteDocument, type RemoteDocHost } from "./remoteDoc";
+import { initOpenUrlUi } from "./openUrlUi";
 
 /**
  * #149: 더보기 메뉴의 한국어 이름과 단축키 표시.
@@ -168,6 +178,14 @@ const saveConflictTextEl = document.querySelector<HTMLElement>("#save-conflict-t
 const saveConflictCancelEl = document.querySelector<HTMLElement>("#save-conflict-cancel");
 const saveConflictReloadEl = document.querySelector<HTMLElement>("#save-conflict-reload");
 const saveConflictOverwriteEl = document.querySelector<HTMLElement>("#save-conflict-overwrite");
+
+// F-90/F-91: 원격 URL 열기 · 로컬 열기 파라미터 확인 (이슈 #195).
+const openUrlDialogEl = document.querySelector<HTMLDialogElement>("#open-url-dialog");
+const openUrlTitleEl = document.querySelector<HTMLElement>("#open-url-title");
+const openUrlBodyEl = document.querySelector<HTMLElement>("#open-url-body");
+const openUrlTargetEl = document.querySelector<HTMLElement>("#open-url-target");
+const openUrlCancelEl = document.querySelector<HTMLElement>("#open-url-cancel");
+const openUrlConfirmEl = document.querySelector<HTMLElement>("#open-url-confirm");
 
 if (editorEl && previewEl) {
   if (noticeEl) initNotice(noticeEl);
@@ -1032,6 +1050,102 @@ if (editorEl && previewEl) {
     });
   }
 
+  // F-90/F-91: 원격 URL 열기(?url=) · 로컬 열기 파라미터(?open=local) 확인
+  // (이슈 #195). `initTabs()`·`setFileActions()` 뒤여야 한다 — 성공 시
+  // `createTab()` 을, 로컬 모드에서 `openFile()` 을 부른다(F-89 가 이미 같은
+  // 이유로 이 자리에 있다).
+  const openUrlUi =
+    openUrlDialogEl &&
+    openUrlTitleEl &&
+    openUrlBodyEl &&
+    openUrlTargetEl &&
+    openUrlCancelEl &&
+    openUrlConfirmEl
+      ? initOpenUrlUi({
+          dialogEl: openUrlDialogEl,
+          titleEl: openUrlTitleEl,
+          bodyEl: openUrlBodyEl,
+          targetEl: openUrlTargetEl,
+          cancelEl: openUrlCancelEl,
+          confirmEl: openUrlConfirmEl,
+          returnFocusTo: editorEl,
+        })
+      : null;
+
+  const remoteDocHost: RemoteDocHost = {
+    fetch: (input, init) => window.fetch(input, init),
+    isOnline: () => navigator.onLine,
+    notify: (message, kind) => showNotice(message, kind ?? "info", 6000),
+  };
+
+  /**
+   * 주소 정리(M-9/AC-14). `targetURL` 경로에서는 아무 일도 하지 않는다 —
+   * 그 경우 주소창에는 파라미터가 없다(페이지가 이동하지 않았다). 대화상자가
+   * 떠 있는 동안에는 부르지 않는다 — 새로고침하면 확인창이 다시 떠야 한다.
+   */
+  function cleanupAddress(): void {
+    const u = new URL(window.location.href);
+    if (!u.searchParams.has("url") && !u.searchParams.has("open") && !u.searchParams.has("file")) {
+      return;
+    }
+    u.searchParams.delete("url");
+    u.searchParams.delete("open");
+    u.searchParams.delete("file");
+    window.history.replaceState(null, "", u.pathname + u.search + u.hash);
+  }
+
+  /**
+   * 주소 하나에서 읽은 의도를 실제로 처리한다(기술 스펙 §6-2). `location.href`
+   * 와 PWA `LaunchParams.targetURL` 이 **같은 함수**를 탄다(M-13).
+   */
+  function handleIntent(href: string): void {
+    if (!openUrlUi) return;
+    const intent = readOpenIntent(href);
+    if (intent === null) return; // 파라미터 없음 → 요청 0건 (M-4 / AC-2)
+
+    if (intent.kind === "reject") {
+      showNotice(rejectMessage(intent.reason), "error", 8000);
+      cleanupAddress(); // 확인창 없음, 요청 0건 (AC-5 / AC-13)
+      return;
+    }
+
+    if (intent.kind === "local") {
+      // F-91 / M-10 / AC-12: 클릭 자체가 사용자 제스처다 — 동기 프레임 안에서 연다.
+      openUrlUi.confirmLocal(
+        () => {
+          void openFile();
+          cleanupAddress();
+        },
+        () => cleanupAddress(), // 취소(버튼·Esc·백드롭) — 요청 0건, 주소만 정리 (AC-4)
+      );
+      return;
+    }
+
+    // F-90 원격
+    const { url, host } = intent;
+    openUrlUi.confirmRemote(
+      { url, host },
+      () => {
+        showNotice("문서를 가져오는 중…", "info", 30_000); // S-2 — 새 UI 를 만들지 않는다
+        void fetchRemoteDocument(remoteDocHost, url).then((result) => {
+          if (!result.ok) {
+            showNotice(fetchErrorMessage(result.reason), "error", 8000);
+          } else {
+            const name = fileNameFromUrl(url);
+            createTab(result.content, null, name); // M-3 — 항상 새 탭, handle: null
+            showNotice(
+              openedMessage(host, name, looksLikeWebPage(result.contentType)),
+              "info",
+              8000,
+            );
+          }
+          cleanupAddress(); // M-9 / AC-14
+        });
+      },
+      () => cleanupAddress(), // 취소(버튼·Esc·백드롭) — 요청 0건, 탭 불변 (AC-4)
+    );
+  }
+
   // #135: Finder "다음으로 열기" 등 OS 파일 연결로 실행됐으면 그 파일을 연다.
   //
   // **탭 시스템이 준비된 뒤여야 한다** — `openFileFromHandle` 이 탭을 만든다.
@@ -1048,7 +1162,16 @@ if (editorEl && previewEl) {
       showNotice(`"${handle.name}" 을(를) 열었습니다.`, "info", 6000);
     },
     notify: (message, kind) => showNotice(message, kind ?? "info", 6000),
+    // F-90/F-91 M-13: files 가 없을 때만 도착한 targetURL 을 본다(§6-3 순서 불변식).
+    // `readOpenIntent` 는 절대 URL 을 전제하는 순수 함수다 — 실제 브라우저의
+    // `LaunchParams.targetURL` 은 항상 절대 주소이지만, 상대 경로가 오더라도
+    // 여기서 현재 오리진 기준으로 절대화해 안전하게 넘긴다.
+    openTargetUrl: (href) => handleIntent(new URL(href, window.location.origin).href),
   });
+
+  // F-90/F-91: 일반 진입(주소창의 ?url=/?open=local). launchFiles 등록 **뒤**에
+  // 불러야 PWA 의 targetURL 경로와 순서가 어긋나지 않는다(기술 스펙 §6).
+  handleIntent(window.location.href);
 
   // F-60: /s/<id> 로 들어왔으면 문서를 가져와 새 탭으로 연다.
   // 실패해도 앱은 정상적으로 떠야 한다 — 흰 화면이 되면 안 된다.

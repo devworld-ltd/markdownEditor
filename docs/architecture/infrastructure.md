@@ -249,7 +249,7 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 
 | 헤더 | 값 |
 |------|-----|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; manifest-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `no-referrer` |
 | `X-Frame-Options` | `DENY` |
@@ -264,9 +264,9 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 | `img-src` | `https:` 허용 | 문서의 `![](https://…)` 외부 이미지 |
 | `img-src` | `data:` 허용 | 인라인 SVG·data URI 이미지 |
 | `script-src` | `https://static.cloudflareinsights.com` 허용 | Cloudflare Web Analytics 가 **커스텀 도메인에만** 비콘을 엣지 주입한다. 예전에는 dev 가 `*.workers.dev` 라 주입되지 않아 이 문제가 prod E2E 에서 처음 잡혔다. **F-67 로 dev 에도 커스텀 도메인이 붙어 이 비대칭이 사라졌다** — 같은 종류의 문제가 이제 dev 에서 먼저 드러난다 |
-| `connect-src` | `https://cloudflareinsights.com` 허용 | 위 비콘의 전송 대상 |
+| `connect-src` | `https:` 허용(F-90, 이슈 #195) | `?url=` 로 사용자가 확인한 임의의 https 주소에서 마크다운을 내려받는다(`src/remoteDoc.ts`). 대상은 링크마다 다르므로 호스트를 고정할 수 없다. `https://cloudflareinsights.com` 은 이 값에 포함되므로 별도로 남기지 않는다 — `script-src` 는 불변이라 임의 코드 실행 경로가 없고, 유출에는 실행이 필요하다. 확인 대화상자 없이는 요청 자체가 나가지 않는다 |
 
-`script-src` 는 `'self'` + Cloudflare Insights 비콘 호스트만 허용하며 `'unsafe-inline'`·`'unsafe-eval'` 은 절대 넣지 않는다. E2E 가 허용 호스트 목록을 **정확히 일치**로 단언하므로, 외부 스크립트를 추가하려면 테스트도 함께 고쳐야 한다.
+`script-src` 는 `'self'` + Cloudflare Insights 비콘 호스트만 허용하며 `'unsafe-inline'`·`'unsafe-eval'` 은 절대 넣지 않는다. E2E 가 허용 호스트 목록을 **정확히 일치**로 단언하므로, 외부 스크립트를 추가하려면 테스트도 함께 고쳐야 한다. `connect-src` 는 F-90 이후 `https:` 로 넓어졌지만 이는 **fetch 대상**일 뿐 스크립트 실행과 무관하다.
 
 **캐시 규칙**
 
