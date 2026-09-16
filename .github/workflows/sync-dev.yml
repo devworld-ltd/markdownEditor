@@ -1,0 +1,141 @@
+# 승격(dev → main) 뒤 dev 를 main 이력에 따라잡히는 PR 을 자동으로 연다.
+#
+# ## 왜 필요한가
+#
+# 승격을 PR 머지로 하므로 main 에 머지 커밋이 하나씩 생기고 dev 에는 없다.
+# 내용은 같은데(트리 해시 동일) 이력만 갈리며, 쌓이면 다음 승격 PR 에 지난
+# 승격 머지 커밋들이 딸려 보인다. 지금까지 손으로 PR 을 열어 정리했다
+# (PR #186, #206, #216).
+#
+# GitHub PR 에는 fast-forward 머지가 없고(merge/squash/rebase 뿐), rebase 는
+# 커밋을 새 SHA 로 재생성해 오히려 나쁘다. 진짜 fast-forward 는 main 으로
+# 직접 push 해야 하는데 `enforce_admins: true` 라 막혀 있다 — 그래서 커밋이
+# 생기는 것 자체는 받아들이고, **손이 가는 것만** 없앤다.
+#
+# ## 자동 PR 에 CI 가 안 도는 문제를 어떻게 넘기는가
+#
+# `GITHUB_TOKEN` 으로 만든 PR 은 워크플로를 트리거하지 않는다(재귀 방지).
+# dev 는 `verify` 를 필수 체크로 요구하므로 보통은 여기서 막힌다.
+#
+# **이 PR 은 막히지 않는다** — head 가 방금 승격된 main 의 SHA 그대로이고,
+# 그 SHA 에는 main push 로 돈 `verify` 성공이 이미 붙어 있기 때문이다. 체크는
+# 브랜치가 아니라 **커밋에 붙는다.** 그래서 새 실행 없이 필수 체크가 충족된다.
+#
+# 이 전제가 깨지는 경우는 하나다 — 승격 커밋의 `verify` 가 실패했을 때.
+# 그때는 애초에 배포도 실패했을 것이므로 PR 이 막히는 것이 옳다.
+#
+# ## 안 여는 경우
+#
+# 아래 어느 하나라도 걸리면 조용히 넘어간다. 애매하면 만들지 않는다 —
+# 틀린 동기화 PR 은 없느니만 못하다.
+#
+# - dev 에 main 이 모르는 커밋이 있다 → 단순 따라잡기가 아니다. 사람이 본다.
+# - 트리가 다르다 → 내용 차이가 있다는 뜻. 동기화로 다룰 일이 아니다.
+# - dev 가 이미 main 과 같다 → 할 일 없음.
+# - 열린 동기화 PR 이 이미 있다 → 중복 생성 방지.
+
+name: Sync dev
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  open-sync-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 동기화가 필요한지 판정
+        id: check
+        run: |
+          set -euo pipefail
+          git fetch origin main dev --quiet
+
+          MAIN=$(git rev-parse origin/main)
+          DEV=$(git rev-parse origin/dev)
+          echo "main=$MAIN dev=$DEV"
+
+          if [ "$MAIN" = "$DEV" ]; then
+            echo "이미 같다 — 넘어간다."
+            echo "needed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          # dev 에만 있는 커밋이 있으면 단순 따라잡기가 아니다.
+          AHEAD=$(git rev-list --count "$MAIN..$DEV")
+          if [ "$AHEAD" -ne 0 ]; then
+            echo "::notice::dev 에 main 이 모르는 커밋이 ${AHEAD}건 있다 — 자동 동기화하지 않는다."
+            echo "needed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          # 내용이 다르면 동기화로 다룰 일이 아니다.
+          if [ "$(git rev-parse "$MAIN^{tree}")" != "$(git rev-parse "$DEV^{tree}")" ]; then
+            echo "::warning::main 과 dev 의 트리가 다르다 — 사람이 확인해야 한다."
+            echo "needed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+
+          BEHIND=$(git rev-list --count "$DEV..$MAIN")
+          echo "needed=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$MAIN" >> "$GITHUB_OUTPUT"
+          echo "short=${MAIN:0:7}" >> "$GITHUB_OUTPUT"
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+
+      - name: 이미 열린 동기화 PR 이 있는지
+        if: steps.check.outputs.needed == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OPEN=$(gh pr list --base dev --state open \
+                   --json number,headRefName \
+                   --jq '[.[] | select(.headRefName | startswith("chore/sync-dev-main-"))] | length')
+          echo "open=$OPEN" >> "$GITHUB_OUTPUT"
+          [ "$OPEN" -gt 0 ] && echo "::notice::열린 동기화 PR 이 이미 있다 — 새로 만들지 않는다." || true
+
+      - name: 동기화 PR 생성
+        if: steps.check.outputs.needed == 'true' && steps.existing.outputs.open == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.check.outputs.sha }}
+          SHORT: ${{ steps.check.outputs.short }}
+          BEHIND: ${{ steps.check.outputs.behind }}
+        run: |
+          set -euo pipefail
+          BRANCH="chore/sync-dev-main-${SHORT}"
+          git push origin "${SHA}:refs/heads/${BRANCH}"
+
+          {
+            echo "\`dev\` 를 \`main\` 으로 따라잡는다. **파일 변경 0건** — 이력만 맞춘다."
+            echo
+            echo "승격을 PR 머지로 하므로 \`main\` 에 머지 커밋이 하나씩 생기고 \`dev\` 에는 없다."
+            echo "지금 ${BEHIND}건 쌓여 있다."
+            echo
+            echo "## 워크플로가 확인한 것"
+            echo
+            echo "- \`dev\` 에만 있는 커밋 **0건** — 단순 따라잡기다."
+            echo "- \`main\` 과 \`dev\` 의 **트리 해시 동일** — 내용 차이가 없다."
+            echo
+            echo "## CI"
+            echo
+            echo "이 PR 의 head(\`${SHORT}\`)는 방금 승격된 \`main\` 의 SHA 그대로다."
+            echo "그 커밋에는 \`main\` push 로 돈 \`verify\` 결과가 이미 붙어 있으므로"
+            echo "새 실행 없이 필수 체크가 충족된다 — 체크는 브랜치가 아니라 커밋에 붙는다."
+            echo
+            echo "자동 생성: \`.github/workflows/sync-dev.yml\`"
+          } > /tmp/body.md
+
+          gh pr create --base dev --head "$BRANCH" \
+            --title "chore: dev 를 main 이력에 동기화 (${SHORT})" \
+            --body-file /tmp/body.md
