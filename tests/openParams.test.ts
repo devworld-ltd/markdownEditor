@@ -28,9 +28,42 @@ describe("readOpenIntent — 스킴", () => {
     ["http://localhost:8080/a.md"],
     ["http://127.0.0.1/a.md"],
     ["http://[::1]/a.md"],
-  ])("로컬 호스트의 http 는 remote — %s", (target) => {
-    const intent = readOpenIntent("https://app.test/?url=" + encodeURIComponent(target));
+  ])("앱이 로컬일 때 로컬 호스트의 http 는 remote — %s", (target) => {
+    const intent = readOpenIntent("http://127.0.0.1:5173/?url=" + encodeURIComponent(target));
     expect(intent).toMatchObject({ kind: "remote", url: target });
+  });
+
+  // #198: 대상만 보고 열어 주면 배포된 앱의 ?url=http://localhost 링크도 확인창까지
+  // 도달한다. 예외는 앱 자신이 로컬일 때만 열린다.
+  it.each([
+    ["http://localhost:8080/a.md"],
+    ["http://127.0.0.1/a.md"],
+    ["http://[::1]/a.md"],
+  ])("앱이 배포 오리진이면 로컬 호스트의 http 도 reject(scheme) — %s", (target) => {
+    const intent = readOpenIntent("https://app.test/?url=" + encodeURIComponent(target));
+    expect(intent).toEqual({ kind: "reject", reason: "scheme" });
+  });
+
+  it.each([
+    ["localhost", "http://localhost:5173/"],
+    ["127.0.0.1", "http://127.0.0.1:5173/"],
+    ["[::1]", "http://[::1]:5173/"],
+  ])("앱 오리진이 %s 면 예외가 열린다", (_name, appHref) => {
+    const target = "http://localhost:3000/a.md";
+    const intent = readOpenIntent(appHref + "?url=" + encodeURIComponent(target));
+    expect(intent).toMatchObject({ kind: "remote", url: target });
+  });
+
+  it("앱이 로컬이어도 비-로컬 http 는 여전히 reject(scheme)", () => {
+    const target = "http://example.com/a.md";
+    const intent = readOpenIntent("http://127.0.0.1:5173/?url=" + encodeURIComponent(target));
+    expect(intent).toEqual({ kind: "reject", reason: "scheme" });
+  });
+
+  it("앱이 로컬이어도 https 는 그대로 remote — 예외가 https 를 가리지 않는다", () => {
+    const target = "https://raw.test/a.md";
+    const intent = readOpenIntent("http://127.0.0.1:5173/?url=" + encodeURIComponent(target));
+    expect(intent).toEqual({ kind: "remote", url: target, host: "raw.test" });
   });
 
   it.each([

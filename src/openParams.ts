@@ -54,8 +54,14 @@ function isLocalHostname(hostname: string): boolean {
  * 또는 not-absolute) — **local-path 는 여기서 만들지 않는다.** `url=file://...`
  * 같은 값도 "http(s) 주소만 열 수 있습니다" 로 거절한다(AC-5 실측 그대로) —
  * local-path 는 `?file=` 파라미터 전용이다(AC-13).
+ *
+ * `http:` 예외는 **앱 자신이 로컬에서 돌 때만** 연다(이슈 #198). 대상만 보고
+ * 열어 주면 배포된 앱의 `?url=http://localhost:3000/...` 링크도 확인창까지
+ * 도달하는데, 거기 뜨는 호스트가 `localhost` 라 사용자가 위화감을 느끼기
+ * 어렵다 — 배포 환경에서 이 예외가 필요한 이유도 없다. 판정 근거인 앱
+ * 호스트명은 **인자로 받는다**(전역을 읽지 말 것 — 트랩 #15).
  */
-function classifyUrlParam(value: string): OpenIntent {
+function classifyUrlParam(value: string, appHostname: string): OpenIntent {
   let parsed: URL;
   try {
     parsed = new URL(value);
@@ -66,7 +72,11 @@ function classifyUrlParam(value: string): OpenIntent {
   if (parsed.protocol === "https:") {
     return { kind: "remote", url: value, host: parsed.hostname };
   }
-  if (parsed.protocol === "http:" && isLocalHostname(parsed.hostname)) {
+  if (
+    parsed.protocol === "http:" &&
+    isLocalHostname(parsed.hostname) &&
+    isLocalHostname(appHostname)
+  ) {
     return { kind: "remote", url: value, host: parsed.hostname };
   }
   return { kind: "reject", reason: "scheme" };
@@ -76,6 +86,11 @@ function classifyUrlParam(value: string): OpenIntent {
  * 주소 하나에서 의도를 읽는다. `location.href` 와 `LaunchParams.targetURL` 이
  * **같은 함수**를 탄다(M-13). 파라미터가 없거나 `?url=` 이 빈 문자열이면 null.
  * 경로가 `/s/<id>` 면 무조건 null — 공유 링크가 우선이다(§7-2).
+ *
+ * `href` 는 **앱 자신의 주소**다(양쪽 호출부 모두 그렇다) — 그래서 `http:`
+ * 예외를 좁히는 데 필요한 앱 호스트명을 따로 받지 않고 여기서 꺼낸다(#198).
+ * 인자를 늘리면 두 호출부가 각자 오리진을 구해 넘기게 되고, 그 순간 한쪽만
+ * 틀리는 경로가 생긴다.
  */
 export function readOpenIntent(href: string): OpenIntent | null {
   let url: URL;
@@ -89,7 +104,7 @@ export function readOpenIntent(href: string): OpenIntent | null {
 
   const urlParam = url.searchParams.get("url");
   if (urlParam !== null && urlParam !== "") {
-    return classifyUrlParam(urlParam);
+    return classifyUrlParam(urlParam, url.hostname);
   }
 
   const fileParam = url.searchParams.get("file");
