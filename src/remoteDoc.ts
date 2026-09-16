@@ -26,8 +26,10 @@ export interface RemoteDocHost {
   fetch: typeof fetch;
   /** `navigator.onLine`. */
   isOnline: () => boolean;
-  /** 진행 알림. main.ts 가 showNotice 를 넘긴다(이 모듈은 언제 부를지 모른다 — 배선쪽 책임). */
-  notify?: (message: string, kind?: "info" | "error") => void;
+  // 진행 알림 통로는 여기 없다. 이 모듈은 **결과만 돌려주고** 무엇을 띄울지는
+  // `main.ts` 의 `handleIntent` 가 정한다 — 단일 통로다(#197). 쓰이지 않는
+  // `notify?` 를 남겨 두면 다음 사람이 "여기서도 띄우는구나" 로 읽고 알림이
+  // 두 곳에서 나가게 만든다.
   /** 테스트가 시한을 줄일 수 있도록 주입 경계로 뺀다. */
   timeoutMs?: number;
   probeTimeoutMs?: number;

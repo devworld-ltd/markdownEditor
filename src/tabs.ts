@@ -114,6 +114,13 @@ export function setTabStateListener(listener: (() => void) | null): void {
 let tabSwitchListener: ((id: string) => void) | null = null;
 
 export function setTabSwitchListener(listener: ((id: string) => void) | null): void {
+  // #189: 슬롯이 하나라 두 번째 등록이 첫 번째를 **조용히 덮는다** — 실제로
+  // main.ts 에 죽은 등록이 하나 남아 있었고, 아무 테스트도 실패하지 않았다.
+  // 마지막이 이긴다는 동작은 그대로 두고(바꾸면 교체가 막힌다) 사실만 알린다.
+  // `initOpenUrlUi` 의 이중 초기화 경고와 같은 패턴이다.
+  if (tabSwitchListener !== null && listener !== null) {
+    console.warn("[tabs] setTabSwitchListener 가 다시 불려 이전 리스너를 교체합니다 (#189).");
+  }
   tabSwitchListener = listener;
 }
 
