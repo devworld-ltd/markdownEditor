@@ -17,3 +17,13 @@ test-results/
 # devflow 실행 중 lock (커밋 대상 아님)
 .claude/.devflow.lock
 .claude/.chainflow.lock
+
+# devflow 산출물 폴백 (aiops). forge 가 살아 있으면 각 단계 산출물은 이슈 댓글이
+# 정본이고 이 폴더는 그 사본일 뿐이라 커밋하지 않는다. 남겨 두면 작업 트리가
+# 계속 지저분해져 `/aiops:merge-main` 의 릴리스 단계가 release_dirty_tree 로 막힌다.
+#
+# ⚠️ `.e2e-agent/` 는 **여기 넣지 말 것.** 그쪽은 러너 중립 시나리오의 핸드오프
+#    경로라 커밋되어야 하며, e2e-runner 가 저장소에서 `.e2e-agent/task.md` 를
+#    직접 읽는다(agent_runner.py::_resolve_task). 무시하면 러너를 붙이는 순간
+#    오류 없이 시나리오가 사라진다.
+context/
