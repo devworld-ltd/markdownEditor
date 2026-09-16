@@ -98,6 +98,17 @@ test.describe("F-61 PWA", () => {
     expect(manifest.theme_color.toLowerCase()).toBe(fill!.toLowerCase());
   });
 
+  /*
+   * background_color 는 **설치된 앱의 스플래시 배경**이다. theme_color 만 맞추고
+   * 이것을 흰색으로 두면 앱을 띄울 때 흰 바탕이 번쩍인 뒤 남색 아이콘이 나타난다
+   * — 배포된 v2.8.2 가 실제로 그 상태였다. theme_color 와 같은 이유로 **값이
+   * 아니라 짝을 단언한다**: 다음에 브랜드 색을 바꿔도 셋이 함께 움직인다.
+   */
+  test("스플래시 배경이 테마 색과 같다", async ({ request }) => {
+    const manifest = await (await request.get("/manifest.webmanifest")).json();
+    expect(manifest.background_color).toBe(manifest.theme_color);
+  });
+
   test("아이콘과 서비스 워커 스크립트가 서빙된다", async ({ request }) => {
     const icon = await request.get("/icon.svg");
     expect(icon.status()).toBe(200);
