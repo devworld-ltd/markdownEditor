@@ -334,7 +334,7 @@ const url = URL.createObjectURL(blob);
 
 ## 4.2 Web App Manifest
 
-`/manifest.webmanifest` — `display: standalone`, `start_url: /`, `theme_color: #1e1e1e`, 아이콘은 `/icon.svg`(`any` + `maskable`). `launch_handler: { client_mode: "focus-existing" }` (F-89, §3.14) — 미지원 브라우저는 알 수 없는 필드를 무시할 뿐 아무것도 깨지지 않는다.
+`/manifest.webmanifest` — `display: standalone`, `start_url: /`, `theme_color: #17324d` = `background_color` = `icon.svg` 의 `<rect fill>` (셋이 같아야 한다 — `hardening.spec.ts` 가 짝을 단언한다), 아이콘은 `/icon.svg`(`any` + `maskable`). `launch_handler: { client_mode: "focus-existing" }` (F-89, §3.14) — 미지원 브라우저는 알 수 없는 필드를 무시할 뿐 아무것도 깨지지 않는다.
 
 ---
 
