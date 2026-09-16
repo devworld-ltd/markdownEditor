@@ -107,8 +107,25 @@ export function initOpenUrlUi(host: OpenUrlUiHost): OpenUrlUiController {
       onConfirm: () => void,
       onCancel?: () => void,
     ): void {
-      // 재진입: 이미 열려 있으면 두 번째 요청은 무시한다.
-      if (dialogEl.open) return;
+      // 재진입(#199): 이미 열려 있으면 **새 요청을 버리되 그 onCancel 은 부른다.**
+      // 그래야 main.ts 의 cleanupAddress() 가 돌아 주소에 파라미터가 남지 않는다 —
+      // 예전에는 그냥 return 해서 "오류도 없이 조용히 무동작" 이었다.
+      //
+      // 열려 있던 것을 새 요청으로 **교체하지 않는** 이유가 둘이다.
+      //
+      // 1. 이 대화상자의 존재 이유가 "링크를 준 사람을 믿을 수 있을 때만 여세요"
+      //    다. 사용자가 A 를 읽고 "열기" 로 손을 옮기는 사이 내용이 B 로 바뀌면
+      //    읽지 않은 것을 확인하게 된다 — 확인창이 오히려 위험해진다.
+      // 2. `dialogEl.close()` 의 close 이벤트는 **동기가 아니라 큐에 들어간다.**
+      //    교체하려면 닫기 전에 옛 핸들러를 떼야 하고, 안 그러면 뒤늦게 도착한
+      //    close 가 방금 세운 새 요청을 취소로 처리한다.
+      //
+      // 닿는 경로는 PWA focus-existing(F-89/#187) 이다 — 확인창이 떠 있는 창에
+      // OS 가 새 targetURL 을 전달할 때.
+      if (dialogEl.open) {
+        onCancel?.();
+        return;
+      }
 
       pendingConfirm = onConfirm;
       pendingCancel = onCancel ?? null;

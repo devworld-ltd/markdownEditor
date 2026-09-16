@@ -608,8 +608,8 @@ if (editorEl && previewEl) {
     });
 
     setSaveConflictGuard((tabId) => reloadController!.confirmBeforeSave(tabId));
-    // I-2: 탭 전환마다 그 탭만 조용히 확인한다. tabs.ts 는 fileReload.ts 를 모른다.
-    setTabSwitchListener((id) => void reloadController?.checkTab(id));
+    // I-2(탭 전환 감지)는 아래 syncReloadButton 정의 뒤에서 **한 번만** 등록한다 —
+    // `setTabSwitchListener` 는 슬롯이 하나라 두 번 부르면 앞의 것이 조용히 죽는다(#189).
     // I-1: 창 포커스 복귀 / visible 전환 — 핸들 있는 모든 탭을 조용히 확인.
     window.addEventListener("focus", () => void reloadController?.checkAll());
     document.addEventListener("visibilitychange", () => {
@@ -673,7 +673,9 @@ if (editorEl && previewEl) {
   }
   syncReloadButton();
   if (reloadController) {
-    // I-2 감지와 같은 신호에 얹는다 — 탭이 바뀌면 버튼 상태도 함께 바뀐다.
+    // I-2: 탭 전환마다 그 탭만 조용히 확인한다. tabs.ts 는 fileReload.ts 를 모른다.
+    // 버튼 상태 갱신을 같은 신호에 얹는다 — 탭이 바뀌면 둘 다 바뀌어야 한다.
+    // **이 레포에서 `setTabSwitchListener` 를 부르는 곳은 여기 하나뿐이어야 한다**(#189).
     setTabSwitchListener((id) => {
       void reloadController?.checkTab(id);
       syncReloadButton();
@@ -1072,10 +1074,10 @@ if (editorEl && previewEl) {
         })
       : null;
 
+  // 알림은 주입하지 않는다 — 진행 알림의 단일 통로는 아래 handleIntent 다(#197).
   const remoteDocHost: RemoteDocHost = {
     fetch: (input, init) => window.fetch(input, init),
     isOnline: () => navigator.onLine,
-    notify: (message, kind) => showNotice(message, kind ?? "info", 6000),
   };
 
   /**
