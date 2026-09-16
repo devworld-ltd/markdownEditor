@@ -105,6 +105,8 @@
 | F-56 | 마크다운 파일 드래그앤드롭으로 열기 | `src/dropFiles.ts`, `src/editorDrop.ts`, `src/fileOps.ts` | 단위 39 + E2E 10 |
 | F-88 | 파일 변경 감지 새로고침 — 조용한 감지(포커스·탭 전환) + 수동 재읽기 + 더티 탭 보호(배너·확인 대화상자) + 저장 충돌 경고 (#187) | `src/diskStamp.ts`, `src/fileReload.ts`, `src/reloadUi.ts` | 단위 55 + E2E 13(`fileReload.spec.ts`) |
 | F-89 | 앱 중복 실행 방지 — `manifest.webmanifest` `launch_handler: focus-existing`, 기존 `launchQueue` 소비자 재사용 (#187) | `public/manifest.webmanifest` | E2E 2(`launchHandler.spec.ts`) + **실기기 확인 필요**(AC-20, 자동 테스트 불가) |
+| F-90 | 원격 URL 열기 — `?url=<https 주소>` 로 진입하면 확인 대화상자 뒤 fetch·정화(F-18)·새 탭. CORS/네트워크/HTTP/용량 4갈래 오류 구별, `connect-src https:` 완화 (#195) | `src/openParams.ts`, `src/remoteDoc.ts`, `src/openUrlUi.ts` | 단위 51(`openParams`·`remoteDoc`·`openUrlUi`) + E2E 24(`openUrl.spec.ts`, CORS 갈래는 단위로 하향) |
+| F-91 | 로컬 열기 파라미터 — `?open=local` 로 진입하면 확인 대화상자 뒤 클릭 한 번으로 기존 `openFile()` 을 촉발(제스처 필요, 자동 파일 선택창은 불가) (#195) | `src/openParams.ts`, `src/openUrlUi.ts`, `src/launchFiles.ts` | E2E 2 포함(`openUrl.spec.ts` E7) |
 
 ## 3. 부분 구현 (⚠️)
 
@@ -116,6 +118,7 @@
 | F-20 | 세션 복원 | 탭·본문·dirty·활성 탭 복원 | 파일 핸들·커서·스크롤은 복원 불가 (구조적 한계) | 낮 |
 | F-06 | 커서·스크롤 보존 | 탭 전환 시 복원, E2E 로 커서 검증 | `scrollTop` 복원은 미검증 (textarea 높이 의존) | 낮 |
 | F-88 | 파일 변경 감지 새로고침 | FS Access 핸들이 있는 탭에서 전부 동작 | **폴백 브라우저(Safari·Firefox)에서는 불가** — 핸들이 없어 디스크를 다시 읽을 방법이 없다. `Reload` 버튼은 `aria-disabled` + 클릭 시 이유 안내 | 중 |
+| F-91 | 로컬 열기 파라미터 | Chromium 실측 완료(제스처 요구 확인) | **Safari·Firefox 는 미측정** — `showOpenFilePicker` 가 없어 `<input type=file>` 폴백을 타는데, 제스처 요구가 Chromium 보다 느슨할 근거가 없어 설계는 동일하게 안전한 쪽이다. 실기기 확인이 남아 있다(이슈 #195 댓글에 기록 예정) | 낮 |
 
 ## 4. 미구현 (❌)
 
