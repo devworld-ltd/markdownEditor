@@ -143,6 +143,55 @@ describe("confirmRemote", () => {
     expect(firstConfirm).toHaveBeenCalledTimes(1);
     expect(secondConfirm).not.toHaveBeenCalled();
   });
+
+  // #199: 버려진 요청이 흔적 없이 사라지면 main.ts 의 cleanupAddress() 가 돌지
+  // 않아 주소에 파라미터가 남는다 — "오류도 없이 조용히 무동작".
+  it("재진입 — 버려진 두 번째 요청의 onCancel 은 불린다", async () => {
+    const { initOpenUrlUi } = await loadOpenUrlUi();
+    const host = buildHost();
+    const ui = initOpenUrlUi(host);
+    const firstCancel = vi.fn();
+    const secondCancel = vi.fn();
+
+    ui.confirmRemote({ url: "https://raw.test/a.md", host: "raw.test" }, vi.fn(), firstCancel);
+    ui.confirmRemote({ url: "https://other.test/b.md", host: "other.test" }, vi.fn(), secondCancel);
+
+    // 버려진 쪽만 취소로 처리된다 — 떠 있는 대화상자는 아직 살아 있다.
+    expect(secondCancel).toHaveBeenCalledTimes(1);
+    expect(firstCancel).not.toHaveBeenCalled();
+    expect(host.dialogEl.open).toBe(true);
+  });
+
+  it("재진입 — 떠 있던 요청은 교체되지 않고 그대로 확인된다", async () => {
+    const { initOpenUrlUi } = await loadOpenUrlUi();
+    const host = buildHost();
+    const ui = initOpenUrlUi(host);
+    const firstConfirm = vi.fn();
+    const firstCancel = vi.fn();
+
+    ui.confirmRemote({ url: "https://raw.test/a.md", host: "raw.test" }, firstConfirm, firstCancel);
+    ui.confirmLocal(vi.fn(), vi.fn()); // 모드가 다른 재진입도 마찬가지다
+
+    // 내용이 로컬 모드로 바뀌지 않았다 — 읽던 것이 그대로다.
+    expect(host.targetEl.textContent).toBe("https://raw.test/a.md");
+    expect(host.confirmEl.textContent).toBe("열기");
+
+    host.confirmEl.click();
+    expect(firstConfirm).toHaveBeenCalledTimes(1);
+    expect(firstCancel).not.toHaveBeenCalled();
+  });
+
+  it("재진입 — 버려진 요청에 onCancel 이 없어도 터지지 않는다", async () => {
+    const { initOpenUrlUi } = await loadOpenUrlUi();
+    const host = buildHost();
+    const ui = initOpenUrlUi(host);
+
+    ui.confirmRemote({ url: "https://raw.test/a.md", host: "raw.test" }, vi.fn());
+    expect(() =>
+      ui.confirmRemote({ url: "https://other.test/b.md", host: "other.test" }, vi.fn()),
+    ).not.toThrow();
+    expect(host.dialogEl.open).toBe(true);
+  });
 });
 
 describe("confirmLocal", () => {

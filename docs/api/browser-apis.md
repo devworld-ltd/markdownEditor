@@ -1,6 +1,6 @@
 # API 명세 — 브라우저 플랫폼 API
 
-> 최종 갱신: 2026-08-31 · 대상: v2.6.1 (F-88·F-89, #187)
+> 최종 갱신: 2026-09-16 · 대상: v2.8.0 (F-90·F-91 #195, `http:` 예외 좁힘 #198)
 > 이전 문서(`bridge-api.md`, JS↔Swift 브리지)는 네이티브 앱 제거와 함께 이 문서로 대체됐다.
 
 ## 0. HTTP API 현황
@@ -272,7 +272,7 @@ const url = URL.createObjectURL(blob);
 | 항목 | 값 |
 |------|-----|
 | 파라미터 판정 | `src/openParams.ts` `readOpenIntent()` — 순수 함수. `location.href` 와 PWA `targetURL`(위 §3.14) 이 **같은 함수**를 탄다 |
-| 허용 스킴 | `https:`. `http:` 는 호스트가 `localhost`·`127.0.0.1`·`[::1]` 일 때만(로컬 개발) |
+| 허용 스킴 | `https:`. `http:` 는 **대상 호스트와 앱 자신의 호스트가 둘 다** `localhost`·`127.0.0.1`·`[::1]` 일 때만(로컬 개발 전용, 이슈 #198). 앱 호스트명은 `readOpenIntent(href)` 가 받은 `href` 에서 꺼내 `classifyUrlParam` 에 넘긴다 — 전역을 읽지 않는다(트랩 #15) |
 | 요청 | `fetch(url, { mode:"cors", credentials:"omit", redirect:"follow", cache:"no-store", referrerPolicy:"no-referrer" })` — **사용자가 확인 대화상자에서 "열기" 를 누르기 전에는 나가지 않는다** |
 | `accept` 헤더 | `text/markdown, text/plain;q=0.9, */*;q=0.8` — CORS **안전목록**(simple request 헤더) 안에서만 값을 늘려야 한다. 벗어나면 `OPTIONS` preflight 가 발생해 GitHub raw 같은 정적 호스트 대부분이 실패한다(새 함정 후보) |
 | 용량 상한 | 2MB(`MAX_REMOTE_BYTES` = `imageUpload.ts` 의 `MAX_IMAGE_BYTES`). `Content-Length` 사전검사 + `Response.body.getReader()` 본문 누적검사 **두 지점 모두** — 헤더가 없거나 거짓일 수 있다 |

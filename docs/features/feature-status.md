@@ -1,6 +1,6 @@
 # 기능 개발 현황
 
-> 최종 갱신: 2026-08-31 · 대상: v2.6.1 (F-88·F-89, #187)
+> 최종 갱신: 2026-09-16 · 대상: v2.8.0 (F-90·F-91 #195, `http:` 예외 좁힘 #198)
 > 범례: ✅ 구현 완료 · ⚠️ 부분 구현(제약 있음) · ❌ 미구현 · 🗑 제거됨
 
 ## 1. 웹 전환으로 해결된 항목
@@ -105,7 +105,7 @@
 | F-56 | 마크다운 파일 드래그앤드롭으로 열기 | `src/dropFiles.ts`, `src/editorDrop.ts`, `src/fileOps.ts` | 단위 39 + E2E 10 |
 | F-88 | 파일 변경 감지 새로고침 — 조용한 감지(포커스·탭 전환) + 수동 재읽기 + 더티 탭 보호(배너·확인 대화상자) + 저장 충돌 경고 (#187) | `src/diskStamp.ts`, `src/fileReload.ts`, `src/reloadUi.ts` | 단위 55 + E2E 13(`fileReload.spec.ts`) |
 | F-89 | 앱 중복 실행 방지 — `manifest.webmanifest` `launch_handler: focus-existing`, 기존 `launchQueue` 소비자 재사용 (#187) | `public/manifest.webmanifest` | E2E 2(`launchHandler.spec.ts`) + **실기기 확인 필요**(AC-20, 자동 테스트 불가) |
-| F-90 | 원격 URL 열기 — `?url=<https 주소>` 로 진입하면 확인 대화상자 뒤 fetch·정화(F-18)·새 탭. CORS/네트워크/HTTP/용량 4갈래 오류 구별, `connect-src https:` 완화 (#195) | `src/openParams.ts`, `src/remoteDoc.ts`, `src/openUrlUi.ts` | 단위 51(`openParams`·`remoteDoc`·`openUrlUi`) + E2E 24(`openUrl.spec.ts`, CORS 갈래는 단위로 하향) |
+| F-90 | 원격 URL 열기 — `?url=<https 주소>` 로 진입하면 확인 대화상자 뒤 fetch·정화(F-18)·새 탭. CORS/네트워크/HTTP/용량 4갈래 오류 구별, `connect-src https:` 완화 (#195). `http:` 예외는 **앱 자신이 로컬일 때만** (#198) | `src/openParams.ts`, `src/remoteDoc.ts`, `src/openUrlUi.ts` | 단위 85(`openParams` 56 · `remoteDoc` 14 · `openUrlUi` 15 — 실측) + E2E 24(`openUrl.spec.ts`, CORS 갈래는 단위로 하향) |
 | F-91 | 로컬 열기 파라미터 — `?open=local` 로 진입하면 확인 대화상자 뒤 클릭 한 번으로 기존 `openFile()` 을 촉발(제스처 필요, 자동 파일 선택창은 불가) (#195) | `src/openParams.ts`, `src/openUrlUi.ts`, `src/launchFiles.ts` | E2E 2 포함(`openUrl.spec.ts` E7) |
 
 ## 3. 부분 구현 (⚠️)

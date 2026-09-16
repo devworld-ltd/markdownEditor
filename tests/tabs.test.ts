@@ -710,3 +710,56 @@ describe("용량 초과 알림", () => {
     }
   });
 });
+
+describe("setTabSwitchListener (#189)", () => {
+  it("마지막 등록이 이긴다 — 기존 동작은 그대로다", async () => {
+    const tabs = await loadTabs();
+    const dom = createDom();
+    tabs.initTabs(dom.tabBar, dom.editor, dom.preview, dom.title);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const first = vi.fn();
+    const second = vi.fn();
+    tabs.setTabSwitchListener(first);
+    tabs.setTabSwitchListener(second);
+
+    const firstId = tabs.getActiveTab()!.id;
+    tabs.createTab("두번째"); // 새 탭으로 전환
+    tabs.switchTab(firstId); // 다시 첫 탭으로
+
+    expect(second).toHaveBeenCalled();
+    expect(first).not.toHaveBeenCalled();
+  });
+
+  // 덮어쓰기 자체는 막지 않는다 — 막으면 교체가 불가능해진다. 대신 **조용히**
+  // 죽지 않게 한다. main.ts 에 죽은 등록이 하나 남아 있었고 아무 테스트도
+  // 실패하지 않았던 것이 이 경고를 넣은 이유다.
+  it("이미 등록돼 있는데 또 등록하면 경고한다", async () => {
+    const tabs = await loadTabs();
+    const dom = createDom();
+    tabs.initTabs(dom.tabBar, dom.editor, dom.preview, dom.title);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear(); // 앞 테스트의 호출이 누적되지 않도록
+
+    tabs.setTabSwitchListener(vi.fn());
+    expect(warn).not.toHaveBeenCalled(); // 첫 등록은 조용하다
+
+    tabs.setTabSwitchListener(vi.fn());
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain("setTabSwitchListener");
+  });
+
+  it("해제(null)는 경고하지 않고, 해제 뒤 재등록도 조용하다", async () => {
+    const tabs = await loadTabs();
+    const dom = createDom();
+    tabs.initTabs(dom.tabBar, dom.editor, dom.preview, dom.title);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warn.mockClear(); // 앞 테스트의 호출이 누적되지 않도록
+
+    tabs.setTabSwitchListener(vi.fn());
+    tabs.setTabSwitchListener(null);
+    tabs.setTabSwitchListener(vi.fn());
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
