@@ -1,6 +1,6 @@
 # 인프라 아키텍처
 
-> 최종 갱신: 2026-08-12 · 대상: 웹 전환 (v2.0.0)
+> 최종 갱신: 2026-09-16 · 대상: v2.8.3 (sync-dev 워크플로 추가)
 
 ## 1. 인프라 요약
 
@@ -11,7 +11,7 @@
 | 애플리케이션 서버 | 없음 |
 | 데이터베이스 | 없음 ([데이터 모델](./data-model.md)) |
 | 런타임 외부 API 호출 | 없음 |
-| CI/CD | GitHub Actions (`.github/workflows/ci.yml` — verify → deploy 의존 잡) |
+| CI/CD | GitHub Actions — `.github/workflows/ci.yml`(verify → deploy 의존 잡) · `sync-dev.yml`(승격 뒤 dev 따라잡기 PR 자동 생성, §4.4) |
 | 시크릿 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` 2개뿐 |
 | 배포 산출물 | `dist/` (HTML + JS + CSS + sourcemap) |
 
@@ -217,6 +217,37 @@ CI 와 CD 는 `.github/workflows/ci.yml` 한 파일의 **두 잡**이다. `deplo
 |------|------|
 | **Node 24 사용** (20 불가) | `jsdom@30` → `undici@8` 의 engines 가 `>=22.19.0`. Node 20 에서는 `webidl.util.markAsUncloneable` 부재로 vitest 워커가 기동조차 못 한다. `package.json` `engines` 에 `>=22.22.2` 로 명시 |
 | **`cloudflare/wrangler-action` 미사용** | 액션이 번들한 wrangler 3.90 은 `wrangler.jsonc`(JSON 설정)를 읽지 못해 `env`·`assets` 를 통째로 무시하고 "Missing entry-point" 로 실패한다. package-lock 에 고정된 wrangler 4 를 `npx` 로 직접 호출 |
+
+### 4.4 `sync-dev.yml` — 승격 뒤 이력 따라잡기
+
+승격(`dev` → `main`)을 PR 머지로 하므로 `main` 에 머지 커밋이 하나씩 생기고 `dev` 에는 없다. **내용은 같은데**(트리 해시 동일) 이력만 갈리고, 쌓이면 다음 승격 PR 에 지난 승격 머지 커밋들이 딸려 보인다. 지금까지 손으로 PR 을 열어 정리했다(PR #186, #206, #216).
+
+`main` push 마다 이 워크플로가 조건을 보고 **변경 0건짜리 PR** 을 `dev` 로 자동으로 연다.
+
+#### 왜 fast-forward 로 안 하는가
+
+GitHub PR 의 머지 방식은 merge commit · squash · rebase 셋뿐이고 **fast-forward 가 없다.** rebase 는 `main` 이 이미 조상이어도 커밋을 **새 SHA 로 재생성**해서 같은 변경이 두 벌로 남는다 — 오히려 나쁘다. 진짜 fast-forward 는 `main` 으로 직접 push 해야 하는데 `enforce_admins: true` 라 막혀 있고, 그것을 끄면 prod 브랜치 보호와 승격 PR 의 CI 게이트를 잃는다. **커밋이 생기는 것은 받아들이고 손이 가는 것만 없앴다.**
+
+#### 자동 PR 에 CI 가 안 도는 문제
+
+`GITHUB_TOKEN` 으로 만든 PR 은 워크플로를 트리거하지 않는다(재귀 방지). `dev` 는 `verify` 를 필수 체크로 요구하므로 보통 여기서 막힌다.
+
+**이 PR 은 막히지 않는다** — head 가 방금 승격된 `main` 의 SHA 그대로이고, 그 커밋에는 `main` push 로 돈 `verify` 성공이 이미 붙어 있다. **체크는 브랜치가 아니라 커밋에 붙는다.** 전제가 깨지는 경우는 승격 커밋의 `verify` 가 실패했을 때뿐이고, 그러면 배포도 실패했을 것이므로 PR 이 막히는 것이 옳다.
+
+#### 안 여는 경우
+
+애매하면 만들지 않는다 — 틀린 동기화 PR 은 없느니만 못하다.
+
+| 조건 | 판단 |
+|---|---|
+| `dev` 에 `main` 이 모르는 커밋이 있다 | 단순 따라잡기가 아니다. 사람이 본다 |
+| 트리 해시가 다르다 | 내용 차이다. 동기화로 다룰 일이 아니다 |
+| `dev` 가 이미 `main` 과 같다 | 할 일 없음 |
+| 열린 동기화 PR 이 이미 있다 | 중복 생성 방지 |
+
+#### 필요한 리포지토리 설정
+
+**Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"** 가 켜져 있어야 한다. 꺼져 있으면 `GITHUB_TOKEN` 이 PR 을 만들지 못해 **워크플로가 조용히 아무것도 하지 않는다.** 이 저장소는 `dev`·`main` 모두 필수 승인 수가 0 이라, 이 설정이 주는 "승인" 권한으로 우회되는 게이트는 없다.
 
 ## 5. 요구 사양
 

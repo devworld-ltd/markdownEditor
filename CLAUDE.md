@@ -260,7 +260,7 @@ RUN=$(gh run list --branch main --limit 5 --json databaseId,headSha \
 
 **`main`·`dev` 모두 브랜치 보호 규칙이 걸려 있다.** 직접 push 가 거부되므로 문서 한 줄 수정이라도 `feature/*` → PR → 머지 경로를 거쳐야 한다.
 
-`.github/workflows/ci.yml` 한 파일에 `verify`(빌드+단위+E2E) → `deploy`(needs: verify) 두 잡. **CI 는 Node 24 를 써야 한다** — jsdom 30 → undici 8 이 Node >=22.19 를 요구해 Node 20 에서는 vitest 가 기동하지 못한다. 배포는 `cloudflare/wrangler-action` 대신 `npx wrangler` 직접 호출 (액션 번들 wrangler 3.x 는 `wrangler.jsonc` 를 못 읽는다). `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿은 등록 완료. **커스텀 도메인은 첫 prod 배포 때 생성되므로 `main` 에 병합되기 전까지 서비스되지 않는다.**
+`.github/workflows/ci.yml` 한 파일에 `verify`(빌드+단위+E2E) → `deploy`(needs: verify) 두 잡. **워크플로가 하나 더 있다** — `sync-dev.yml` 이 승격 뒤 `dev` 를 `main` 이력에 따라잡히는 변경 0건 PR 을 자동으로 연다(`docs/architecture/infrastructure.md` §4.4). `GITHUB_TOKEN` 이 만든 PR 은 CI 를 트리거하지 않지만, head 가 방금 검사받은 `main` 의 SHA 라 **체크가 커밋에 이미 붙어 있어** 필수 체크가 충족된다. 리포지토리 설정의 "Allow GitHub Actions to create and approve pull requests" 가 꺼지면 **조용히 아무것도 하지 않는다.** **CI 는 Node 24 를 써야 한다** — jsdom 30 → undici 8 이 Node >=22.19 를 요구해 Node 20 에서는 vitest 가 기동하지 못한다. 배포는 `cloudflare/wrangler-action` 대신 `npx wrangler` 직접 호출 (액션 번들 wrangler 3.x 는 `wrangler.jsonc` 를 못 읽는다). `CLOUDFLARE_API_TOKEN`·`CLOUDFLARE_ACCOUNT_ID` 시크릿은 등록 완료. **커스텀 도메인은 첫 prod 배포 때 생성되므로 `main` 에 병합되기 전까지 서비스되지 않는다.**
 
 ## 문서 관리 (필수)
 
