@@ -309,13 +309,15 @@ Windows·Edge 는 아직 안 봤고, `manifest.webmanifest` 의 `launch_handler`
 **다시 실기기에서 봐야 한다** — 헤드리스 Chromium 에는 Launch Services·창 관리자가
 없다(트랩 #82).
 
-**F-91(#195) 은 Safari·Firefox 의 사용자 제스처 요구가 미측정이다.** `?open=local` →
-"파일 선택" 클릭이 `<input type=file>` 폴백을 여는 것은 Chromium 에서만 실측했다(PRD
-결정 2). 두 브라우저는 `showOpenFilePicker` 가 없어 이 폴백을 타는데, 제스처 요구가
-Chromium 보다 느슨할 근거가 없어 설계는 동일하게 안전한 쪽이다. 실기기에서 확인하고
-결과를 이슈 #195 댓글에 기록하는 것을 완료 조건으로 남긴다.
+**F-91 도 2026-09-20 Safari·Firefox 에서 기대대로 확인됐다** — `?open=local` →
+"파일 선택" 클릭이 `<input type=file>` 폴백을 연다. 두 브라우저는 `showOpenFilePicker`
+가 없어 이 폴백을 타는데, 제스처 요구가 Chromium 보다 느슨하지 않다는 것이 실측으로
+확인된 셈이다(PRD 결정 2). 기록은 이슈 #195 댓글.
 
-지금 남은 것: **F-91 Safari·Firefox 제스처 확인.**
+**지금 남은 것: 없다.** 실기기·실브라우저 확인이 필요했던 세 항목(F-87·F-89·F-91)이
+전부 닫혔다. 다만 **자동 테스트가 이 셋을 지켜 주지 않는다는 사실은 그대로다** —
+`formatBar.ts`·`virtualKeyboard.ts`(F-87) · `manifest.webmanifest` 의 `launch_handler`
+(F-89) · `openUrlUi.ts` 의 제스처 경로(F-91)를 고치면 **다시 사람이 봐야 한다.**
 
 ## ai-chat 협업 규약
 
