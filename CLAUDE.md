@@ -303,12 +303,11 @@ RUN=$(gh run list --branch main --limit 5 --json databaseId,headSha \
 자동 테스트로는 여전히 닿지 않으므로 **`formatBar.ts`·`virtualKeyboard.ts` 를 고치면 다시
 실기기에서 봐야 한다**(트랩 #100).
 
-**F-89(#187) 는 실기기 확인이 아직 남아 있다.** `manifest.webmanifest` 의
-`launch_handler: { client_mode: "focus-existing" }` 와 `launchQueue` 배선(E6)은 자동
-E2E 로 확인됐지만, "Finder 에서 다시 열었을 때 새 창이 안 뜨고 기존 창이 앞으로
-나오는가"(AC-20)는 헤드리스 Chromium 에 Launch Services·창 관리자가 없어 검증 불가다
-(트랩 #82, F-87 과 같은 성격). PWA 를 설치한 실기기에서 확인하고 결과를 이슈 #187
-댓글에 기록하는 것을 완료 조건으로 남긴다.
+**F-89 AC-20 도 2026-09-20 실기기(macOS Chrome 설치 PWA)에서 기대대로 확인됐다** —
+Finder 에서 다시 열면 새 창이 뜨지 않고 기존 창이 앞으로 나온다. 기록은 이슈 #187 댓글.
+Windows·Edge 는 아직 안 봤고, `manifest.webmanifest` 의 `launch_handler` 를 고치면
+**다시 실기기에서 봐야 한다** — 헤드리스 Chromium 에는 Launch Services·창 관리자가
+없다(트랩 #82).
 
 **F-91(#195) 은 Safari·Firefox 의 사용자 제스처 요구가 미측정이다.** `?open=local` →
 "파일 선택" 클릭이 `<input type=file>` 폴백을 여는 것은 Chromium 에서만 실측했다(PRD
@@ -316,7 +315,7 @@ E2E 로 확인됐지만, "Finder 에서 다시 열었을 때 새 창이 안 뜨�
 Chromium 보다 느슨할 근거가 없어 설계는 동일하게 안전한 쪽이다. 실기기에서 확인하고
 결과를 이슈 #195 댓글에 기록하는 것을 완료 조건으로 남긴다.
 
-지금 남은 것: **F-89 AC-20 실기기 확인 · F-91 Safari·Firefox 제스처 확인.**
+지금 남은 것: **F-91 Safari·Firefox 제스처 확인.**
 
 ## ai-chat 협업 규약
 
