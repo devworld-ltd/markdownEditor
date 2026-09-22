@@ -12,6 +12,7 @@
 
 | 일자 | 작업 | 문서 |
 |------|------|------|
+| 2026-09-22 | **인수인계 문서 작성 + 워크트리 확인** — `docs/handover.md` 신규. 버전·배포 SHA·테스트 1235/569·커버리지를 실측해 기록, 문서 인덱스의 낡은 숫자 표시 | [2026-09-22-handover.md](./2026-09-22-handover.md) |
 | 2026-09-16 | **리뷰 P2 3건 정리 (#197·#199·#189)** — 확인창 재진입 시 버려진 요청의 `onCancel` 호출 · 쓰이지 않던 `RemoteDocHost.notify` 제거(타입이 강제) · `setTabSwitchListener` 죽은 등록 제거 + 재등록 경고. 단위 1229 → 1235 | [2026-09-16-review-p2-cleanup.md](./2026-09-16-review-p2-cleanup.md) |
 | 2026-09-16 | **`http:` 예외를 앱 오리진이 로컬일 때로 좁힘 (#198)** — 배포 환경의 `?url=http://localhost` 가 확인창까지 가던 것을 차단. `readOpenIntent` 가 받은 `href` 에서 앱 호스트명을 꺼내 넘긴다(호출부 변경 0). `openParams.test.ts` 단위 48 → 56 | [2026-09-16-http-local-exception.md](./2026-09-16-http-local-exception.md) |
 | 2026-09-16 | **원격 URL 열기 + 로컬 열기 파라미터 (F-90·F-91, #195)** — `?url=`/`?open=local`, 확인 대화상자, CORS/네트워크/HTTP/용량 4갈래 오류 구별, `connect-src https:` 완화. `launchQueue` 단일 소비자 유지, F-91 은 실기기 검증 잔여 | [2026-09-16-open-url-param.md](./2026-09-16-open-url-param.md) |
